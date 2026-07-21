@@ -1,10 +1,12 @@
 import express from "express";
-import healthRoutes from "./routes/health.routes";
+import healthRouter from "./modules/health/health.routes.js";
+import errorMiddleware from "./middleware/error.middleware";
 
 const app = express();
 
 app.use(express.json());
-
-app.use("/", healthRoutes);
+app.use(express.urlencoded({ extended: true }));
+app.use("/", healthRouter);
+app.use(errorMiddleware);
 
 export default app;

@@ -1,9 +1,11 @@
+import "./config/env.js";
 import app from "./app.js";
-
-const PORT = process.env.PORT || 3000;
+import config from "./config/index.js";
+import logger from "./shared/logger";
+const PORT = config.server.port ;
 
 const server = app.listen(PORT, () => {
-    console.log(`Server running on port ${PORT}`);
+    logger.info(`Server running on port ${PORT}`);
 });
 
 export default server;
