@@ -2,12 +2,11 @@ import { Request, Response } from "express";
 import healthService from "./health.service";
 
 class HealthController {
-    
-    public getHealth(req: Request, res: Response): Response {
-        const health = healthService.getHealth();
+  public async getHealth(_req: Request, res: Response): Promise<Response> {
+    const health = await healthService.getHealth();
 
-        return res.status(200).json(health);
-    }
+    return res.status(200).json(health);
+  }
 }
 
 export default new HealthController();

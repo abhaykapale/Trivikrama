@@ -12,7 +12,7 @@ class AppError extends Error {
         this.statusCode = statusCode;
         this.errorCode = errorCode;
 
-        Error.captureStackTrace(this, this.constructor);
+        (Error as ErrorConstructor & { captureStackTrace?: (targetObject: object, constructorOpt?: Function) => void }).captureStackTrace?.(this, this.constructor);
     }
 }
 
