@@ -1,2 +1,9 @@
-export { default as postgres } from "./client";
-export { connectPostgres, query } from "./client";
+export {
+  closePostgres,
+  createPostgresClient,
+  pingPostgres,
+} from "./client.js";
+export type {
+  PostgresClient,
+  PostgresClientOptions,
+} from "./client.js";

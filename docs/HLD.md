@@ -216,6 +216,9 @@ graph TB
 This diagram shows the four processes and the three data stores as top-level components, with their interfaces and dependencies.
 
 ```mermaid
+---
+id: ed1ced68-30ae-4bf6-83ae-1b5ae6e8da6d
+---
 graph LR
     subgraph "Collector [C++]"
         C_IN(("Input\nSyslog / File / ETW / HTTP"))

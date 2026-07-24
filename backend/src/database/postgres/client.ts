@@ -1,39 +1,80 @@
-import { Pool } from "pg";
-import config from "../../config";
-import logger from "../../shared/logger";
+import { performance } from "node:perf_hooks";
 
-const pool = new Pool({
-  host: config.database.postgres.host,
-  port: config.database.postgres.port,
-  user: config.database.postgres.user,
-  password: config.database.postgres.password,
-  database: config.database.postgres.database,
-  max: 20,
-  idleTimeoutMillis: 30000,
-  connectionTimeoutMillis: 5000,
-});
+import { knex, type Knex } from "knex";
 
-export const query = async <T>(
-  text: string,
-  params?: unknown[],
-): Promise<T> => {
-  const result = await pool.query(text, params);
+export type PostgresClient = Knex;
 
-  return result.rows as T;
-};
-
-export const connectPostgres = async (): Promise<void> => {
-  try {
-    const client = await pool.connect();
-
-    logger.info("PostgreSQL connected successfully");
-
-    client.release();
-  } catch (error) {
-    logger.error("Failed to connect to PostgreSQL");
-    throw error;
+export interface PostgresClientOptions {
+  readonly connectionString: string;
+  readonly poolMin?: number;
+  readonly poolMax?: number;
+  readonly acquireConnectionTimeoutMs?: number;
 }
 
-};
+const DEFAULT_POOL_MIN = 0;
+const DEFAULT_POOL_MAX = 10;
+const DEFAULT_ACQUIRE_CONNECTION_TIMEOUT_MS = 5_000;
 
-export default pool;
+/**
+ * Creates the single Knex instance used by one backend process.
+ *
+ * Knex creates its PostgreSQL pool lazily. The first real query is executed by
+ * pingPostgres(), which is why application startup must call that function
+ * before the HTTP server starts accepting traffic.
+ */
+export function createPostgresClient(
+  options: PostgresClientOptions,
+): PostgresClient {
+  validateOptions(options);
+
+  return knex({
+    client: "pg",
+    connection: options.connectionString,
+    pool: {
+      min: options.poolMin ?? DEFAULT_POOL_MIN,
+      max: options.poolMax ?? DEFAULT_POOL_MAX,
+    },
+    acquireConnectionTimeout:
+      options.acquireConnectionTimeoutMs ??
+      DEFAULT_ACQUIRE_CONNECTION_TIMEOUT_MS,
+  });
+}
+
+/**
+ * Executes a real database round trip and returns its latency.
+ */
+export async function pingPostgres(client: PostgresClient): Promise<number> {
+  const startedAt = performance.now();
+
+  await client.raw("select 1 as health_check");
+
+  return Math.max(0, Math.round(performance.now() - startedAt));
+}
+
+/**
+ * Drains and destroys the Knex connection pool.
+ */
+export async function closePostgres(client: PostgresClient): Promise<void> {
+  await client.destroy();
+}
+
+function validateOptions(options: PostgresClientOptions): void {
+  if (options.connectionString.trim().length === 0) {
+    throw new Error("PostgreSQL connection string is required");
+  }
+
+  const min = options.poolMin ?? DEFAULT_POOL_MIN;
+  const max = options.poolMax ?? DEFAULT_POOL_MAX;
+
+  if (!Number.isInteger(min) || min < 0) {
+    throw new Error("PostgreSQL poolMin must be a non-negative integer");
+  }
+
+  if (!Number.isInteger(max) || max < 1) {
+    throw new Error("PostgreSQL poolMax must be a positive integer");
+  }
+
+  if (min > max) {
+    throw new Error("PostgreSQL poolMin cannot exceed poolMax");
+  }
+}

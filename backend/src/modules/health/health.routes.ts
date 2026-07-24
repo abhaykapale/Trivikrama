@@ -1,8 +1,22 @@
 import { Router } from "express";
-import HealthController from "./health.controller.js";
+import type HealthService from "./health.service.js";
 
-const healthRouter = Router();
+export default function createHealthRouter(
+  healthService: HealthService,
+): Router {
+  const router = Router();
 
-healthRouter.get("/health", HealthController.getHealth);
+  router.get("/health", async (_request, response, next) => {
+    try {
+      const health = await healthService.getHealth();
 
-export default healthRouter;
+      const statusCode = health.status === "UP" ? 200 : 503;
+
+      response.status(statusCode).json(health);
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  return router;
+}

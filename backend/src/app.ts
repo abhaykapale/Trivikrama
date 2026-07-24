@@ -1,12 +1,21 @@
-import express from "express";
-import healthRouter from "./modules/health/health.routes.js";
-import errorMiddleware from "./middleware/error.middleware";
+import express, { type Express } from "express";
+import createHealthRouter from "./modules/health/health.routes.js";
+import type HealthService from "./modules/health/health.service.js";
+import errorMiddleware from "./middleware/error.middleware.js";
 
-const app = express();
+export interface AppDependencies {
+  readonly healthService: HealthService;
+}
 
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
-app.use("/", healthRouter);
-app.use(errorMiddleware);
+export function createApp({ healthService }: AppDependencies): Express {
+  const app = express();
 
-export default app;
+  app.use(express.json());
+  app.use(express.urlencoded({ extended: true }));
+
+  app.use("/", createHealthRouter(healthService));
+
+  app.use(errorMiddleware);
+
+  return app;
+}
