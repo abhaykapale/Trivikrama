@@ -1,13 +1,8 @@
-# Database Migrations
+# PostgreSQL Migrations
 
-Migration execution order:
+Only `.js` files in this directory are executable migrations.
 
-1. 001_initial_schema.sql
-2. 002_indexes.sql
-3. 003_triggers.sql
+The migration runner uses:
 
-Rules:
-
-- Never modify an executed migration.
-- Every schema change gets a new migration file.
-- Migrations must be idempotent whenever possible.
+```ts
+loadExtensions: [".js"]

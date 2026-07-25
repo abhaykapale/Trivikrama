@@ -11,19 +11,25 @@ export interface MigrationRunnerOptions {
   idleInTransactionSessionTimeoutMs?: number;
 }
 
+interface PendingMigration {
+  file: string;
+  directory: string;
+}
+
 export interface MigrationCommandResult {
   command: MigrationCommand;
   migrationsDirectory: string;
   batch?: number;
   migrations?: string[];
   completed?: string[];
-  pending?: string[];
+  pending?: PendingMigration[];
 }
 
 interface SafeError {
   name: string;
   message: string;
 }
+
 
 const DEFAULT_CONNECTION_TIMEOUT_MS = 5_000;
 const DEFAULT_STATEMENT_TIMEOUT_MS = 60_000;
@@ -69,6 +75,7 @@ const assertMigrationsDirectoryExists = async (
     );
   }
 };
+
 
 const createMigrationClient = (options: MigrationRunnerOptions): Knex => {
   return knex({

@@ -16,7 +16,9 @@ const developmentFormat = winston.format.combine(
     const renderedMessage = stack ?? message;
 
     const renderedMetadata =
-      Object.keys(metadata).length > 0 ? ` ${JSON.stringify(metadata)}` : "";
+      Object.keys(metadata).length > 0
+        ? `\n${JSON.stringify(metadata, null, 2)}`
+        : "";
 
     return `[${timestamp}] ${level}: ${renderedMessage}${renderedMetadata}`;
   }),
