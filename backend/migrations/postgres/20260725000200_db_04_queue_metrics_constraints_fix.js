@@ -6,9 +6,13 @@
  *
  * This migration is required because DB-04 was already applied
  * in the same Knex batch as the initial relational tables.
+ *
+ * The checks are intentionally added here instead of DB-04 so
+ * existing databases that have already recorded DB-04 remain
+ * compatible with the corrective migration history.
  */
 
-export async function up(knex) {
+async function up(knex) {
   /*
    * Existing invalid rows must be corrected before PostgreSQL can
    * validate the new CHECK constraints.
@@ -26,25 +30,68 @@ export async function up(knex) {
   `);
 
   await knex.raw(`
-    ALTER TABLE monitor.queue_metrics
-      ADD CONSTRAINT chk_queue_metrics_waiting_nonnegative
-        CHECK (waiting >= 0),
+    DO $$
+    BEGIN
+      IF NOT EXISTS (
+        SELECT 1
+        FROM pg_catalog.pg_constraint
+        WHERE conname = 'chk_queue_metrics_waiting_nonnegative'
+          AND conrelid = 'monitor.queue_metrics'::regclass
+      ) THEN
+        ALTER TABLE monitor.queue_metrics
+          ADD CONSTRAINT chk_queue_metrics_waiting_nonnegative
+          CHECK (waiting >= 0);
+      END IF;
 
-      ADD CONSTRAINT chk_queue_metrics_active_nonnegative
-        CHECK (active >= 0),
+      IF NOT EXISTS (
+        SELECT 1
+        FROM pg_catalog.pg_constraint
+        WHERE conname = 'chk_queue_metrics_active_nonnegative'
+          AND conrelid = 'monitor.queue_metrics'::regclass
+      ) THEN
+        ALTER TABLE monitor.queue_metrics
+          ADD CONSTRAINT chk_queue_metrics_active_nonnegative
+          CHECK (active >= 0);
+      END IF;
 
-      ADD CONSTRAINT chk_queue_metrics_completed_nonnegative
-        CHECK (completed >= 0),
+      IF NOT EXISTS (
+        SELECT 1
+        FROM pg_catalog.pg_constraint
+        WHERE conname = 'chk_queue_metrics_completed_nonnegative'
+          AND conrelid = 'monitor.queue_metrics'::regclass
+      ) THEN
+        ALTER TABLE monitor.queue_metrics
+          ADD CONSTRAINT chk_queue_metrics_completed_nonnegative
+          CHECK (completed >= 0);
+      END IF;
 
-      ADD CONSTRAINT chk_queue_metrics_failed_nonnegative
-        CHECK (failed >= 0),
+      IF NOT EXISTS (
+        SELECT 1
+        FROM pg_catalog.pg_constraint
+        WHERE conname = 'chk_queue_metrics_failed_nonnegative'
+          AND conrelid = 'monitor.queue_metrics'::regclass
+      ) THEN
+        ALTER TABLE monitor.queue_metrics
+          ADD CONSTRAINT chk_queue_metrics_failed_nonnegative
+          CHECK (failed >= 0);
+      END IF;
 
-      ADD CONSTRAINT chk_queue_metrics_dead_lettered_nonnegative
-        CHECK (dead_lettered >= 0);
+      IF NOT EXISTS (
+        SELECT 1
+        FROM pg_catalog.pg_constraint
+        WHERE conname = 'chk_queue_metrics_dead_lettered_nonnegative'
+          AND conrelid = 'monitor.queue_metrics'::regclass
+      ) THEN
+        ALTER TABLE monitor.queue_metrics
+          ADD CONSTRAINT chk_queue_metrics_dead_lettered_nonnegative
+          CHECK (dead_lettered >= 0);
+      END IF;
+    END
+    $$;
   `);
 }
 
-export async function down(knex) {
+async function down(knex) {
   await knex.raw(`
     ALTER TABLE monitor.queue_metrics
       DROP CONSTRAINT IF EXISTS chk_queue_metrics_waiting_nonnegative,
@@ -55,6 +102,8 @@ export async function down(knex) {
   `);
 }
 
-export const config = {
+const config = {
   transaction: true,
 };
+
+module.exports = { up, down, config };

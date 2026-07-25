@@ -9,7 +9,7 @@
  * - DB-05A failed because the function was missing.
  */
 
-export async function up(knex) {
+async function up(knex) {
   await knex.raw(`
     CREATE OR REPLACE FUNCTION public.update_updated_at_column()
     RETURNS TRIGGER AS $$
@@ -21,12 +21,14 @@ export async function up(knex) {
   `);
 }
 
-export async function down(knex) {
+async function down(knex) {
   await knex.raw(`
     DROP FUNCTION IF EXISTS public.update_updated_at_column();
   `);
 }
 
-export const config = {
+const config = {
   transaction: true,
 };
+
+module.exports = { up, down, config };

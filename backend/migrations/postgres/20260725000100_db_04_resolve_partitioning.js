@@ -325,7 +325,7 @@ async function grantRuntimePrivilegesIfRoleExists(knex) {
   `);
 }
 
-export async function up(knex) {
+async function up(knex) {
   for (const schemaName of REQUIRED_SCHEMAS) {
     await assertSchemaExists(knex, schemaName);
   }
@@ -419,22 +419,7 @@ export async function up(knex) {
       snapshot_at       TIMESTAMPTZ NOT NULL DEFAULT NOW(),
 
       CONSTRAINT pk_queue_metrics
-        PRIMARY KEY (id, snapshot_at),
-
-      CONSTRAINT chk_queue_metrics_waiting_nonnegative
-        CHECK (waiting >= 0),
-
-      CONSTRAINT chk_queue_metrics_active_nonnegative
-        CHECK (active >= 0),
-
-      CONSTRAINT chk_queue_metrics_completed_nonnegative
-        CHECK (completed >= 0),
-
-      CONSTRAINT chk_queue_metrics_failed_nonnegative
-        CHECK (failed >= 0),
-
-      CONSTRAINT chk_queue_metrics_dead_lettered_nonnegative
-        CHECK (dead_lettered >= 0)
+        PRIMARY KEY (id, snapshot_at)
     )
     PARTITION BY RANGE (snapshot_at);
 
@@ -518,7 +503,7 @@ export async function up(knex) {
   await grantRuntimePrivilegesIfRoleExists(knex);
 }
 
-export async function down(knex) {
+async function down(knex) {
   /*
    * Dropping a partitioned parent drops its attached partitions.
    *
@@ -533,6 +518,8 @@ export async function down(knex) {
   `);
 }
 
-export const config = {
+const config = {
   transaction: true,
 };
+
+module.exports = { up, down, config };

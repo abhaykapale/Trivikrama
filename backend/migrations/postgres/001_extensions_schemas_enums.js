@@ -92,7 +92,7 @@ const dropEnumType = async (knex, typeName) => {
  * @param {Knex} knex
  * @returns {Promise<void>}
  */
-export async function up(knex) {
+async function up(knex) {
   await knex.raw('CREATE EXTENSION IF NOT EXISTS "uuid-ossp";');
   await knex.raw('CREATE EXTENSION IF NOT EXISTS "pgcrypto";');
   await knex.raw('CREATE EXTENSION IF NOT EXISTS "pg_trgm";');
@@ -111,7 +111,7 @@ export async function up(knex) {
  * @param {Knex} knex
  * @returns {Promise<void>}
  */
-export async function down(knex) {
+async function down(knex) {
   for (const [typeName] of [...ENUM_TYPES].reverse()) {
     await dropEnumType(knex, typeName);
   }
@@ -123,3 +123,5 @@ export async function down(knex) {
   await knex.raw('DROP EXTENSION IF EXISTS "pgcrypto";');
   await knex.raw('DROP EXTENSION IF EXISTS "uuid-ossp";');
 }
+
+module.exports = { up, down };

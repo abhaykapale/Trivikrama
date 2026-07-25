@@ -9,7 +9,7 @@
  * Do not create them in this migration.
  */
 
-export async function up(knex) {
+async function up(knex) {
   await knex.raw(`
     CREATE TABLE public.users (
       id                  UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -88,13 +88,15 @@ export async function up(knex) {
   `);
 }
 
-export async function down(knex) {
+async function down(knex) {
   await knex.raw(`
     DROP TABLE IF EXISTS public.incidents;
     DROP TABLE IF EXISTS public.users;
   `);
 }
 
-export const config = {
+const config = {
   transaction: true,
 };
+
+module.exports = { up, down, config };

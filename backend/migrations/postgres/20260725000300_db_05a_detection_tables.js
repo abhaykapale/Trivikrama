@@ -86,7 +86,7 @@ async function grantRuntimePrivilegesIfRoleExists(knex) {
   `);
 }
 
-export async function up(knex) {
+async function up(knex) {
   await assertTableExists(knex, "public", "users");
   await assertTableExists(knex, "public", "incidents");
 
@@ -276,13 +276,15 @@ export async function up(knex) {
   await grantRuntimePrivilegesIfRoleExists(knex);
 }
 
-export async function down(knex) {
+async function down(knex) {
   await knex.raw(`
     DROP TABLE IF EXISTS public.alerts;
     DROP TABLE IF EXISTS public.rules;
   `);
 }
 
-export const config = {
+const config = {
   transaction: true,
 };
+
+module.exports = { up, down, config };
