@@ -16,12 +16,17 @@ async function main(): Promise<void> {
   try {
     const repositories = createPostgresRepositories(postgres);
 
-    const [users, configuration, rules, audit] = await Promise.all([
-      repositories.users.list({ limit: 5 }),
-      repositories.configuration.list({ limit: 5 }),
-      repositories.rules.list({ limit: 5 }),
-      repositories.audit.list({ limit: 5 }),
-    ]);
+    const [users, configuration, rules, audit, sessions, assets, collectorStatus, queueMetrics] =
+      await Promise.all([
+        repositories.users.list({ limit: 5 }),
+        repositories.configuration.list({ limit: 5 }),
+        repositories.rules.list({ limit: 5 }),
+        repositories.audit.list({ limit: 5 }),
+        repositories.sessions.list({ limit: 5, includeRevoked: true }),
+        repositories.assets.list({ limit: 5 }),
+        repositories.collectorStatus.list({ limit: 5 }),
+        repositories.queueMetrics.list({ limit: 5 }),
+      ]);
 
     console.info(
       JSON.stringify(
@@ -43,6 +48,22 @@ async function main(): Promise<void> {
             audit: {
               sampleCount: audit.items.length,
               hasMore: audit.hasMore,
+            },
+            sessions: {
+              sampleCount: sessions.items.length,
+              hasMore: sessions.hasMore,
+            },
+            assets: {
+              sampleCount: assets.items.length,
+              hasMore: assets.hasMore,
+            },
+            collectorStatus: {
+              sampleCount: collectorStatus.items.length,
+              hasMore: collectorStatus.hasMore,
+            },
+            queueMetrics: {
+              sampleCount: queueMetrics.items.length,
+              hasMore: queueMetrics.hasMore,
             },
           },
         },
