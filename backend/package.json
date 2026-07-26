@@ -12,7 +12,13 @@
     "migrate": "tsx src/scripts/migrate.ts latest",
     "migrate:status": "tsx src/scripts/migrate.ts status",
     "migrate:rollback": "tsx src/scripts/migrate.ts rollback",
-    "migrate:prod": "node dist/scripts/migrate.js latest"
+    "migrate:prod": "node dist/scripts/migrate.js latest",
+    "db:seed": "tsx src/scripts/seed.ts core",
+    "db:seed:development": "tsx src/scripts/seed.ts development",
+    "db:seed:status": "tsx src/scripts/seed.ts status",
+    "db:mongo:status": "tsx src/scripts/mongo-bootstrap.ts status",
+    "db:mongo:bootstrap": "tsx src/scripts/mongo-bootstrap.ts apply",
+    "db:mongo:bootstrap:prod": "node dist/scripts/mongo-bootstrap.js apply"
   },
   "keywords": [],
   "author": "",

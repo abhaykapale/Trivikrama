@@ -9,6 +9,7 @@ export interface PostgresClientOptions {
   readonly poolMin?: number;
   readonly poolMax?: number;
   readonly acquireConnectionTimeoutMs?: number;
+  readonly applicationName?: string;
 }
 
 const DEFAULT_POOL_MIN = 0;
@@ -29,7 +30,10 @@ export function createPostgresClient(
 
   return knex({
     client: "pg",
-    connection: options.connectionString,
+    connection: {
+      connectionString: options.connectionString,
+      application_name: options.applicationName,
+    },
     pool: {
       min: options.poolMin ?? DEFAULT_POOL_MIN,
       max: options.poolMax ?? DEFAULT_POOL_MAX,
