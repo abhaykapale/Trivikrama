@@ -24,6 +24,7 @@ export * from "./health.js";
 export * from "./mongodb/index.js";
 export * from "./postgres/index.js";
 export * from "./redis/index.js";
+export * from "./repositories/index.js";
 
 export type DatabaseName = "postgres" | "mongodb" | "redis";
 

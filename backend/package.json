@@ -21,7 +21,10 @@
     "db:mongo:bootstrap:prod": "node dist/scripts/mongo-bootstrap.js apply",
     "db:redis:status": "tsx src/scripts/redis-verify.ts status",
     "db:redis:verify": "tsx src/scripts/redis-verify.ts verify",
-    "db:redis:verify:prod": "node dist/scripts/redis-verify.js verify"
+    "db:redis:verify:prod": "node dist/scripts/redis-verify.js verify",
+    "db:verify:status": "tsx src/scripts/db-verify.ts status",
+    "db:verify": "tsx src/scripts/db-verify.ts verify",
+    "db:verify:prod": "node dist/scripts/db-verify.js verify"
   },
   "keywords": [],
   "author": "",
