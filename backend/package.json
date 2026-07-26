@@ -26,7 +26,13 @@
     "db:verify": "tsx src/scripts/db-verify.ts verify",
     "db:verify:prod": "node dist/scripts/db-verify.js verify",
     "db:transaction:smoke": "tsx src/scripts/transaction-smoke.ts",
-    "test:repositories:integration": "tsx tests/integration/repositories/run-repository-integration-tests.ts"
+    "test:repositories:integration": "tsx tests/integration/repositories/run-repository-integration-tests.ts",
+    "db:maintenance:status": "tsx src/scripts/db-maintenance.ts status",
+    "db:maintenance:partitions": "tsx src/scripts/db-maintenance.ts partitions",
+    "db:maintenance:retention": "tsx src/scripts/db-maintenance.ts retention",
+    "db:maintenance:vacuum": "tsx src/scripts/db-maintenance.ts vacuum",
+    "db:maintenance:run": "tsx src/scripts/db-maintenance.ts run",
+    "db:maintenance:prod": "node dist/scripts/db-maintenance.js run"
   },
   "keywords": [],
   "author": "",
