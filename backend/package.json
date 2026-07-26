@@ -24,7 +24,8 @@
     "db:redis:verify:prod": "node dist/scripts/redis-verify.js verify",
     "db:verify:status": "tsx src/scripts/db-verify.ts status",
     "db:verify": "tsx src/scripts/db-verify.ts verify",
-    "db:verify:prod": "node dist/scripts/db-verify.js verify"
+    "db:verify:prod": "node dist/scripts/db-verify.js verify",
+    "db:transaction:smoke": "tsx src/scripts/transaction-smoke.ts"
   },
   "keywords": [],
   "author": "",
