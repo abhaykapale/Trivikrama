@@ -3,7 +3,7 @@ import type { Knex } from "knex";
 import {
   ensureNonBlank,
   pageByLimitOffset,
-  toNullableDate,
+  toJsonb,
   toRequiredDate,
   type PageResult,
   type QueryExecutor,
@@ -75,7 +75,7 @@ export class PostgresConfigurationRepository implements IConfigurationRepository
     const insertable = {
       ...(input.id ? { id: input.id } : {}),
       key,
-      value: input.value,
+      value: toJsonb(input.value),
       description: input.description ?? null,
       is_sensitive: input.isSensitive ?? false,
       updated_by: input.updatedBy ?? null,
@@ -93,7 +93,7 @@ export class PostgresConfigurationRepository implements IConfigurationRepository
     input: UpdateConfigurationInput,
   ): Promise<ConfigurationRecord | null> {
     const patch: Record<string, unknown> = {
-      value: input.value,
+      value: toJsonb(input.value),
     };
 
     if (input.description !== undefined) {

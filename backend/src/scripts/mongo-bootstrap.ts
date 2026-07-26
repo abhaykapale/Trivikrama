@@ -6,6 +6,7 @@ import {
 } from "../database/mongodb/index.js";
 import { runMongoDbBootstrap } from "../database/mongodb/bootstrap.js";
 import type { MongoBootstrapCommand } from "../database/mongodb/bootstrap.types.js";
+import logger from "../shared/logger/index.js";
 
 function parseCommand(argv: readonly string[]): MongoBootstrapCommand {
   const command = argv[2] ?? "status";
@@ -50,7 +51,7 @@ async function main(): Promise<void> {
 main().catch((error: unknown) => {
   const message = error instanceof Error ? error.message : String(error);
 
-  console.error(
+  logger.error(
     JSON.stringify(
       {
         success: false,

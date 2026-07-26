@@ -1,5 +1,11 @@
 import type { Collection, Filter, Sort } from "mongodb";
 
+import {
+  removeUndefined,
+  toMongoDouble,
+  toMongoInt,
+  type MongoInsertDocument,
+} from "./mongo-document.helpers.js";
 import type { MongoDbClient } from "../../mongodb/client.js";
 import {
   normalizeMongoPagination,
@@ -19,6 +25,8 @@ import type {
 
 const COLLECTION_NAME = "normalized_events";
 
+type MutableMongoFilter = Record<string, unknown>;
+
 export class MongoNormalizedEventRepository implements INormalizedEventRepository {
   public constructor(private readonly client: MongoDbClient) {}
 
@@ -26,7 +34,9 @@ export class MongoNormalizedEventRepository implements INormalizedEventRepositor
     input: CreateNormalizedEventInput,
   ): Promise<NormalizedEventDocument> {
     validateNormalizedEvent(input);
-    await this.collection().insertOne(input);
+    await this.collection().insertOne(
+      toMongoNormalizedEventDocument(input) as never,
+    );
     return input;
   }
 
@@ -41,22 +51,29 @@ export class MongoNormalizedEventRepository implements INormalizedEventRepositor
       validateNormalizedEvent(input);
     }
 
-    const result = await this.collection().insertMany([...inputs], {
-      ordered: false,
-    });
+    const result = await this.collection().insertMany(
+      inputs.map((input) => toMongoNormalizedEventDocument(input)) as never,
+      {
+        ordered: false,
+      },
+    );
     return result.insertedCount;
   }
 
   public async findByEventId(
     eventId: string,
   ): Promise<NormalizedEventDocument | null> {
-    return this.collection().findOne({ event_id: requireNonBlank(eventId, "eventId") });
+    return this.collection().findOne({
+      event_id: requireNonBlank(eventId, "eventId"),
+    });
   }
 
   public async findByDedupHash(
     dedupHash: string,
   ): Promise<NormalizedEventDocument | null> {
-    return this.collection().findOne({ dedup_hash: requireNonBlank(dedupHash, "dedupHash") });
+    return this.collection().findOne({
+      dedup_hash: requireNonBlank(dedupHash, "dedupHash"),
+    });
   }
 
   public async list(
@@ -64,7 +81,10 @@ export class MongoNormalizedEventRepository implements INormalizedEventRepositor
   ): Promise<MongoPageResult<NormalizedEventDocument>> {
     const { limit, offset } = normalizeMongoPagination(filters);
     const query = buildNormalizedEventFilter(filters);
-    const sort: Sort = { time: filters.sortDirection === "asc" ? 1 : -1, event_id: 1 };
+    const sort: Sort = {
+      time: filters.sortDirection === "asc" ? 1 : -1,
+      event_id: 1,
+    };
 
     const items = await this.collection()
       .find(query)
@@ -97,7 +117,10 @@ export class MongoNormalizedEventRepository implements INormalizedEventRepositor
     batchId: string,
     options?: MongoPaginationOptions,
   ): Promise<MongoPageResult<NormalizedEventDocument>> {
-    return this.list({ ...options, batchId: requireNonBlank(batchId, "batchId") });
+    return this.list({
+      ...options,
+      batchId: requireNonBlank(batchId, "batchId"),
+    });
   }
 
   public async searchMessage(
@@ -120,110 +143,79 @@ export class MongoNormalizedEventRepository implements INormalizedEventRepositor
   }
 
   private collection(): Collection<NormalizedEventDocument> {
-    return requireMongoDatabase(this.client).collection<NormalizedEventDocument>(
-      COLLECTION_NAME,
-    );
+    return requireMongoDatabase(
+      this.client,
+    ).collection<NormalizedEventDocument>(COLLECTION_NAME);
   }
 }
 
 function buildNormalizedEventFilter(
   filters: NormalizedEventListFilters,
 ): Filter<NormalizedEventDocument> {
-  const clauses: Filter<NormalizedEventDocument>[] = [];
+  const query: MutableMongoFilter = {};
+  // const query: Filter<NormalizedEventDocument> = {};
 
   if (filters.orgId !== undefined) {
-    clauses.push({
-      org_id: requireNonBlank(filters.orgId, "orgId"),
-    });
+    query.org_id = requireNonBlank(filters.orgId, "orgId");
   }
 
   if (filters.classUid !== undefined) {
     assertNonNegativeInteger(filters.classUid, "classUid");
-
-    clauses.push({
-      class_uid: filters.classUid,
-    });
+    query.class_uid = filters.classUid;
   }
 
   if (filters.categoryUid !== undefined) {
     assertNonNegativeInteger(filters.categoryUid, "categoryUid");
-
-    clauses.push({
-      category_uid: filters.categoryUid,
-    });
+    query.category_uid = filters.categoryUid;
   }
 
   if (filters.minSeverityId !== undefined) {
     assertNumberRange(filters.minSeverityId, "minSeverityId", 0, 6);
-
-    clauses.push({
-      severity_id: {
-        $gte: filters.minSeverityId,
-      },
-    });
+    query.severity_id = { $gte: filters.minSeverityId };
   }
 
   if (filters.srcIp !== undefined) {
-    clauses.push({
-      "src_endpoint.ip": requireNonBlank(filters.srcIp, "srcIp"),
-    });
+    query["src_endpoint.ip"] = requireNonBlank(filters.srcIp, "srcIp");
   }
 
   if (filters.dstIp !== undefined) {
-    clauses.push({
-      "dst_endpoint.ip": requireNonBlank(filters.dstIp, "dstIp"),
-    });
+    query["dst_endpoint.ip"] = requireNonBlank(filters.dstIp, "dstIp");
   }
 
   if (filters.username !== undefined) {
-    clauses.push({
-      "actor.user.name": requireNonBlank(filters.username, "username"),
-    });
+    query["actor.user.name"] = requireNonBlank(filters.username, "username");
   }
 
   if (filters.hostname !== undefined) {
-    clauses.push({
-      "device.hostname": requireNonBlank(filters.hostname, "hostname"),
-    });
+    query["device.hostname"] = requireNonBlank(filters.hostname, "hostname");
   }
 
   if (filters.collectorId !== undefined) {
-    clauses.push({
-      "ingestion.collector_id": requireNonBlank(
-        filters.collectorId,
-        "collectorId",
-      ),
-    });
+    query["ingestion.collector_id"] = requireNonBlank(
+      filters.collectorId,
+      "collectorId",
+    );
   }
 
   if (filters.batchId !== undefined) {
-    clauses.push({
-      "ingestion.batch_id": requireNonBlank(filters.batchId, "batchId"),
-    });
-  }
-
-  if (
-    filters.from !== undefined &&
-    filters.to !== undefined &&
-    filters.from > filters.to
-  ) {
-    throw new Error("from must be earlier than or equal to to");
+    query["ingestion.batch_id"] = requireNonBlank(filters.batchId, "batchId");
   }
 
   if (filters.from !== undefined || filters.to !== undefined) {
-    clauses.push({
-      time: {
-        ...(filters.from !== undefined ? { $gte: filters.from } : {}),
-        ...(filters.to !== undefined ? { $lte: filters.to } : {}),
-      },
-    });
+    const time: Record<string, Date> = {};
+
+    if (filters.from !== undefined) {
+      time.$gte = filters.from;
+    }
+
+    if (filters.to !== undefined) {
+      time.$lte = filters.to;
+    }
+
+    query.time = time;
   }
 
-  return clauses.length === 0
-    ? {}
-    : {
-        $and: clauses,
-      };
+  return query as Filter<NormalizedEventDocument>;
 }
 
 function validateNormalizedEvent(input: CreateNormalizedEventInput): void {
@@ -248,4 +240,105 @@ function toMongoPage<TRecord>(
     offset,
     hasMore: rows.length > limit,
   };
+}
+function toMongoNormalizedEventDocument(
+  input: CreateNormalizedEventInput,
+): MongoInsertDocument {
+  return removeUndefined({
+    ...input,
+    class_uid: toMongoInt(input.class_uid, "class_uid"),
+    category_uid: toMongoInt(input.category_uid, "category_uid"),
+    severity_id: toMongoInt(input.severity_id, "severity_id"),
+    src_endpoint:
+      input.src_endpoint === undefined
+        ? undefined
+        : toMongoEndpoint(input.src_endpoint, "src_endpoint"),
+    dst_endpoint:
+      input.dst_endpoint === undefined
+        ? undefined
+        : toMongoEndpoint(input.dst_endpoint, "dst_endpoint"),
+    actor: input.actor === undefined ? undefined : toMongoActor(input.actor),
+    enrichments:
+      input.enrichments === undefined
+        ? undefined
+        : toMongoEnrichments(input.enrichments),
+    ingestion: {
+      ...input.ingestion,
+      pipeline_duration_ms:
+        input.ingestion.pipeline_duration_ms === undefined
+          ? undefined
+          : toMongoInt(
+              input.ingestion.pipeline_duration_ms,
+              "ingestion.pipeline_duration_ms",
+            ),
+    },
+  });
+}
+
+function toMongoEndpoint(
+  endpoint: NonNullable<CreateNormalizedEventInput["src_endpoint"]>,
+  fieldName: string,
+): Record<string, unknown> {
+  return removeUndefined({
+    ...endpoint,
+    port:
+      endpoint.port === undefined
+        ? undefined
+        : toMongoInt(endpoint.port, `${fieldName}.port`),
+  });
+}
+
+function toMongoActor(
+  actor: NonNullable<CreateNormalizedEventInput["actor"]>,
+): Record<string, unknown> {
+  return removeUndefined({
+    ...actor,
+    process:
+      actor.process === undefined
+        ? undefined
+        : {
+            ...actor.process,
+            pid:
+              actor.process.pid === undefined
+                ? undefined
+                : toMongoInt(actor.process.pid, "actor.process.pid"),
+          },
+  });
+}
+
+function toMongoEnrichments(
+  enrichments: Record<string, unknown>,
+): Record<string, unknown> {
+  return removeUndefined({
+    ...enrichments,
+    asset_criticality:
+      typeof enrichments.asset_criticality === "number"
+        ? toMongoDouble(
+            enrichments.asset_criticality,
+            "enrichments.asset_criticality",
+          )
+        : enrichments.asset_criticality,
+    geo_src: toMongoGeo(enrichments.geo_src, "enrichments.geo_src"),
+    geo_dst: toMongoGeo(enrichments.geo_dst, "enrichments.geo_dst"),
+  });
+}
+
+function toMongoGeo(value: unknown, fieldName: string): unknown {
+  if (value === null || typeof value !== "object" || Array.isArray(value)) {
+    return value;
+  }
+
+  const geo = value as Record<string, unknown>;
+
+  return removeUndefined({
+    ...geo,
+    latitude:
+      typeof geo.latitude === "number"
+        ? toMongoDouble(geo.latitude, `${fieldName}.latitude`)
+        : geo.latitude,
+    longitude:
+      typeof geo.longitude === "number"
+        ? toMongoDouble(geo.longitude, `${fieldName}.longitude`)
+        : geo.longitude,
+  });
 }

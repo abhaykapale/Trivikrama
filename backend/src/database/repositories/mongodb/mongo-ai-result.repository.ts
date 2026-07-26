@@ -1,5 +1,13 @@
 import type { Collection, Filter, Sort } from "mongodb";
 
+import {
+  removeUndefined,
+  toMongoDouble,
+  toMongoInt,
+  type MongoInsertDocument,
+} from "./mongo-document.helpers.js";
+
+
 import type { MongoDbClient } from "../../mongodb/client.js";
 import {
   assertNonNegativeInteger,
@@ -19,16 +27,20 @@ import type {
 
 const COLLECTION_NAME = "ai_results";
 
+type MutableMongoFilter = Record<string, unknown>;
+
 export class MongoAiResultRepository implements IAiResultRepository {
   public constructor(private readonly client: MongoDbClient) {}
 
   public async create(input: CreateAiResultInput): Promise<AiResultDocument> {
     validateAiResult(input);
-    await this.collection().insertOne(input);
+    await this.collection().insertOne(toMongoAiResultDocument(input) as never);
     return input;
   }
 
-  public async createMany(inputs: readonly CreateAiResultInput[]): Promise<number> {
+  public async createMany(
+    inputs: readonly CreateAiResultInput[],
+  ): Promise<number> {
     if (inputs.length === 0) {
       return 0;
     }
@@ -37,9 +49,12 @@ export class MongoAiResultRepository implements IAiResultRepository {
       validateAiResult(input);
     }
 
-    const result = await this.collection().insertMany([...inputs], {
-      ordered: false,
-    });
+    const result = await this.collection().insertMany(
+      inputs.map((input) => toMongoAiResultDocument(input)) as never,
+      {
+        ordered: false,
+      },
+    );
     return result.insertedCount;
   }
 
@@ -83,7 +98,10 @@ export class MongoAiResultRepository implements IAiResultRepository {
     batchId: string,
     options?: MongoPaginationOptions,
   ): Promise<MongoPageResult<AiResultDocument>> {
-    return this.list({ ...options, batchId: requireNonBlank(batchId, "batchId") });
+    return this.list({
+      ...options,
+      batchId: requireNonBlank(batchId, "batchId"),
+    });
   }
 
   private collection(): Collection<AiResultDocument> {
@@ -96,77 +114,59 @@ export class MongoAiResultRepository implements IAiResultRepository {
 function buildAiResultFilter(
   filters: AiResultListFilters,
 ): Filter<AiResultDocument> {
-  const clauses: Filter<AiResultDocument>[] = [];
+  const query: MutableMongoFilter = {};
 
   if (filters.orgId !== undefined) {
-    clauses.push({
-      org_id: requireNonBlank(filters.orgId, "orgId"),
-    });
+    query.org_id = requireNonBlank(filters.orgId, "orgId");
   }
 
   if (filters.eventId !== undefined) {
-    clauses.push({
-      event_id: requireNonBlank(filters.eventId, "eventId"),
-    });
+    query.event_id = requireNonBlank(filters.eventId, "eventId");
   }
 
   if (filters.batchId !== undefined) {
-    clauses.push({
-      batch_id: requireNonBlank(filters.batchId, "batchId"),
-    });
+    query.batch_id = requireNonBlank(filters.batchId, "batchId");
   }
 
   if (filters.modelName !== undefined) {
-    clauses.push({
-      model_name: requireNonBlank(filters.modelName, "modelName"),
-    });
+    query.model_name = requireNonBlank(filters.modelName, "modelName");
   }
 
   if (filters.modelVersion !== undefined) {
-    clauses.push({
-      model_version: requireNonBlank(filters.modelVersion, "modelVersion"),
-    });
+    query.model_version = requireNonBlank(filters.modelVersion, "modelVersion");
   }
 
   if (filters.isAnomaly !== undefined) {
-    clauses.push({
-      is_anomaly: filters.isAnomaly,
-    });
+    query.is_anomaly = filters.isAnomaly;
   }
 
   if (filters.minAnomalyScore !== undefined) {
     assertNumberRange(filters.minAnomalyScore, "minAnomalyScore", 0, 1);
-
-    clauses.push({
-      anomaly_score: {
-        $gte: filters.minAnomalyScore,
-      },
-    });
+    query.anomaly_score = { $gte: filters.minAnomalyScore };
   }
 
   if (filters.threatCategory !== undefined) {
-    clauses.push({
-      threat_category: requireNonBlank(
-        filters.threatCategory,
-        "threatCategory",
-      ),
-    });
+    query.threat_category = requireNonBlank(
+      filters.threatCategory,
+      "threatCategory",
+    );
   }
 
   if (filters.from !== undefined || filters.to !== undefined) {
-    clauses.push({
-      created_at: {
-        ...(filters.from !== undefined ? { $gte: filters.from } : {}),
-        ...(filters.to !== undefined ? { $lte: filters.to } : {}),
-      },
-    });
+    const createdAt: Record<string, Date> = {};
+
+    if (filters.from !== undefined) {
+      createdAt.$gte = filters.from;
+    }
+
+    if (filters.to !== undefined) {
+      createdAt.$lte = filters.to;
+    }
+
+    query.created_at = createdAt;
   }
 
-  return clauses.length === 0
-    ? {}
-    : {
-        $and: clauses,
-      };
+  return query as Filter<AiResultDocument>;
 }
 
 function validateAiResult(input: CreateAiResultInput): void {
@@ -199,4 +199,49 @@ function toMongoPage<TRecord>(
     offset,
     hasMore: rows.length > limit,
   };
+}
+
+function toMongoAiResultDocument(
+  input: CreateAiResultInput,
+): MongoInsertDocument {
+  return removeUndefined({
+    ...input,
+    anomaly_score: toMongoDouble(input.anomaly_score, "anomaly_score"),
+    confidence:
+      input.confidence === undefined
+        ? undefined
+        : toMongoDouble(input.confidence, "confidence"),
+    threat_confidence:
+      input.threat_confidence === undefined
+        ? undefined
+        : toMongoDouble(input.threat_confidence, "threat_confidence"),
+    shap_explanation:
+      input.shap_explanation === undefined
+        ? undefined
+        : {
+            ...input.shap_explanation,
+            base_value:
+              input.shap_explanation.base_value === undefined
+                ? undefined
+                : toMongoDouble(
+                    input.shap_explanation.base_value,
+                    "shap_explanation.base_value",
+                  ),
+            features: input.shap_explanation.features?.map((feature) => ({
+              ...feature,
+              value: toMongoDouble(
+                feature.value,
+                `shap_explanation.features.${feature.name}.value`,
+              ),
+              shap_value: toMongoDouble(
+                feature.shap_value,
+                `shap_explanation.features.${feature.name}.shap_value`,
+              ),
+            })),
+          },
+    processing_time_ms:
+      input.processing_time_ms === undefined
+        ? undefined
+        : toMongoInt(input.processing_time_ms, "processing_time_ms"),
+  });
 }

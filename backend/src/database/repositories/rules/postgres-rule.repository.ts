@@ -4,6 +4,7 @@ import {
   ensureNonBlank,
   pageByLimitOffset,
   parseJsonArray,
+  toJsonb,
   toRequiredDate,
   type PageResult,
   type QueryExecutor,
@@ -135,9 +136,9 @@ export class PostgresRuleRepository implements IRuleRepository {
       compiled_hash: input.compiledHash ?? null,
       class_uid: input.classUid ?? null,
       category_uid: input.categoryUid ?? null,
-      tags: input.tags ?? [],
-      false_positives: input.falsePositives ?? [],
-      rule_references: input.ruleReferences ?? [],
+      tags: toJsonb(input.tags ?? []),
+      false_positives: toJsonb(input.falsePositives ?? []),
+      rule_references: toJsonb(input.ruleReferences ?? []),
       version: input.version ?? 1,
       is_builtin: input.isBuiltin ?? false,
       created_by: input.createdBy ?? null,
@@ -194,15 +195,15 @@ export class PostgresRuleRepository implements IRuleRepository {
     }
 
     if (input.tags !== undefined) {
-      patch.tags = input.tags;
+      patch.tags = toJsonb(input.tags);
     }
 
     if (input.falsePositives !== undefined) {
-      patch.false_positives = input.falsePositives;
+      patch.false_positives = toJsonb(input.falsePositives);
     }
 
     if (input.ruleReferences !== undefined) {
-      patch.rule_references = input.ruleReferences;
+      patch.rule_references = toJsonb(input.ruleReferences);
     }
 
     if (input.version !== undefined) {

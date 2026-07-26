@@ -3,6 +3,7 @@ import {
   pageByLimitOffset,
   parseJsonArray,
   parseJsonObject,
+  toJsonb,
   toRequiredDate,
   type PageResult,
   type QueryExecutor,
@@ -55,8 +56,8 @@ export class PostgresAssetRepository implements IAssetRepository {
       criticality: input.criticality ?? 0.5,
       owner: input.owner ?? null,
       department: input.department ?? null,
-      tags: input.tags ?? [],
-      metadata: input.metadata ?? {},
+      tags: toJsonb(input.tags ?? []),
+      metadata: toJsonb(input.metadata ?? {}),
       is_active: input.isActive ?? true,
       org_id: input.orgId ? ensureNonBlank(input.orgId, "orgId") : DEFAULT_ORG_ID,
     };
@@ -143,8 +144,8 @@ export class PostgresAssetRepository implements IAssetRepository {
     }
     if (input.owner !== undefined) updates.owner = input.owner;
     if (input.department !== undefined) updates.department = input.department;
-    if (input.tags !== undefined) updates.tags = input.tags;
-    if (input.metadata !== undefined) updates.metadata = input.metadata;
+    if (input.tags !== undefined) updates.tags = toJsonb(input.tags);
+    if (input.metadata !== undefined) updates.metadata = toJsonb(input.metadata);
     if (input.isActive !== undefined) updates.is_active = input.isActive;
 
     if (Object.keys(updates).length === 0) {

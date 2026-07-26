@@ -5,6 +5,7 @@ import {
   pageByLimitOffset,
   parseJsonArray,
   parseJsonObject,
+  toJsonb,
   toNullableDate,
   toRequiredDate,
   type PageResult,
@@ -69,11 +70,11 @@ export class PostgresIncidentRepository implements IIncidentRepository {
       severity: input.severity ?? "medium",
       risk_score: input.riskScore ?? 0,
       source: input.source ?? "rule",
-      score_breakdown: input.scoreBreakdown ?? {},
+      score_breakdown: toJsonb(input.scoreBreakdown ?? {}),
       primary_entity: input.primaryEntity ?? null,
       entity_type: input.entityType ?? null,
-      entities: input.entities ?? [],
-      kill_chain_stages: input.killChainStages ?? [],
+      entities: toJsonb(input.entities ?? []),
+      kill_chain_stages: toJsonb(input.killChainStages ?? []),
       alert_count: input.alertCount ?? 0,
       event_count: input.eventCount ?? 0,
       assigned_to: input.assignedTo ?? null,
@@ -161,11 +162,11 @@ export class PostgresIncidentRepository implements IIncidentRepository {
       updates.risk_score = input.riskScore;
     }
     if (input.source !== undefined) updates.source = input.source;
-    if (input.scoreBreakdown !== undefined) updates.score_breakdown = input.scoreBreakdown;
+    if (input.scoreBreakdown !== undefined) updates.score_breakdown = toJsonb(input.scoreBreakdown);
     if (input.primaryEntity !== undefined) updates.primary_entity = input.primaryEntity;
     if (input.entityType !== undefined) updates.entity_type = input.entityType;
-    if (input.entities !== undefined) updates.entities = input.entities;
-    if (input.killChainStages !== undefined) updates.kill_chain_stages = input.killChainStages;
+    if (input.entities !== undefined) updates.entities = toJsonb(input.entities);
+    if (input.killChainStages !== undefined) updates.kill_chain_stages = toJsonb(input.killChainStages);
     if (input.alertCount !== undefined) {
       validateNonNegativeInteger(input.alertCount, "alertCount");
       updates.alert_count = input.alertCount;

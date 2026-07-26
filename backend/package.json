@@ -25,7 +25,8 @@
     "db:verify:status": "tsx src/scripts/db-verify.ts status",
     "db:verify": "tsx src/scripts/db-verify.ts verify",
     "db:verify:prod": "node dist/scripts/db-verify.js verify",
-    "db:transaction:smoke": "tsx src/scripts/transaction-smoke.ts"
+    "db:transaction:smoke": "tsx src/scripts/transaction-smoke.ts",
+    "test:repositories:integration": "tsx tests/integration/repositories/run-repository-integration-tests.ts"
   },
   "keywords": [],
   "author": "",

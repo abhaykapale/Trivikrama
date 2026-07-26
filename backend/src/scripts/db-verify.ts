@@ -1,6 +1,7 @@
 import { loadDatabaseVerificationConfig } from "../config/database-verification.env.js";
 import { runFullDatabaseVerification } from "../database/verification/database-verifier.js";
 import type { DatabaseVerificationCommand } from "../database/verification/verification.types.js";
+import logger from "../shared/logger/index.js";
 
 const VALID_COMMANDS = new Set<DatabaseVerificationCommand>(["status", "verify"]);
 
@@ -34,7 +35,7 @@ function parseCommand(value: string | undefined): DatabaseVerificationCommand {
 main().catch((error: unknown) => {
   const message = error instanceof Error ? error.message : String(error);
 
-  console.error(
+  logger.error(
     JSON.stringify(
       {
         success: false,

@@ -1,6 +1,7 @@
 import { loadRedisToolsConfig } from "../config/redis-tools.env.js";
 import { runRedisVerification } from "../database/redis/verification.js";
 import type { RedisVerificationCommand } from "../database/redis/verification.types.js";
+import logger from "../shared/logger/index.js";
 
 const VALID_COMMANDS = new Set<RedisVerificationCommand>(["status", "verify"]);
 
@@ -45,7 +46,7 @@ function parseCommand(value: string | undefined): RedisVerificationCommand {
 main().catch((error: unknown) => {
   const message = error instanceof Error ? error.message : String(error);
 
-  console.error(
+  logger.error(
     JSON.stringify(
       {
         success: false,

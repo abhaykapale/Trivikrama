@@ -4,6 +4,7 @@ import {
   ensureNonBlank,
   pageByLimitOffset,
   parseJsonObject,
+  toJsonb,
   toNullableDate,
   toRequiredDate,
   type PageResult,
@@ -57,9 +58,9 @@ export class PostgresAuditRepository implements IAuditRepository {
       target_type: input.targetType ?? null,
       target_id: input.targetId ?? null,
       target_name: input.targetName ?? null,
-      details: input.details ?? {},
-      previous_state: input.previousState ?? null,
-      new_state: input.newState ?? null,
+      details: toJsonb(input.details ?? {}),
+      previous_state: input.previousState === undefined || input.previousState === null ? null : toJsonb(input.previousState),
+      new_state: input.newState === undefined || input.newState === null ? null : toJsonb(input.newState),
       org_id: input.orgId ? ensureNonBlank(input.orgId, "orgId") : DEFAULT_ORG_ID,
     };
 

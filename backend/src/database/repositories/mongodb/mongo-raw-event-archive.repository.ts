@@ -1,5 +1,10 @@
 import type { Collection, Filter, Sort } from "mongodb";
 
+import {
+  removeUndefined,
+  toMongoInt,
+  type MongoInsertDocument,
+} from "./mongo-document.helpers.js";
 import type { MongoDbClient } from "../../mongodb/client.js";
 import {
   assertNonNegativeInteger,
@@ -18,6 +23,8 @@ import type {
 
 const COLLECTION_NAME = "raw_events_archive";
 
+type MutableMongoFilter = Record<string, unknown>;
+
 export class MongoRawEventArchiveRepository implements IRawEventArchiveRepository {
   public constructor(private readonly client: MongoDbClient) {}
 
@@ -25,14 +32,18 @@ export class MongoRawEventArchiveRepository implements IRawEventArchiveRepositor
     input: CreateRawEventArchiveInput,
   ): Promise<RawEventArchiveDocument> {
     validateRawArchive(input);
-    await this.collection().insertOne(input);
+    await this.collection().insertOne(
+      toMongoRawEventArchiveDocument(input) as never,
+    );
     return input;
   }
 
   public async findByBatchId(
     batchId: string,
   ): Promise<RawEventArchiveDocument | null> {
-    return this.collection().findOne({ batch_id: requireNonBlank(batchId, "batchId") });
+    return this.collection().findOne({
+      batch_id: requireNonBlank(batchId, "batchId"),
+    });
   }
 
   public async list(
@@ -66,51 +77,40 @@ export class MongoRawEventArchiveRepository implements IRawEventArchiveRepositor
   }
 
   private collection(): Collection<RawEventArchiveDocument> {
-    return requireMongoDatabase(this.client).collection<RawEventArchiveDocument>(
-      COLLECTION_NAME,
-    );
+    return requireMongoDatabase(
+      this.client,
+    ).collection<RawEventArchiveDocument>(COLLECTION_NAME);
   }
 }
 
 function buildRawArchiveFilter(
   filters: RawEventArchiveListFilters,
 ): Filter<RawEventArchiveDocument> {
-  const clauses: Filter<RawEventArchiveDocument>[] = [];
+  const query: MutableMongoFilter = {};
 
   if (filters.orgId !== undefined) {
-    clauses.push({
-      org_id: requireNonBlank(filters.orgId, "orgId"),
-    });
+    query.org_id = requireNonBlank(filters.orgId, "orgId");
   }
 
   if (filters.collectorId !== undefined) {
-    clauses.push({
-      collector_id: requireNonBlank(filters.collectorId, "collectorId"),
-    });
-  }
-
-  if (
-    filters.from !== undefined &&
-    filters.to !== undefined &&
-    filters.from > filters.to
-  ) {
-    throw new Error("from must be earlier than or equal to to");
+    query.collector_id = requireNonBlank(filters.collectorId, "collectorId");
   }
 
   if (filters.from !== undefined || filters.to !== undefined) {
-    clauses.push({
-      archived_at: {
-        ...(filters.from !== undefined ? { $gte: filters.from } : {}),
-        ...(filters.to !== undefined ? { $lte: filters.to } : {}),
-      },
-    });
+    const archivedAt: Record<string, Date> = {};
+
+    if (filters.from !== undefined) {
+      archivedAt.$gte = filters.from;
+    }
+
+    if (filters.to !== undefined) {
+      archivedAt.$lte = filters.to;
+    }
+
+    query.archived_at = archivedAt;
   }
 
-  return clauses.length === 0
-    ? {}
-    : {
-        $and: clauses,
-      };
+  return query as Filter<RawEventArchiveDocument>;
 }
 
 function validateRawArchive(input: CreateRawEventArchiveInput): void {
@@ -141,4 +141,21 @@ function toMongoPage<TRecord>(
     offset,
     hasMore: rows.length > limit,
   };
+}
+
+
+function toMongoRawEventArchiveDocument(
+  input: CreateRawEventArchiveInput,
+): MongoInsertDocument {
+  return removeUndefined({
+    ...input,
+    event_count:
+      input.event_count === undefined
+        ? undefined
+        : toMongoInt(input.event_count, "event_count"),
+    file_size_bytes:
+      input.file_size_bytes === undefined
+        ? undefined
+        : toMongoInt(input.file_size_bytes, "file_size_bytes"),
+  });
 }

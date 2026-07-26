@@ -98,3 +98,7 @@ export function parseJsonObject(value: unknown): Record<string, unknown> {
 
   return {};
 }
+
+export function toJsonb(value: unknown): string {
+  return JSON.stringify(value ?? null);
+}

@@ -4,6 +4,7 @@ import {
   createPostgresClient,
   createPostgresUnitOfWork,
 } from "../database/index.js";
+import logger from "../shared/logger/index.js";
 
 async function main(): Promise<void> {
   const postgres = createPostgresClient({
@@ -78,7 +79,7 @@ async function main(): Promise<void> {
 }
 
 main().catch((error: unknown) => {
-  console.error(
+  logger.error(
     JSON.stringify(
       {
         success: false,

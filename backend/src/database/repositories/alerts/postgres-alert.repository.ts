@@ -3,6 +3,7 @@ import {
   pageByLimitOffset,
   parseJsonArray,
   parseJsonObject,
+  toJsonb,
   toRequiredDate,
   type PageResult,
   type PaginationOptions,
@@ -129,15 +130,15 @@ export class PostgresAlertRepository implements IAlertRepository {
     }
     if (input.threatCategory !== undefined) updates.threat_category = input.threatCategory;
     if (input.modelVersion !== undefined) updates.model_version = input.modelVersion;
-    if (input.shapValues !== undefined) updates.shap_values = input.shapValues;
+    if (input.shapValues !== undefined) updates.shap_values = input.shapValues === null ? null : toJsonb(input.shapValues);
     if (input.severity !== undefined) updates.severity = input.severity;
     if (input.weight !== undefined) {
       validateProbability(input.weight, "weight", false);
       updates.weight = input.weight;
     }
-    if (input.tags !== undefined) updates.tags = input.tags;
-    if (input.metadata !== undefined) updates.metadata = input.metadata;
-    if (input.matchedEventIds !== undefined) updates.matched_event_ids = input.matchedEventIds;
+    if (input.tags !== undefined) updates.tags = toJsonb(input.tags);
+    if (input.metadata !== undefined) updates.metadata = toJsonb(input.metadata);
+    if (input.matchedEventIds !== undefined) updates.matched_event_ids = toJsonb(input.matchedEventIds);
 
     if (Object.keys(updates).length === 0) {
       return this.findById(id);
@@ -172,12 +173,12 @@ function toInsertableAlert(input: CreateAlertInput): Record<string, unknown> {
     confidence: input.confidence ?? null,
     threat_category: input.threatCategory ?? null,
     model_version: input.modelVersion ?? null,
-    shap_values: input.shapValues ?? null,
+    shap_values: input.shapValues === undefined || input.shapValues === null ? null : toJsonb(input.shapValues),
     severity: input.severity ?? "medium",
     weight: input.weight ?? 0.5,
-    tags: input.tags ?? [],
-    metadata: input.metadata ?? {},
-    matched_event_ids: input.matchedEventIds ?? [],
+    tags: toJsonb(input.tags ?? []),
+    metadata: toJsonb(input.metadata ?? {}),
+    matched_event_ids: toJsonb(input.matchedEventIds ?? []),
     org_id: input.orgId ? ensureNonBlank(input.orgId, "orgId") : DEFAULT_ORG_ID,
   };
 }
