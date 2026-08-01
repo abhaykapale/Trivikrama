@@ -1,4 +1,11 @@
 import type { Knex } from "knex";
+import type {
+  IClock,
+  IIdGenerator,
+  IJwtService,
+  IPasswordService,
+  ISessionValidator,
+} from "../domain/auth.contracts.js";
 import { BcryptPasswordService } from "../infrastructure/password/bcrypt-password.service.js";
 import { JwtService } from "../infrastructure/token/jwt.service.js";
 import { SystemClock } from "../infrastructure/time/system-clock.js";
@@ -7,11 +14,11 @@ import { PostgresSessionValidator } from "../infrastructure/session/postgres-ses
 import { redactAuthSecrets } from "../infrastructure/redaction/auth-redaction.js";
 
 export interface AuthInfrastructureDependencies {
-  readonly passwordService: BcryptPasswordService;
-  readonly jwtService: JwtService;
-  readonly clock: SystemClock;
-  readonly idGenerator: UuidIdGenerator;
-  readonly sessionValidator: PostgresSessionValidator;
+  readonly passwordService: IPasswordService;
+  readonly jwtService: IJwtService;
+  readonly clock: IClock;
+  readonly idGenerator: IIdGenerator;
+  readonly sessionValidator: ISessionValidator;
   readonly redactAuthSecrets: typeof redactAuthSecrets;
 }
 
@@ -26,10 +33,6 @@ export function buildAuthInfrastructureDependencies(
   const env = input.env ?? process.env;
   const clock = new SystemClock();
   const bcryptRounds = parseRequiredInteger(env.BCRYPT_SALT_ROUNDS ?? "12", "BCRYPT_SALT_ROUNDS");
-
-  if (bcryptRounds !== 12) {
-    throw new Error("BCRYPT_SALT_ROUNDS must be 12 for BE-01B.");
-  }
 
   const jwtSecret = env.JWT_SECRET;
   if (!jwtSecret) {

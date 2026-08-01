@@ -56,16 +56,16 @@ const tests: TestCase[] = [
   },
   {
     name: "jwt signs HS256 token and preserves required claims",
-    run: () => {
+    run: async () => {
       fixedClock.set(new Date("2026-08-01T00:00:00.000Z"));
       const service = new JwtService({ secret: JWT_SECRET, clock: fixedClock });
-      const result = service.sign({
+      const result = service.signToken({
         userId: "6f22569d-657b-4737-bc38-2164556a1b4c",
         username: "analyst1",
         role: "soc_analyst",
         jwtId: "session-jti-1",
       });
-      const claims = service.verify(result.token);
+      const claims = await service.verify(result.token);
 
       assert.equal(claims.sub, "6f22569d-657b-4737-bc38-2164556a1b4c");
       assert.equal(claims.username, "analyst1");
@@ -78,10 +78,10 @@ const tests: TestCase[] = [
   },
   {
     name: "jwt rejects invalid token",
-    run: () => {
+    run: async () => {
       const service = new JwtService({ secret: JWT_SECRET, clock: fixedClock });
 
-      assert.throws(
+      await assert.rejects(
         () => service.verify("not-a-jwt"),
         (error) => error instanceof JwtVerificationError && error.code === "TOKEN_INVALID",
       );
@@ -89,10 +89,10 @@ const tests: TestCase[] = [
   },
   {
     name: "jwt rejects expired token",
-    run: () => {
+    run: async () => {
       fixedClock.set(new Date("2026-08-01T00:00:00.000Z"));
       const service = new JwtService({ secret: JWT_SECRET, clock: fixedClock });
-      const { token } = service.sign({
+      const { token } = service.signToken({
         userId: "user-1",
         username: "analyst1",
         role: "soc_analyst",
@@ -101,7 +101,7 @@ const tests: TestCase[] = [
       });
 
       fixedClock.set(new Date("2026-08-01T00:00:02.000Z"));
-      assert.throws(
+      await assert.rejects(
         () => service.verify(token),
         (error) => error instanceof JwtVerificationError && error.code === "TOKEN_EXPIRED",
       );
@@ -109,7 +109,7 @@ const tests: TestCase[] = [
   },
   {
     name: "jwt rejects wrong issuer",
-    run: () => {
+    run: async () => {
       fixedClock.set(new Date("2026-08-01T00:00:00.000Z"));
       const issuingService = new JwtService({
         secret: JWT_SECRET,
@@ -121,14 +121,14 @@ const tests: TestCase[] = [
         issuer: "ai-siem",
         clock: fixedClock,
       });
-      const { token } = issuingService.sign({
+      const { token } = issuingService.signToken({
         userId: "user-1",
         username: "analyst1",
         role: "soc_analyst",
         jwtId: "wrong-issuer-jti",
       });
 
-      assert.throws(
+      await assert.rejects(
         () => verifyingService.verify(token),
         (error) => error instanceof JwtVerificationError && error.code === "TOKEN_WRONG_ISSUER",
       );
@@ -177,19 +177,23 @@ const tests: TestCase[] = [
       const clock = new FixedClock(new Date("2026-08-01T00:00:00.000Z"));
       const validator = new PostgresSessionValidator(fakeKnex, clock);
 
-      assert.deepEqual(await validator.validateSession("missing-jti"), {
-        valid: false,
-        reason: "not_found",
-      });
-      assert.equal((await validator.validateSession("active-jti")).valid, true);
-      assert.deepEqual(await validator.validateSession("revoked-jti"), {
-        valid: false,
-        reason: "revoked",
-      });
-      assert.deepEqual(await validator.validateSession("expired-jti"), {
-        valid: false,
-        reason: "expired",
-      });
+      const missingResult = await validator.validate("missing-jti");
+      assert.equal(missingResult.valid, false);
+      if (!missingResult.valid) {
+        assert.equal(missingResult.reason, "not_found");
+        assert.equal(missingResult.session, null);
+      }
+      assert.equal((await validator.validate("active-jti")).valid, true);
+      const revokedResult = await validator.validate("revoked-jti");
+      assert.equal(revokedResult.valid, false);
+      if (!revokedResult.valid) {
+        assert.equal(revokedResult.reason, "revoked");
+      }
+      const expiredResult = await validator.validate("expired-jti");
+      assert.equal(expiredResult.valid, false);
+      if (!expiredResult.valid) {
+        assert.equal(expiredResult.reason, "expired");
+      }
     },
   },
   {

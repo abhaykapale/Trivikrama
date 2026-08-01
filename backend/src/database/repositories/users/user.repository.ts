@@ -48,6 +48,7 @@ export interface UpdateUserInput {
   readonly isActive?: boolean;
   readonly failedLoginCount?: number;
   readonly lockedUntil?: Date | null;
+  readonly lastLoginAt?: Date | string | null;
 }
 
 export interface IUserRepository {
