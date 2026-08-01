@@ -38,19 +38,24 @@
     "db:maintenance:run": "tsx src/scripts/db-maintenance.ts run",
     "db:maintenance:prod": "node dist/scripts/db-maintenance.js run",
     "db:migrate": "tsx src/scripts/migrate.ts latest",
-    "typecheck:be01a-tests": "tsc -p tsconfig.be01a-tests.json"
+    "typecheck:be01a-tests": "tsc -p tsconfig.be01a-tests.json",
+    "test:auth:be01b": "tsx tests/unit/auth/be01b-auth-infrastructure.test.ts",
+    "test:auth:be01b:integration": "tsx tests/integration/auth/be01b-postgres-session-validator.integration.ts"
+
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "type": "commonjs",
   "dependencies": {
+    "bcrypt": "^6.0.0",
     "compression": "^1.8.1",
     "cors": "^2.8.6",
     "dotenv": "^17.4.2",
     "express": "^5.2.1",
     "helmet": "^8.3.0",
     "ioredis": "^5.11.1",
+    "jsonwebtoken": "^9.0.3",
     "knex": "^3.3.0",
     "mongoose": "^8.24.1",
     "pg": "^8.22.0",
@@ -59,8 +64,10 @@
     "zod": "^4.4.3"
   },
   "devDependencies": {
+    "@types/bcrypt": "^6.0.0",
     "@types/cors": "^2.8.19",
     "@types/express": "^5.0.6",
+    "@types/jsonwebtoken": "^9.0.10",
     "@types/node": "^26.1.2",
     "@types/pg": "^8.20.0",
     "@types/uuid": "^10.0.0",
