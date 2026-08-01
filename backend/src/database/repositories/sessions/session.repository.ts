@@ -1,4 +1,8 @@
-import type { PageResult, PaginationOptions, TransactionClient } from "../common/repository.types.js";
+import type {
+  PageResult,
+  PaginationOptions,
+  TransactionClient,
+} from "../common/repository.types.js";
 
 export interface SessionRecord {
   readonly id: string;
@@ -30,11 +34,24 @@ export interface SessionListFilters extends PaginationOptions {
 export interface ISessionRepository {
   withTransaction(transaction: TransactionClient): ISessionRepository;
   create(input: CreateSessionInput): Promise<SessionRecord>;
+  createSession(input: CreateSessionInput): Promise<SessionRecord>;
   findById(id: string): Promise<SessionRecord | null>;
   findByJwtId(jwtId: string): Promise<SessionRecord | null>;
+  findActiveByJwtId(
+    jwtId: string,
+    activeAt?: Date,
+  ): Promise<SessionRecord | null>;
   list(filters?: SessionListFilters): Promise<PageResult<SessionRecord>>;
   revokeById(id: string, revokedAt?: Date): Promise<SessionRecord | null>;
-  revokeByJwtId(jwtId: string, revokedAt?: Date): Promise<SessionRecord | null>;
+  revokeByJwtId(
+    jwtId: string,
+    revokedAt?: Date,
+  ): Promise<SessionRecord | null>;
+  rotateJwtId(
+    oldJwtId: string,
+    newJwtId: string,
+    activeAt?: Date,
+  ): Promise<SessionRecord | null>;
   revokeAllForUser(userId: string, revokedAt?: Date): Promise<number>;
   deleteExpired(expiredBefore?: Date): Promise<number>;
 }

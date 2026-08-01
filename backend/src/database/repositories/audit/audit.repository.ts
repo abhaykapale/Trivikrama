@@ -3,7 +3,9 @@ import type { UserRole } from "../users/user.repository.js";
 
 export type AuditAction =
   | "login"
+  | "login_failed"
   | "logout"
+  | "session_revoked"
   | "incident_create"
   | "incident_update"
   | "incident_status_change"

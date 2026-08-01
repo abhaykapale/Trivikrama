@@ -35,6 +35,14 @@ export class PostgresSessionRepository implements ISessionRepository {
   }
 
   public async create(input: CreateSessionInput): Promise<SessionRecord> {
+    return this.createSession(input);
+  }
+
+  public async createSession(
+    input: CreateSessionInput,
+  ): Promise<SessionRecord> {
+    assertValidDate(input.expiresAt, "expiresAt");
+
     const insertable = {
       ...(input.id ? { id: input.id } : {}),
       user_id: ensureNonBlank(input.userId, "userId"),
@@ -54,7 +62,25 @@ export class PostgresSessionRepository implements ISessionRepository {
   }
 
   public async findByJwtId(jwtId: string): Promise<SessionRecord | null> {
-    const row = await this.baseQuery().where("jwt_id", ensureNonBlank(jwtId, "jwtId")).first<SessionRow>();
+    const row = await this.baseQuery()
+      .where("jwt_id", ensureNonBlank(jwtId, "jwtId"))
+      .first<SessionRow>();
+
+    return row ? mapSessionRow(row) : null;
+  }
+
+  public async findActiveByJwtId(
+    jwtId: string,
+    activeAt = new Date(),
+  ): Promise<SessionRecord | null> {
+    assertValidDate(activeAt, "activeAt");
+
+    const row = await this.baseQuery()
+      .where("jwt_id", ensureNonBlank(jwtId, "jwtId"))
+      .whereNull("revoked_at")
+      .andWhere("expires_at", ">", activeAt)
+      .first<SessionRow>();
+
     return row ? mapSessionRow(row) : null;
   }
 
@@ -81,6 +107,8 @@ export class PostgresSessionRepository implements ISessionRepository {
   }
 
   public async revokeById(id: string, revokedAt = new Date()): Promise<SessionRecord | null> {
+    assertValidDate(revokedAt, "revokedAt");
+
     const [row] = await this.db<SessionRow>(SESSIONS_TABLE)
       .where("id", ensureNonBlank(id, "id"))
       .whereNull("revoked_at")
@@ -91,6 +119,8 @@ export class PostgresSessionRepository implements ISessionRepository {
   }
 
   public async revokeByJwtId(jwtId: string, revokedAt = new Date()): Promise<SessionRecord | null> {
+    assertValidDate(revokedAt, "revokedAt");
+
     const [row] = await this.db<SessionRow>(SESSIONS_TABLE)
       .where("jwt_id", ensureNonBlank(jwtId, "jwtId"))
       .whereNull("revoked_at")
@@ -100,7 +130,32 @@ export class PostgresSessionRepository implements ISessionRepository {
     return row ? mapSessionRow(row) : null;
   }
 
+  public async rotateJwtId(
+    oldJwtId: string,
+    newJwtId: string,
+    activeAt = new Date(),
+  ): Promise<SessionRecord | null> {
+    const normalizedOldJwtId = ensureNonBlank(oldJwtId, "oldJwtId");
+    const normalizedNewJwtId = ensureNonBlank(newJwtId, "newJwtId");
+    assertValidDate(activeAt, "activeAt");
+
+    if (normalizedOldJwtId === normalizedNewJwtId) {
+      throw new Error("newJwtId must differ from oldJwtId.");
+    }
+
+    const [row] = await this.db<SessionRow>(SESSIONS_TABLE)
+      .where("jwt_id", normalizedOldJwtId)
+      .whereNull("revoked_at")
+      .andWhere("expires_at", ">", activeAt)
+      .update({ jwt_id: normalizedNewJwtId })
+      .returning("*");
+
+    return row ? mapSessionRow(row) : null;
+  }
+
   public async revokeAllForUser(userId: string, revokedAt = new Date()): Promise<number> {
+    assertValidDate(revokedAt, "revokedAt");
+
     return this.db<SessionRow>(SESSIONS_TABLE)
       .where("user_id", ensureNonBlank(userId, "userId"))
       .whereNull("revoked_at")
@@ -108,6 +163,8 @@ export class PostgresSessionRepository implements ISessionRepository {
   }
 
   public async deleteExpired(expiredBefore = new Date()): Promise<number> {
+    assertValidDate(expiredBefore, "expiredBefore");
+
     return this.db<SessionRow>(SESSIONS_TABLE).where("expires_at", "<", expiredBefore).delete();
   }
 
@@ -127,4 +184,10 @@ function mapSessionRow(row: SessionRow): SessionRecord {
     createdAt: toRequiredDate(row.created_at),
     revokedAt: toNullableDate(row.revoked_at),
   };
+}
+
+function assertValidDate(value: Date, fieldName: string): void {
+  if (!(value instanceof Date) || Number.isNaN(value.getTime())) {
+    throw new Error(`${fieldName} must be a valid Date.`);
+  }
 }

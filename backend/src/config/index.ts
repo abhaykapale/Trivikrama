@@ -1,1 +1,2 @@
-export { default } from "./env";
+export { default } from "./env.js";
+export * from "./env.js";
