@@ -28,12 +28,15 @@ export interface TransactionContext {
   readonly attempt: number;
 }
 
-export interface UnitOfWork {
+export interface IUnitOfWork {
   execute<TResult>(
     operation: (context: TransactionContext) => Promise<TResult>,
     options?: TransactionOptions,
   ): Promise<TResult>;
 }
+
+/** Existing name retained for backward compatibility. */
+export type UnitOfWork = IUnitOfWork;
 
 export interface PostgresUnitOfWorkOptions {
   readonly defaultIsolationLevel?: TransactionIsolationLevel;

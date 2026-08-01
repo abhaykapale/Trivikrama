@@ -49,7 +49,17 @@ export class PostgresUserRepository implements IUserRepository {
     return row ? mapUserRow(row) : null;
   }
 
-  public async findByUsername(username: string, orgId = DEFAULT_ORG_ID): Promise<UserRecord | null> {
+  public async findByUsername(
+    username: string,
+    orgId = DEFAULT_ORG_ID,
+  ): Promise<UserRecord | null> {
+    return this.findByUsernameAndOrg(username, orgId);
+  }
+
+  public async findByUsernameAndOrg(
+    username: string,
+    orgId: string,
+  ): Promise<UserRecord | null> {
     const row = await this.baseQuery()
       .where("username", ensureNonBlank(username, "username"))
       .andWhere("org_id", ensureNonBlank(orgId, "orgId"))
@@ -157,9 +167,67 @@ export class PostgresUserRepository implements IUserRepository {
     return row ? mapUserRow(row) : null;
   }
 
-  public async recordSuccessfulLogin(id: string, loginAt = new Date()): Promise<UserRecord | null> {
+  public async incrementFailedLoginCount(
+    id: string,
+  ): Promise<UserRecord | null> {
     const [row] = await this.db<UserRow>(USERS_TABLE)
-      .where("id", id)
+      .where("id", ensureNonBlank(id, "id"))
+      .update({
+        failed_login_count: this.db.raw("failed_login_count + 1"),
+      })
+      .returning("*");
+
+    return row ? mapUserRow(row) : null;
+  }
+
+  public async resetLoginFailures(id: string): Promise<UserRecord | null> {
+    const [row] = await this.db<UserRow>(USERS_TABLE)
+      .where("id", ensureNonBlank(id, "id"))
+      .update({
+        failed_login_count: 0,
+        locked_until: null,
+      })
+      .returning("*");
+
+    return row ? mapUserRow(row) : null;
+  }
+
+  public async markLastLogin(
+    id: string,
+    loginAt = new Date(),
+  ): Promise<UserRecord | null> {
+    assertValidDate(loginAt, "loginAt");
+
+    const [row] = await this.db<UserRow>(USERS_TABLE)
+      .where("id", ensureNonBlank(id, "id"))
+      .update({ last_login_at: loginAt })
+      .returning("*");
+
+    return row ? mapUserRow(row) : null;
+  }
+
+  public async lockUserUntil(
+    id: string,
+    lockedUntil: Date,
+  ): Promise<UserRecord | null> {
+    assertValidDate(lockedUntil, "lockedUntil");
+
+    const [row] = await this.db<UserRow>(USERS_TABLE)
+      .where("id", ensureNonBlank(id, "id"))
+      .update({ locked_until: lockedUntil })
+      .returning("*");
+
+    return row ? mapUserRow(row) : null;
+  }
+
+  public async recordSuccessfulLogin(
+    id: string,
+    loginAt = new Date(),
+  ): Promise<UserRecord | null> {
+    assertValidDate(loginAt, "loginAt");
+
+    const [row] = await this.db<UserRow>(USERS_TABLE)
+      .where("id", ensureNonBlank(id, "id"))
       .update({
         last_login_at: loginAt,
         failed_login_count: 0,
@@ -179,10 +247,14 @@ export class PostgresUserRepository implements IUserRepository {
       throw new Error("failedLoginCount must be a non-negative integer.");
     }
 
+    if (lockedUntil !== null) {
+      assertValidDate(lockedUntil, "lockedUntil");
+    }
+
     const [row] = await this.db<UserRow>(USERS_TABLE)
-      .where("id", id)
+      .where("id", ensureNonBlank(id, "id"))
       .update({
-        failed_login_count: failedLoginCount,
+        failed_login_count: this.db.raw("failed_login_count + 1"),
         locked_until: lockedUntil,
       })
       .returning("*");
@@ -215,4 +287,10 @@ function mapUserRow(row: UserRow): UserRecord {
     updatedAt: toRequiredDate(row.updated_at),
     orgId: row.org_id,
   };
+}
+
+function assertValidDate(value: Date, fieldName: string): void {
+  if (!(value instanceof Date) || Number.isNaN(value.getTime())) {
+    throw new Error(`${fieldName} must be a valid Date.`);
+  }
 }

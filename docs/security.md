@@ -139,8 +139,7 @@ stateDiagram-v2
 | `jwt.cookie_sameSite` | `Strict` | No cross-site sending |
 
 ### 1.5 Server-Side Session Tracking
-
-Every JWT is tracked server-side in the `sessions` table. This enables:
+very JWT is tracked server-side in the `sessions` table. This enables:
 
 | Feature | Mechanism |
 |---|---|

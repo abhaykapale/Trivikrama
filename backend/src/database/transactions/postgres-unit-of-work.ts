@@ -11,7 +11,7 @@ import type {
   TransactionIsolationLevel,
   TransactionOptions,
   TransactionRetryOptions,
-  UnitOfWork,
+  IUnitOfWork,
 } from "./transaction.types.js";
 
 const DEFAULT_MAX_ATTEMPTS = 3;
@@ -25,7 +25,7 @@ const ISOLATION_LEVEL_SQL: Record<TransactionIsolationLevel, string> = {
   serializable: "SERIALIZABLE",
 };
 
-export class PostgresUnitOfWork implements UnitOfWork {
+export class PostgresUnitOfWork implements IUnitOfWork {
   constructor(
     private readonly client: PostgresClient,
     private readonly defaults: PostgresUnitOfWorkOptions = {},

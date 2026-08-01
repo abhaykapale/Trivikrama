@@ -27,12 +27,18 @@
     "db:verify:prod": "node dist/scripts/db-verify.js verify",
     "db:transaction:smoke": "tsx src/scripts/transaction-smoke.ts",
     "test:repositories:integration": "tsx tests/integration/repositories/run-repository-integration-tests.ts",
+    "test:migration:be01a": "node tests/unit/migrations/be-01a-auth-compatibility-migration.test.cjs",
+    "test:auth-config": "tsx tests/unit/config/auth-config.test.ts",
+    "test:repositories:be01a": "tsx tests/integration/repositories/be-01a-auth-repository-capabilities.integration.ts",
+    "test:be01a:foundation": "npm run typecheck && npm run typecheck:be01a-tests && npm run test:migration:be01a && npm run test:auth-config",
     "db:maintenance:status": "tsx src/scripts/db-maintenance.ts status",
     "db:maintenance:partitions": "tsx src/scripts/db-maintenance.ts partitions",
     "db:maintenance:retention": "tsx src/scripts/db-maintenance.ts retention",
     "db:maintenance:vacuum": "tsx src/scripts/db-maintenance.ts vacuum",
     "db:maintenance:run": "tsx src/scripts/db-maintenance.ts run",
-    "db:maintenance:prod": "node dist/scripts/db-maintenance.js run"
+    "db:maintenance:prod": "node dist/scripts/db-maintenance.js run",
+    "db:migrate": "tsx src/scripts/migrate.ts latest",
+    "typecheck:be01a-tests": "tsc -p tsconfig.be01a-tests.json"
   },
   "keywords": [],
   "author": "",
@@ -55,7 +61,7 @@
   "devDependencies": {
     "@types/cors": "^2.8.19",
     "@types/express": "^5.0.6",
-    "@types/node": "^26.1.1",
+    "@types/node": "^26.1.2",
     "@types/pg": "^8.20.0",
     "@types/uuid": "^10.0.0",
     "ts-node-dev": "^2.0.0",

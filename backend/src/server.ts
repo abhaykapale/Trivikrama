@@ -18,7 +18,7 @@ const startServer = ({ healthService }: StartServerDependencies): Server => {
   const port = config.server.port;
 
   const server = app.listen(port, () => {
-    logger.info(`🚀 Server running on port ${port}`);
+    logger.info(` Server running on port ${port}`);
   });
 
   return server;
