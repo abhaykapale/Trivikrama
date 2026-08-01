@@ -155,6 +155,10 @@ export class PostgresUserRepository implements IUserRepository {
       patch.locked_until = input.lockedUntil;
     }
 
+    if (input.lastLoginAt !== undefined) {
+      patch.last_login_at = input.lastLoginAt;
+    }
+
     if (Object.keys(patch).length === 0) {
       return this.findById(id);
     }

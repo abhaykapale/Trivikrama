@@ -1,3 +1,21 @@
+/**
+ * Canonical error codes shared between the domain and application error
+ * hierarchies.  Both layers reference these values so they stay in sync.
+ */
+export const AUTH_ERROR_CODES = {
+  INVALID_CREDENTIALS: "INVALID_CREDENTIALS",
+  ACCOUNT_LOCKED: "ACCOUNT_LOCKED",
+  INVALID_TOKEN: "INVALID_TOKEN",
+  EXPIRED_TOKEN: "EXPIRED_TOKEN",
+  SESSION_EXPIRED: "SESSION_EXPIRED",
+  SESSION_REVOKED: "SESSION_REVOKED",
+  INACTIVE_USER: "INACTIVE_USER",
+  FORBIDDEN: "FORBIDDEN",
+  TOKEN_INVALID: "TOKEN_INVALID",
+  USER_INACTIVE: "USER_INACTIVE",
+  USER_NOT_FOUND: "USER_NOT_FOUND",
+} as const;
+
 export type AuthErrorCode =
   | "INVALID_CREDENTIALS"
   | "ACCOUNT_LOCKED"
@@ -6,7 +24,10 @@ export type AuthErrorCode =
   | "SESSION_EXPIRED"
   | "SESSION_REVOKED"
   | "INACTIVE_USER"
-  | "FORBIDDEN";
+  | "FORBIDDEN"
+  | "TOKEN_INVALID"
+  | "USER_INACTIVE"
+  | "USER_NOT_FOUND";
 
 export abstract class AuthError extends Error {
   protected constructor(

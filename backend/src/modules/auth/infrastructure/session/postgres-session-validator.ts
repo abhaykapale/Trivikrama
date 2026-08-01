@@ -1,8 +1,10 @@
 import type { Knex } from "knex";
 
-interface ClockLike {
-  now(): Date;
-}
+import type {
+  IClock,
+  ISessionValidator,
+} from "../../domain/auth.contracts.js";
+import type { SessionValidationResult } from "../../domain/auth.types.js";
 
 interface SessionRow {
   readonly id: string;
@@ -13,33 +15,15 @@ interface SessionRow {
   readonly revoked_at: Date | string | null;
 }
 
-export type SessionInvalidReason = "not_found" | "revoked" | "expired";
-
-export type SessionValidationResult =
-  | {
-      readonly valid: true;
-      readonly session: {
-        readonly id: string;
-        readonly userId: string;
-        readonly jwtId: string;
-        readonly expiresAt: Date;
-        readonly createdAt: Date;
-      };
-    }
-  | {
-      readonly valid: false;
-      readonly reason: SessionInvalidReason;
-    };
-
-export class PostgresSessionValidator {
+export class PostgresSessionValidator implements ISessionValidator {
   public constructor(
     private readonly knex: Knex,
-    private readonly clock: ClockLike,
+    private readonly clock: IClock,
   ) {}
 
-  public async validateSession(jwtId: string): Promise<SessionValidationResult> {
+  public async validate(jwtId: string): Promise<SessionValidationResult> {
     if (typeof jwtId !== "string" || jwtId.trim().length === 0) {
-      return { valid: false, reason: "not_found" };
+      return { valid: false, session: null, reason: "not_found" };
     }
 
     const row = await this.knex<SessionRow>("sessions")
@@ -48,29 +32,37 @@ export class PostgresSessionValidator {
       .first();
 
     if (!row) {
-      return { valid: false, reason: "not_found" };
+      return { valid: false, session: null, reason: "not_found" };
     }
 
+    const expiresAt = new Date(row.expires_at);
+
+    const session = {
+      jwtId: row.jwt_id,
+      userId: row.user_id,
+      expiresAt,
+      revokedAt: row.revoked_at !== null ? new Date(row.revoked_at) : null,
+    } as const;
+
     if (row.revoked_at !== null) {
-      return { valid: false, reason: "revoked" };
+      return { valid: false, session, reason: "revoked" };
     }
 
     const now = this.clock.now();
-    const expiresAt = new Date(row.expires_at);
 
     if (Number.isNaN(expiresAt.getTime()) || expiresAt.getTime() <= now.getTime()) {
-      return { valid: false, reason: "expired" };
+      return { valid: false, session, reason: "expired" };
     }
 
     return {
       valid: true,
-      session: {
-        id: row.id,
-        userId: row.user_id,
-        jwtId: row.jwt_id,
-        expiresAt,
-        createdAt: new Date(row.created_at),
-      },
+      session,
+      reason: null,
     };
+  }
+
+  /** @deprecated Use validate() instead. */
+  public async validateSession(jwtId: string): Promise<SessionValidationResult> {
+    return this.validate(jwtId);
   }
 }

@@ -1,8 +1,10 @@
 import * as bcrypt from "bcrypt";
 
+import type { IPasswordService } from "../../domain/auth.contracts.js";
+
 const DEFAULT_BCRYPT_ROUNDS = 12;
 
-export class BcryptPasswordService {
+export class BcryptPasswordService implements IPasswordService {
   public readonly rounds: number;
 
   public constructor(rounds = DEFAULT_BCRYPT_ROUNDS) {
@@ -13,7 +15,7 @@ export class BcryptPasswordService {
     this.rounds = rounds;
   }
 
-  public async hashPassword(plainPassword: string): Promise<string> {
+  public async hash(plainPassword: string): Promise<string> {
     if (typeof plainPassword !== "string" || plainPassword.length === 0) {
       throw new Error("Password must be a non-empty string.");
     }
@@ -21,7 +23,7 @@ export class BcryptPasswordService {
     return bcrypt.hash(plainPassword, this.rounds);
   }
 
-  public async verifyPassword(
+  public async verify(
     plainPassword: string,
     passwordHash: string,
   ): Promise<boolean> {
@@ -38,5 +40,18 @@ export class BcryptPasswordService {
     } catch {
       return false;
     }
+  }
+
+  /** @deprecated Use hash() instead. */
+  public async hashPassword(plainPassword: string): Promise<string> {
+    return this.hash(plainPassword);
+  }
+
+  /** @deprecated Use verify() instead. */
+  public async verifyPassword(
+    plainPassword: string,
+    passwordHash: string,
+  ): Promise<boolean> {
+    return this.verify(plainPassword, passwordHash);
   }
 }

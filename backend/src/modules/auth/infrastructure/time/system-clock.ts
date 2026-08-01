@@ -1,4 +1,6 @@
-export class SystemClock {
+import type { IClock } from "../../domain/auth.contracts.js";
+
+export class SystemClock implements IClock {
   public now(): Date {
     return new Date();
   }

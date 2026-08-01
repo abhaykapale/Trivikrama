@@ -1,17 +1,8 @@
 import * as jwt from "jsonwebtoken";
 import type { JwtPayload } from "jsonwebtoken";
 
-export type AuthRole = "admin" | "security_engineer" | "soc_analyst";
-
-export interface AuthJwtClaims {
-  readonly sub: string;
-  readonly username: string;
-  readonly role: AuthRole;
-  readonly jti: string;
-  readonly iat: number;
-  readonly exp: number;
-  readonly iss: string;
-}
+import type { IClock, IJwtService } from "../../domain/auth.contracts.js";
+import type { AuthRole, JwtClaims } from "../../domain/auth.types.js";
 
 export interface SignAuthTokenInput {
   readonly userId: string;
@@ -23,7 +14,7 @@ export interface SignAuthTokenInput {
 
 export interface SignAuthTokenResult {
   readonly token: string;
-  readonly claims: AuthJwtClaims;
+  readonly claims: JwtClaims;
   readonly expiresAt: Date;
 }
 
@@ -42,7 +33,7 @@ export class JwtVerificationError extends Error {
   }
 }
 
-interface ClockLike {
+interface JwtClockLike extends IClock {
   nowUnixSeconds(): number;
 }
 
@@ -50,18 +41,18 @@ export interface JwtServiceOptions {
   readonly secret: string;
   readonly issuer?: string;
   readonly accessTokenExpirySeconds?: number;
-  readonly clock: ClockLike;
+  readonly clock: JwtClockLike;
 }
 
 const DEFAULT_ISSUER = "ai-siem";
 const DEFAULT_ACCESS_TOKEN_EXPIRY_SECONDS = 60 * 60;
 const MIN_SECRET_LENGTH = 64;
 
-export class JwtService {
+export class JwtService implements IJwtService {
   private readonly secret: string;
   private readonly issuer: string;
   private readonly accessTokenExpirySeconds: number;
-  private readonly clock: ClockLike;
+  private readonly clock: JwtClockLike;
 
   public constructor(options: JwtServiceOptions) {
     if (!options.secret || options.secret.length < MIN_SECRET_LENGTH) {
@@ -82,35 +73,25 @@ export class JwtService {
     this.clock = options.clock;
   }
 
-  public sign(input: SignAuthTokenInput): SignAuthTokenResult {
-    const issuedAt = this.clock.nowUnixSeconds();
-    const expiresInSeconds = input.expiresInSeconds ?? this.accessTokenExpirySeconds;
-    const expiresAtUnix = issuedAt + expiresInSeconds;
-
-    const claims: AuthJwtClaims = {
-      sub: input.userId,
-      username: input.username,
-      role: input.role,
-      jti: input.jwtId,
-      iat: issuedAt,
-      exp: expiresAtUnix,
-      iss: this.issuer,
-    };
-
-    const token = jwt.sign(claims, this.secret, {
+  /**
+   * Satisfies the domain IJwtService.sign() contract.
+   * Delegates to signToken() and returns only the token string.
+   */
+  public async sign(claims: JwtClaims): Promise<string> {
+    const token = jwt.sign({ ...claims }, this.secret, {
       algorithm: "HS256",
-      header: { alg: 'HS256', typ: "JWT" },
+      header: { alg: "HS256", typ: "JWT" },
       mutatePayload: false,
     });
 
-    return {
-      token,
-      claims,
-      expiresAt: new Date(expiresAtUnix * 1000),
-    };
+    return token;
   }
 
-  public verify(token: string): AuthJwtClaims {
+  /**
+   * Satisfies the domain IJwtService.verify() contract.
+   * Returns a promise wrapping the synchronous jsonwebtoken verification.
+   */
+  public async verify(token: string): Promise<JwtClaims> {
     if (typeof token !== "string" || token.trim().length === 0) {
       throw new JwtVerificationError("TOKEN_INVALID", "JWT token is missing.");
     }
@@ -146,7 +127,40 @@ export class JwtService {
     }
   }
 
-  private validateClaims(decoded: string | JwtPayload): AuthJwtClaims {
+  /**
+   * Infrastructure-specific convenience method that produces a full
+   * SignAuthTokenResult (token + claims + expiresAt).  Used by the
+   * composition root and login flow.
+   */
+  public signToken(input: SignAuthTokenInput): SignAuthTokenResult {
+    const issuedAt = this.clock.nowUnixSeconds();
+    const expiresInSeconds = input.expiresInSeconds ?? this.accessTokenExpirySeconds;
+    const expiresAtUnix = issuedAt + expiresInSeconds;
+
+    const claims: JwtClaims = {
+      sub: input.userId,
+      username: input.username,
+      role: input.role,
+      jti: input.jwtId,
+      iat: issuedAt,
+      exp: expiresAtUnix,
+      iss: this.issuer,
+    };
+
+    const token = jwt.sign(claims, this.secret, {
+      algorithm: "HS256",
+      header: { alg: 'HS256', typ: "JWT" },
+      mutatePayload: false,
+    });
+
+    return {
+      token,
+      claims,
+      expiresAt: new Date(expiresAtUnix * 1000),
+    };
+  }
+
+  private validateClaims(decoded: string | JwtPayload): JwtClaims {
     if (typeof decoded !== "object" || decoded === null || Array.isArray(decoded)) {
       throw new JwtVerificationError("TOKEN_INVALID", "JWT payload must be an object.");
     }

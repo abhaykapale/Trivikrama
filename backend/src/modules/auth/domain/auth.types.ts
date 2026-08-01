@@ -1,6 +1,12 @@
-import type { UserRole } from "../../../database/repositories/users/index.js";
-
-export type AuthRole = UserRole;
+/**
+ * Auth domain role type.
+ *
+ * Defined independently of the database layer so the domain owns its own
+ * vocabulary.  The values intentionally match the database `UserRole` union
+ * so that database implementations satisfy the domain contract via structural
+ * typing — no adapter required.
+ */
+export type AuthRole = "admin" | "security_engineer" | "soc_analyst";
 
 export interface AuthRequestContext {
   readonly ipAddress: string | null;
@@ -55,7 +61,7 @@ export interface JwtClaims {
   readonly jti: string;
   readonly iat: number;
   readonly exp: number;
-  readonly iss: "ai-siem";
+  readonly iss: string;
 }
 
 export type SessionValidationFailureReason =
