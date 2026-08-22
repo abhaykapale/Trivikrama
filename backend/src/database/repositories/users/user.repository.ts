@@ -53,21 +53,31 @@ export interface UpdateUserInput {
 
 export interface IUserRepository {
   withTransaction(transaction: TransactionClient): IUserRepository;
+
   findById(id: string): Promise<UserRecord | null>;
+
   findByUsername(username: string, orgId?: string): Promise<UserRecord | null>;
+
   findByUsernameAndOrg(
     username: string,
     orgId: string,
   ): Promise<UserRecord | null>;
+
   findByEmail(email: string, orgId?: string): Promise<UserRecord | null>;
+
   list(filters?: UserListFilters): Promise<PageResult<UserRecord>>;
+
   create(input: CreateUserInput): Promise<UserRecord>;
+
   update(id: string, input: UpdateUserInput): Promise<UserRecord | null>;
 
   /** Atomically increments failed_login_count and returns the updated row. */
   incrementFailedLoginCount(id: string): Promise<UserRecord | null>;
+
   resetLoginFailures(id: string): Promise<UserRecord | null>;
+
   markLastLogin(id: string, loginAt?: Date): Promise<UserRecord | null>;
+  
   lockUserUntil(id: string, lockedUntil: Date): Promise<UserRecord | null>;
 
   /** Existing convenience operation retained for compatibility. */

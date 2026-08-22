@@ -1,10 +1,16 @@
 import type {
   IClock,
+  IIdGenerator,
   IJwtService,
+  ISessionRepository,
   ISessionValidator,
   IUserRepository,
 } from "../../domain/auth.contracts.js";
-import type { JwtClaims, SessionValidationResult } from "../../domain/auth.types.js";
+import type {
+  AuthRole,
+  JwtClaims,
+  SessionValidationResult,
+} from "../../domain/auth.types.js";
 import type {
   RefreshTokenRequestDto,
   RefreshTokenResponseDto,
@@ -18,18 +24,34 @@ import {
   UserInactiveError,
   UserNotFoundError,
 } from "../errors/index.js";
+import { AuthAuditService } from "../services/index.js";
 import { assertPositiveInteger, hasErrorCode, isRecord } from "../shared.js";
 
 export interface RefreshTokenUseCaseOptions {
   readonly accessTokenTtlSeconds: number;
   readonly refreshWindowSeconds?: number;
+  readonly maxSessionDurationSeconds?: number;
 }
 
 type RefreshUserRepository = Pick<IUserRepository, "findById">;
+type RefreshSessionRepository = Pick<
+  ISessionRepository,
+  "findByJwtId" | "rotateJwtId"
+>;
+
+export interface RefreshTokenUseCaseDependencies {
+  readonly sessionRepository?: RefreshSessionRepository;
+  readonly idGenerator?: IIdGenerator;
+  readonly authAuditService?: AuthAuditService;
+}
 
 export class RefreshTokenUseCase {
   private readonly accessTokenTtlSeconds: number;
   private readonly refreshWindowSeconds?: number;
+  private readonly maxSessionDurationSeconds?: number;
+  private readonly sessionRepository?: RefreshSessionRepository;
+  private readonly idGenerator?: IIdGenerator;
+  private readonly authAuditService?: AuthAuditService;
 
   public constructor(
     private readonly jwtService: IJwtService,
@@ -37,6 +59,7 @@ export class RefreshTokenUseCase {
     private readonly userRepository: RefreshUserRepository,
     private readonly clock: IClock,
     options: RefreshTokenUseCaseOptions,
+    dependencies: RefreshTokenUseCaseDependencies = {},
   ) {
     this.accessTokenTtlSeconds = assertPositiveInteger(
       options.accessTokenTtlSeconds,
@@ -46,47 +69,98 @@ export class RefreshTokenUseCase {
     this.refreshWindowSeconds =
       options.refreshWindowSeconds === undefined
         ? undefined
-        : assertPositiveInteger(options.refreshWindowSeconds, "refreshWindowSeconds");
+        : assertPositiveInteger(
+            options.refreshWindowSeconds,
+            "refreshWindowSeconds",
+          );
+    this.maxSessionDurationSeconds =
+      options.maxSessionDurationSeconds === undefined
+        ? undefined
+        : assertPositiveInteger(
+            options.maxSessionDurationSeconds,
+            "maxSessionDurationSeconds",
+          );
+    this.sessionRepository = dependencies.sessionRepository;
+    this.idGenerator = dependencies.idGenerator;
+    this.authAuditService = dependencies.authAuditService;
   }
 
   public async execute(
     input: RefreshTokenRequestDto,
   ): Promise<RefreshTokenResponseDto> {
-    const currentClaims = await this.verifyToken(input.token);
+    let currentClaims: JwtClaims | null = null;
+    let auditUser: AuditUser | null = null;
 
-    await this.validateSession(currentClaims.jti);
+    try {
+      currentClaims = await this.verifyToken(input.token);
 
-    const user = await this.userRepository.findById(currentClaims.sub);
+      await this.validateSession(currentClaims.jti);
 
-    if (user === null) {
-      throw new UserNotFoundError();
+      const user = await this.userRepository.findById(currentClaims.sub);
+
+      if (user === null) {
+        throw new UserNotFoundError();
+      }
+
+      if (!isUserActive(user)) {
+        throw new UserInactiveError();
+      }
+
+      auditUser = toAuditUser(user, currentClaims);
+      this.assertRefreshWindow(currentClaims);
+
+      const now = this.clock.now();
+      const nowUnixSeconds = Math.floor(now.getTime() / 1000);
+      const newJwtId = this.idGenerator?.generate() ?? currentClaims.jti;
+      const expiresAt = await this.calculateRefreshExpiry(
+        currentClaims.jti,
+        now,
+      );
+      const expiresAtUnixSeconds = Math.floor(expiresAt.getTime() / 1000);
+
+      if (newJwtId !== currentClaims.jti) {
+        await this.rotateSessionJwtId(
+          currentClaims.jti,
+          newJwtId,
+          now,
+          expiresAt,
+        );
+      }
+
+      const refreshedClaims: JwtClaims = {
+        sub: currentClaims.sub,
+        username: currentClaims.username,
+        role: currentClaims.role,
+        jti: newJwtId,
+        iat: nowUnixSeconds,
+        exp: expiresAtUnixSeconds,
+        iss: currentClaims.iss,
+      };
+
+      const token = await this.jwtService.sign(refreshedClaims);
+
+      await this.authAuditService?.recordRefreshSuccess({
+        user: auditUser,
+        ipAddress: input.ipAddress,
+        userAgent: input.userAgent,
+        orgId: getAuditOrgId(user),
+      });
+
+      return {
+        token,
+        expiresAt: expiresAt.toISOString(),
+      };
+    } catch (error: unknown) {
+      await this.authAuditService?.recordRefreshFailure({
+        reason: mapRefreshFailureReason(error),
+        user: auditUser,
+        ipAddress: input.ipAddress,
+        userAgent: input.userAgent,
+        orgId: currentClaims === null ? undefined : getClaimsOrgFallback(),
+      });
+
+      throw error;
     }
-
-    if (!isUserActive(user)) {
-      throw new UserInactiveError();
-    }
-
-    this.assertRefreshWindow(currentClaims);
-
-    const nowUnixSeconds = this.nowUnixSeconds();
-    const expiresAtUnixSeconds = nowUnixSeconds + this.accessTokenTtlSeconds;
-
-    const refreshedClaims: JwtClaims = {
-      sub: currentClaims.sub,
-      username: currentClaims.username,
-      role: currentClaims.role,
-      jti: currentClaims.jti,
-      iat: nowUnixSeconds,
-      exp: expiresAtUnixSeconds,
-      iss: currentClaims.iss,
-    };
-
-    const token = await this.jwtService.sign(refreshedClaims);
-
-    return {
-      token,
-      expiresAt: new Date(expiresAtUnixSeconds * 1000).toISOString(),
-    };
   }
 
   private async verifyToken(token: string): Promise<JwtClaims> {
@@ -135,6 +209,64 @@ export class RefreshTokenUseCase {
   private nowUnixSeconds(): number {
     return Math.floor(this.clock.now().getTime() / 1000);
   }
+
+  private async calculateRefreshExpiry(
+    currentJwtId: string,
+    now: Date,
+  ): Promise<Date> {
+    const requestedExpiry = addSeconds(now, this.accessTokenTtlSeconds);
+
+    if (
+      this.maxSessionDurationSeconds === undefined ||
+      this.sessionRepository === undefined
+    ) {
+      return requestedExpiry;
+    }
+
+    const currentSession =
+      await this.sessionRepository.findByJwtId(currentJwtId);
+
+    if (currentSession === null) {
+      throw new SessionExpiredError();
+    }
+
+    const maxSessionExpiry = addSeconds(
+      currentSession.createdAt,
+      this.maxSessionDurationSeconds,
+    );
+    const expiresAt =
+      requestedExpiry.getTime() <= maxSessionExpiry.getTime()
+        ? requestedExpiry
+        : maxSessionExpiry;
+
+    if (expiresAt.getTime() <= now.getTime()) {
+      throw new SessionExpiredError();
+    }
+
+    return expiresAt;
+  }
+
+  private async rotateSessionJwtId(
+    currentJwtId: string,
+    newJwtId: string,
+    now: Date,
+    expiresAt: Date,
+  ): Promise<void> {
+    if (this.sessionRepository === undefined) {
+      return;
+    }
+
+    const rotatedSession = await this.sessionRepository.rotateJwtId(
+      currentJwtId,
+      newJwtId,
+      now,
+      expiresAt,
+    );
+
+    if (rotatedSession === null) {
+      throw new SessionExpiredError();
+    }
+  }
 }
 
 function mapSessionValidationFailure(
@@ -169,4 +301,90 @@ function isUserActive(user: unknown): boolean {
   const isActive = user.isActive ?? user.is_active;
 
   return isActive !== false;
+}
+
+interface AuditUser {
+  readonly id: string;
+  readonly username: string;
+  readonly role: AuthRole;
+}
+
+function toAuditUser(user: unknown, claims: JwtClaims): AuditUser {
+  if (!isRecord(user)) {
+    return {
+      id: claims.sub,
+      username: claims.username,
+      role: claims.role,
+    };
+  }
+
+  return {
+    id: typeof user.id === "string" ? user.id : claims.sub,
+    username:
+      typeof user.username === "string" ? user.username : claims.username,
+    role: isAuthRole(user.role) ? user.role : claims.role,
+  };
+}
+
+function getAuditOrgId(user: unknown): string | undefined {
+  if (!isRecord(user)) {
+    return undefined;
+  }
+
+  return typeof user.orgId === "string" ? user.orgId : undefined;
+}
+
+function getClaimsOrgFallback(): undefined {
+  return undefined;
+}
+
+function mapRefreshFailureReason(
+  error: unknown,
+):
+  | "session_expired"
+  | "session_revoked"
+  | "token_invalid"
+  | "user_inactive"
+  | "user_not_found" {
+  if (
+    error instanceof AuthApplicationError &&
+    error.code === AUTH_APPLICATION_ERROR_CODES.SESSION_REVOKED
+  ) {
+    return "session_revoked";
+  }
+
+  if (
+    error instanceof AuthApplicationError &&
+    error.code === AUTH_APPLICATION_ERROR_CODES.USER_INACTIVE
+  ) {
+    return "user_inactive";
+  }
+
+  if (
+    error instanceof AuthApplicationError &&
+    error.code === AUTH_APPLICATION_ERROR_CODES.USER_NOT_FOUND
+  ) {
+    return "user_not_found";
+  }
+
+  if (
+    error instanceof AuthApplicationError &&
+    error.code === AUTH_APPLICATION_ERROR_CODES.TOKEN_INVALID
+  ) {
+    return "token_invalid";
+  }
+
+  return "session_expired";
+}
+
+function isAuthRole(value: unknown): value is AuthRole {
+  return (
+    value === "admin" ||
+    value === "security_engineer" ||
+    value === "soc_analyst"
+  );
+}
+
+function addSeconds(date: Date, seconds: number): Date {
+  return new Date(date.getTime() + seconds * 1000);
 }

@@ -43,14 +43,12 @@ export interface ISessionRepository {
   ): Promise<SessionRecord | null>;
   list(filters?: SessionListFilters): Promise<PageResult<SessionRecord>>;
   revokeById(id: string, revokedAt?: Date): Promise<SessionRecord | null>;
-  revokeByJwtId(
-    jwtId: string,
-    revokedAt?: Date,
-  ): Promise<SessionRecord | null>;
+  revokeByJwtId(jwtId: string, revokedAt?: Date): Promise<SessionRecord | null>;
   rotateJwtId(
     oldJwtId: string,
     newJwtId: string,
     activeAt?: Date,
+    expiresAt?: Date,
   ): Promise<SessionRecord | null>;
   revokeAllForUser(userId: string, revokedAt?: Date): Promise<number>;
   deleteExpired(expiredBefore?: Date): Promise<number>;

@@ -16,6 +16,7 @@ const DEFAULT_POOL_MIN = 0;
 const DEFAULT_POOL_MAX = 10;
 const DEFAULT_ACQUIRE_CONNECTION_TIMEOUT_MS = 5_000;
 
+
 /**
  * Creates the single Knex instance used by one backend process.
  *
@@ -23,6 +24,7 @@ const DEFAULT_ACQUIRE_CONNECTION_TIMEOUT_MS = 5_000;
  * pingPostgres(), which is why application startup must call that function
  * before the HTTP server starts accepting traffic.
  */
+
 export function createPostgresClient(
   options: PostgresClientOptions,
 ): PostgresClient {
@@ -51,7 +53,7 @@ export async function pingPostgres(client: PostgresClient): Promise<number> {
   const startedAt = performance.now();
 
   await client.raw("select 1 as health_check");
-
+  
   return Math.max(0, Math.round(performance.now() - startedAt));
 }
 
@@ -75,7 +77,7 @@ function validateOptions(options: PostgresClientOptions): void {
   }
 
   if (!Number.isInteger(max) || max < 1) {
-    throw new Error("PostgreSQL poolMax must be a positive integer");
+    throw new Error("PostgreSQL poolMax must be a positive integer and at least 1");
   }
 
   if (min > max) {

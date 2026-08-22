@@ -5,10 +5,16 @@ import logger from "./shared/logger";
 import startServer from "./server";
 import env from "./config/env.js";
 import { initializeDatabases } from "./database/index.js";
+import {
+  createPostgresRepositories,
+  createPostgresUnitOfWork,
+} from "./database/index.js";
 import HealthService from "./modules/health/health.service.js";
+import { createAuthApplicationDependencies } from "./modules/auth/composition/index.js";
 
 let server: Server | null = null;
 let isShuttingDown = false;
+
 
 const gracefulShutdown = (signal: NodeJS.Signals): void => {
   if (isShuttingDown) {
@@ -62,14 +68,33 @@ const bootstrap = async (): Promise<void> => {
     });
 
     const healthService = new HealthService(databaseClients);
+    const repositories = createPostgresRepositories(databaseClients.postgres);
+    const unitOfWork = createPostgresUnitOfWork(databaseClients.postgres);
+    const authApplicationDependencies = createAuthApplicationDependencies({
+      knex: databaseClients.postgres,
+      repositories: {
+        users: repositories.users,
+        sessions: repositories.sessions,
+        audit: repositories.audit,
+      },
+      appConfig: env,
+      unitOfWork,
+    });
 
     logger.info("Databases initialized successfully.");
 
     logger.info("Starting server...");
 
-
     server = startServer({
       healthService,
+      auth: {
+        authService: authApplicationDependencies.authService,
+        jwtService: authApplicationDependencies.jwtService,
+        sessionRepository: repositories.sessions,
+        userRepository: repositories.users,
+        redisClient: databaseClients.redis,
+        config: env,
+      },
     });
 
     registerSignalHandlers();

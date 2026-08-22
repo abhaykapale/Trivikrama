@@ -41,7 +41,8 @@
     "typecheck:be01a-tests": "tsc -p tsconfig.be01a-tests.json",
     "test:auth:be01b": "tsx tests/unit/auth/be01b-auth-infrastructure.test.ts",
     "test:auth:be01b:integration": "tsx tests/integration/auth/be01b-postgres-session-validator.integration.ts",
-    "test:auth:be01c": "node --import tsx tests/unit/auth/be01c-auth-application.test.ts && node --import tsx tests/unit/auth/be01c-auth-composition.test.ts"
+    "test:auth:be01c": "node --import tsx tests/unit/auth/be01c-auth-application.test.ts && node --import tsx tests/unit/auth/be01c-auth-composition.test.ts",
+    "test:auth:be01d": "node --import tsx tests/unit/auth/be01d-auth-verification.test.ts && node --import tsx tests/integration/auth/be01d-auth-http.test.ts"
   },
   "keywords": [],
   "author": "",

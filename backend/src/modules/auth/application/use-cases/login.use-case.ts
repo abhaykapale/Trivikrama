@@ -26,8 +26,6 @@ const DEFAULT_LOCKOUT_ATTEMPTS = 5;
 const DEFAULT_LOCKOUT_DURATION_MINUTES = 15;
 const JWT_ISSUER = "ai-siem";
 
-
-
 export interface LoginUseCaseOptions {
   readonly orgId?: string;
   readonly accessTokenTtlSeconds?: number;
@@ -37,8 +35,23 @@ export interface LoginUseCaseOptions {
 
 export type LoginUseCaseInput = LoginRequestDto;
 
-type LoginUserRepository = Pick<IUserRepository, "findByUsername" | "update">;
+type LoginUserRepository = Pick<IUserRepository, "findByUsername" | "update"> &
+  Partial<
+    Pick<
+      IUserRepository,
+      "incrementFailedLoginCount" | "lockUserUntil" | "recordSuccessfulLogin"
+    >
+  >;
 type LoginSessionRepository = Pick<ISessionRepository, "create">;
+
+export interface LoginUseCaseTransactionManager {
+  execute<TResult>(
+    operation: (repositories: {
+      readonly users: LoginUserRepository;
+      readonly sessions: LoginSessionRepository;
+    }) => Promise<TResult>,
+  ): Promise<TResult>;
+}
 
 interface LoginUserRecord {
   readonly id: string;
@@ -70,6 +83,7 @@ export class LoginUseCase {
     private readonly clock: IClock,
     private readonly authAuditService: AuthAuditService,
     options: LoginUseCaseOptions = {},
+    private readonly transactionManager?: LoginUseCaseTransactionManager,
   ) {
     this.orgId = normalizeOrgId(options.orgId);
     this.accessTokenTtlSeconds = assertPositiveInteger(
@@ -166,16 +180,16 @@ export class LoginUseCase {
     input: LoginUseCaseInput,
   ): Promise<never> {
     const now = this.clock.now();
-    const nextFailedLoginCount = user.failedLoginCount + 1;
+    const updatedUser = await this.incrementFailedLoginCount(user);
+    const nextFailedLoginCount = updatedUser.failedLoginCount;
     const shouldLock = nextFailedLoginCount >= this.lockoutAttempts;
     const lockedUntil = shouldLock
       ? addMinutes(now, this.lockoutDurationMinutes)
       : null;
 
-    await this.userRepository.update(user.id, {
-      failedLoginCount: nextFailedLoginCount,
-      lockedUntil,
-    });
+    if (lockedUntil !== null) {
+      await this.lockUserUntil(user.id, lockedUntil);
+    }
 
     if (shouldLock && lockedUntil !== null) {
       const lockedUntilIso = lockedUntil.toISOString();
@@ -216,25 +230,40 @@ export class LoginUseCase {
     const jwtId = this.idGenerator.generate();
     const expiresAt = addSeconds(now, this.accessTokenTtlSeconds);
 
-    const updatedUser = await this.userRepository.update(user.id, {
-      failedLoginCount: 0,
-      lockedUntil: null,
-      lastLoginAt: now,
-    });
+    const persistLogin = async (repositories: {
+      readonly users: LoginUserRepository;
+      readonly sessions: LoginSessionRepository;
+    }): Promise<LoginUserRecord> => {
+      const updatedUser = await this.recordSuccessfulLogin(
+        repositories.users,
+        user.id,
+        now,
+      );
 
-    if (updatedUser === null) {
-      throw new UserNotFoundError();
-    }
+      if (updatedUser === null) {
+        throw new UserNotFoundError();
+      }
+
+      await repositories.sessions.create({
+        userId: user.id,
+        jwtId,
+        ipAddress: input.ipAddress ?? null,
+        userAgent: input.userAgent ?? null,
+        expiresAt,
+      });
+
+      return updatedUser as LoginUserRecord;
+    };
+
+    const updatedUser =
+      this.transactionManager !== undefined
+        ? await this.transactionManager.execute(persistLogin)
+        : await persistLogin({
+            users: this.userRepository,
+            sessions: this.sessionRepository,
+          });
 
     const safeUser = mapLoginResponseUser(updatedUser);
-
-    await this.sessionRepository.create({
-      userId: user.id,
-      jwtId,
-      ipAddress: input.ipAddress ?? null,
-      userAgent: input.userAgent ?? null,
-      expiresAt,
-    });
 
     const claims: JwtClaims = {
       sub: user.id,
@@ -264,6 +293,63 @@ export class LoginUseCase {
       user: safeUser,
       expiresAt: expiresAt.toISOString(),
     };
+  }
+
+  private async incrementFailedLoginCount(
+    user: LoginUserRecord,
+  ): Promise<LoginUserRecord> {
+    if (this.userRepository.incrementFailedLoginCount !== undefined) {
+      const updatedUser = await this.userRepository.incrementFailedLoginCount(
+        user.id,
+      );
+
+      if (updatedUser === null) {
+        throw new UserNotFoundError();
+      }
+
+      return updatedUser as LoginUserRecord;
+    }
+
+    const updatedUser = await this.userRepository.update(user.id, {
+      failedLoginCount: user.failedLoginCount + 1,
+    });
+
+    if (updatedUser === null) {
+      throw new UserNotFoundError();
+    }
+
+    return updatedUser as LoginUserRecord;
+  }
+
+  private async lockUserUntil(
+    userId: string,
+    lockedUntil: Date,
+  ): Promise<void> {
+    if (this.userRepository.lockUserUntil !== undefined) {
+      await this.userRepository.lockUserUntil(userId, lockedUntil);
+      return;
+    }
+
+    await this.userRepository.update(userId, { lockedUntil });
+  }
+
+  private async recordSuccessfulLogin(
+    userRepository: LoginUserRepository,
+    userId: string,
+    loginAt: Date,
+  ): Promise<LoginUserRecord | null> {
+    if (userRepository.recordSuccessfulLogin !== undefined) {
+      return (await userRepository.recordSuccessfulLogin(
+        userId,
+        loginAt,
+      )) as LoginUserRecord | null;
+    }
+
+    return (await userRepository.update(userId, {
+      failedLoginCount: 0,
+      lockedUntil: null,
+      lastLoginAt: loginAt,
+    })) as LoginUserRecord | null;
   }
 }
 

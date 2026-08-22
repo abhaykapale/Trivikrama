@@ -1,19 +1,34 @@
 import express, { type Express } from "express";
+import config, { type AppConfig } from "./config/index.js";
+import {
+  createAuthRouter,
+  type CreateAuthRouterDependencies,
+} from "./index.js";
+import errorMiddleware from "./middleware/error.middleware.js";
+import { applySecurityMiddleware } from "./middleware/security/index.js";
 import createHealthRouter from "./modules/health/health.routes.js";
 import type HealthService from "./modules/health/health.service.js";
-import errorMiddleware from "./middleware/error.middleware.js";
 
 export interface AppDependencies {
   readonly healthService: HealthService;
+  readonly auth?: CreateAuthRouterDependencies;
+  readonly appConfig?: AppConfig;
 }
 
-export function createApp({ healthService }: AppDependencies): Express {
+export function createApp({
+  healthService,
+  auth,
+  appConfig = config,
+}: AppDependencies): Express {
   const app = express();
 
-  app.use(express.json());
-  app.use(express.urlencoded({ extended: true }));
+  applySecurityMiddleware(app, appConfig);
 
   app.use("/", createHealthRouter(healthService));
+
+  if (auth !== undefined) {
+    app.use(`${appConfig.server.apiPrefix}/auth`, createAuthRouter(auth));
+  }
 
   app.use(errorMiddleware);
 

@@ -37,7 +37,11 @@ export interface SessionRecord {
   readonly revokedAt: Date | null;
 }
 
-export type AuthAuditAction = "login" | "login_failed" | "logout" | "session_revoked";
+export type AuthAuditAction =
+  | "login"
+  | "login_failed"
+  | "logout"
+  | "session_revoked";
 
 export interface CreateAuditLogInput {
   readonly id?: string;
@@ -103,7 +107,6 @@ export interface IUserRepository {
       readonly failedLoginCount?: number;
       readonly lockedUntil?: Date | null;
       readonly lastLoginAt?: Date | null;
-
     },
   ): Promise<UserRecord | null>;
   incrementFailedLoginCount(id: string): Promise<UserRecord | null>;
@@ -138,14 +141,12 @@ export interface ISessionRepository {
     activeAt?: Date,
   ): Promise<SessionRecord | null>;
   revokeById(id: string, revokedAt?: Date): Promise<SessionRecord | null>;
-  revokeByJwtId(
-    jwtId: string,
-    revokedAt?: Date,
-  ): Promise<SessionRecord | null>;
+  revokeByJwtId(jwtId: string, revokedAt?: Date): Promise<SessionRecord | null>;
   rotateJwtId(
     oldJwtId: string,
     newJwtId: string,
     activeAt?: Date,
+    expiresAt?: Date,
   ): Promise<SessionRecord | null>;
   revokeAllForUser(userId: string, revokedAt?: Date): Promise<number>;
   deleteExpired(expiredBefore?: Date): Promise<number>;

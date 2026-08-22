@@ -2,6 +2,7 @@ import type { Knex } from "knex";
 
 import config, { type AppConfig } from "../../../config/index.js";
 import type { RelationalRepositories } from "../../../database/repositories/index.js";
+import type { IUnitOfWork } from "../../../database/transactions/index.js";
 import type {
   AuditLogRecord,
   CreateAuditLogInput,
@@ -12,7 +13,10 @@ import type {
   IPasswordService,
   ISessionValidator,
 } from "../domain/auth.contracts.js";
-import type { JwtClaims, SessionValidationResult } from "../domain/auth.types.js";
+import type {
+  JwtClaims,
+  SessionValidationResult,
+} from "../domain/auth.types.js";
 import {
   AuthService,
   type AuthServiceDependencies,
@@ -42,6 +46,7 @@ export interface CreateAuthApplicationDependenciesInput {
   readonly knex: Knex;
   readonly repositories: AuthApplicationRepositoryDependencies;
   readonly appConfig?: AppConfig;
+  readonly unitOfWork?: IUnitOfWork;
 }
 
 export interface AuthApplicationDependencies extends AuthServiceDependencies {
@@ -66,6 +71,10 @@ export function createAuthApplicationDependencies(
   const refreshWindowSeconds = parseDurationToSeconds(
     appConfig.jwt.refreshWindow,
     "JWT_REFRESH_WINDOW",
+  );
+  const maxSessionDurationSeconds = parseDurationToSeconds(
+    appConfig.jwt.maxSessionDuration,
+    "JWT_MAX_SESSION_DURATION",
   );
 
   const passwordService = new BcryptPasswordServiceAdapter(
@@ -105,6 +114,19 @@ export function createAuthApplicationDependencies(
       lockoutAttempts: appConfig.auth.lockoutAttempts,
       lockoutDurationMinutes: appConfig.auth.lockoutMinutes,
     },
+    input.unitOfWork === undefined
+      ? undefined
+      : {
+          execute: async (operation) =>
+            input.unitOfWork!.execute(
+              async ({ repositories }) =>
+                operation({
+                  users: repositories.users,
+                  sessions: repositories.sessions,
+                }),
+              { isolationLevel: "read committed" },
+            ),
+        },
   );
 
   const logoutUseCase = new LogoutUseCase(
@@ -121,6 +143,12 @@ export function createAuthApplicationDependencies(
     {
       accessTokenTtlSeconds,
       refreshWindowSeconds,
+      maxSessionDurationSeconds,
+    },
+    {
+      sessionRepository: input.repositories.sessions,
+      idGenerator,
+      authAuditService,
     },
   );
 

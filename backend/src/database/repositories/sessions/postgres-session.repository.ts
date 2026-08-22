@@ -52,12 +52,16 @@ export class PostgresSessionRepository implements ISessionRepository {
       expires_at: input.expiresAt,
     };
 
-    const [row] = await this.db<SessionRow>(SESSIONS_TABLE).insert(insertable).returning("*");
+    const [row] = await this.db<SessionRow>(SESSIONS_TABLE)
+      .insert(insertable)
+      .returning("*");
     return mapSessionRow(row);
   }
 
   public async findById(id: string): Promise<SessionRecord | null> {
-    const row = await this.baseQuery().where("id", ensureNonBlank(id, "id")).first<SessionRow>();
+    const row = await this.baseQuery()
+      .where("id", ensureNonBlank(id, "id"))
+      .first<SessionRow>();
     return row ? mapSessionRow(row) : null;
   }
 
@@ -84,8 +88,12 @@ export class PostgresSessionRepository implements ISessionRepository {
     return row ? mapSessionRow(row) : null;
   }
 
-  public async list(filters: SessionListFilters = {}): Promise<PageResult<SessionRecord>> {
-    const query = this.baseQuery().orderBy("created_at", "desc").orderBy("id", "asc");
+  public async list(
+    filters: SessionListFilters = {},
+  ): Promise<PageResult<SessionRecord>> {
+    const query = this.baseQuery()
+      .orderBy("created_at", "desc")
+      .orderBy("id", "asc");
 
     if (filters.userId !== undefined) {
       query.where("user_id", ensureNonBlank(filters.userId, "userId"));
@@ -103,10 +111,17 @@ export class PostgresSessionRepository implements ISessionRepository {
       query.where("expires_at", "<", filters.expiresBefore);
     }
 
-    return pageByLimitOffset<SessionRow, SessionRecord>(query, filters, mapSessionRow);
+    return pageByLimitOffset<SessionRow, SessionRecord>(
+      query,
+      filters,
+      mapSessionRow,
+    );
   }
 
-  public async revokeById(id: string, revokedAt = new Date()): Promise<SessionRecord | null> {
+  public async revokeById(
+    id: string,
+    revokedAt = new Date(),
+  ): Promise<SessionRecord | null> {
     assertValidDate(revokedAt, "revokedAt");
 
     const [row] = await this.db<SessionRow>(SESSIONS_TABLE)
@@ -118,7 +133,10 @@ export class PostgresSessionRepository implements ISessionRepository {
     return row ? mapSessionRow(row) : null;
   }
 
-  public async revokeByJwtId(jwtId: string, revokedAt = new Date()): Promise<SessionRecord | null> {
+  public async revokeByJwtId(
+    jwtId: string,
+    revokedAt = new Date(),
+  ): Promise<SessionRecord | null> {
     assertValidDate(revokedAt, "revokedAt");
 
     const [row] = await this.db<SessionRow>(SESSIONS_TABLE)
@@ -134,6 +152,7 @@ export class PostgresSessionRepository implements ISessionRepository {
     oldJwtId: string,
     newJwtId: string,
     activeAt = new Date(),
+    expiresAt?: Date,
   ): Promise<SessionRecord | null> {
     const normalizedOldJwtId = ensureNonBlank(oldJwtId, "oldJwtId");
     const normalizedNewJwtId = ensureNonBlank(newJwtId, "newJwtId");
@@ -143,17 +162,27 @@ export class PostgresSessionRepository implements ISessionRepository {
       throw new Error("newJwtId must differ from oldJwtId.");
     }
 
+    if (expiresAt !== undefined) {
+      assertValidDate(expiresAt, "expiresAt");
+    }
+
     const [row] = await this.db<SessionRow>(SESSIONS_TABLE)
       .where("jwt_id", normalizedOldJwtId)
       .whereNull("revoked_at")
       .andWhere("expires_at", ">", activeAt)
-      .update({ jwt_id: normalizedNewJwtId })
+      .update({
+        jwt_id: normalizedNewJwtId,
+        ...(expiresAt === undefined ? {} : { expires_at: expiresAt }),
+      })
       .returning("*");
 
     return row ? mapSessionRow(row) : null;
   }
 
-  public async revokeAllForUser(userId: string, revokedAt = new Date()): Promise<number> {
+  public async revokeAllForUser(
+    userId: string,
+    revokedAt = new Date(),
+  ): Promise<number> {
     assertValidDate(revokedAt, "revokedAt");
 
     return this.db<SessionRow>(SESSIONS_TABLE)
@@ -165,7 +194,9 @@ export class PostgresSessionRepository implements ISessionRepository {
   public async deleteExpired(expiredBefore = new Date()): Promise<number> {
     assertValidDate(expiredBefore, "expiredBefore");
 
-    return this.db<SessionRow>(SESSIONS_TABLE).where("expires_at", "<", expiredBefore).delete();
+    return this.db<SessionRow>(SESSIONS_TABLE)
+      .where("expires_at", "<", expiredBefore)
+      .delete();
   }
 
   private baseQuery() {
