@@ -11,6 +11,7 @@ import {
 } from "./database/index.js";
 import HealthService from "./modules/health/health.service.js";
 import { createAuthApplicationDependencies } from "./modules/auth/composition/index.js";
+import { createUserManagementDependencies, } from "./modules/users/composition/index.js";
 
 let server: Server | null = null;
 let isShuttingDown = false;
@@ -80,6 +81,14 @@ const bootstrap = async (): Promise<void> => {
       appConfig: env,
       unitOfWork,
     });
+    const UserManagementDependencies = createUserManagementDependencies({ userRepository: repositories.users });
+
+    const authenticationDependencies = {
+      jwtService: authApplicationDependencies.jwtService,
+      sessionRepository: repositories.sessions,
+      userRepository: repositories.users,
+      config: env
+    }
 
     logger.info("Databases initialized successfully.");
 
@@ -94,7 +103,12 @@ const bootstrap = async (): Promise<void> => {
         userRepository: repositories.users,
         redisClient: databaseClients.redis,
         config: env,
+
       },
+      users: {
+        authentication: authenticationDependencies,
+        listUsersUseCase: UserManagementDependencies.listUsersUseCase,
+      }
     });
 
     registerSignalHandlers();

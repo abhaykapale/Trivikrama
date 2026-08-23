@@ -3,6 +3,8 @@ import config, { type AppConfig } from "./config/index.js";
 import {
   createAuthRouter,
   type CreateAuthRouterDependencies,
+  createUsersRouter,
+  type CreateUsersRouterDependencies,
 } from "./index.js";
 import errorMiddleware from "./middleware/error.middleware.js";
 import { applySecurityMiddleware } from "./middleware/security/index.js";
@@ -13,12 +15,14 @@ export interface AppDependencies {
   readonly healthService: HealthService;
   readonly auth?: CreateAuthRouterDependencies;
   readonly appConfig?: AppConfig;
+  readonly users?: CreateUsersRouterDependencies;
 }
 
 export function createApp({
   healthService,
   auth,
   appConfig = config,
+  users,
 }: AppDependencies): Express {
   const app = express();
 
@@ -29,6 +33,11 @@ export function createApp({
   if (auth !== undefined) {
     app.use(`${appConfig.server.apiPrefix}/auth`, createAuthRouter(auth));
   }
+
+  if(users !== undefined){
+    app.use(`${appConfig.server.apiPrefix}/users`, createUsersRouter(users));
+  }
+
 
   app.use(errorMiddleware);
 

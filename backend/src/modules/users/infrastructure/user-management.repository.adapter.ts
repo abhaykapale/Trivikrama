@@ -12,19 +12,26 @@ export class UserManagementRepositoryAdapter implements IUserManagementRepositor
   public constructor(  private readonly userRepository: UserManagementPersistence ) {}
 
   public async list(filters: ManagedUserFilters ): Promise<PageResult<ManagedUserRecord>> {
+
+    const listFilter: UserListFilters = {
+      orgId: filters.orgId,
+      role: filters.role,
+      isActive: filters.isActive,
+      search: filters.search,
+      limit: filters.limit,
+      offset: filters.offset,
+    };
+
     const dbFilters: UserFilterCriteria = {
       orgId: filters.orgId,
       role: filters.role,
       isActive: filters.isActive,
       search: filters.search,
     };
-    const ListFilter: UserListFilters = {
-      limit: filters.limit,
-      offset: filters.offset,
-    };
+
 
     const [listResult, total] = await Promise.all([
-      this.userRepository.list(ListFilter),
+      this.userRepository.list(listFilter),
       this.userRepository.count(dbFilters),
     ]);
 
