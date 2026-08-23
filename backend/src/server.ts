@@ -6,19 +6,23 @@ import logger from "./shared/logger";
 
 import type { CreateAuthRouterDependencies } from "./index.js";
 import type HealthService from "./modules/health/health.service.js";
+import type { CreateUsersRouterDependencies } from "./index.js";
 
 interface StartServerDependencies {
   readonly healthService: HealthService;
   readonly auth?: CreateAuthRouterDependencies;
+  readonly users?: CreateUsersRouterDependencies;
 }
 
 const startServer = ({
   healthService,
   auth,
+  users,
 }: StartServerDependencies): Server => {
   const app = createApp({
     healthService,
     auth,
+    users,
   });
 
   const port = config.server.port;

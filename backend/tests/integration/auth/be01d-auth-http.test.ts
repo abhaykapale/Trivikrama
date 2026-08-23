@@ -36,7 +36,7 @@ import {
 } from "../../../src/modules/auth/http/index.js";
 import type { AuthenticatedPrincipal } from "../../../src/modules/auth/http/authenticated-principal.js";
 
-type TestCase = {
+export type TestCase = {
   readonly name: string;
   readonly run: () => Promise<void>;
 };

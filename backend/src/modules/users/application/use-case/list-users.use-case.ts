@@ -8,7 +8,8 @@ import type  {
 
 
 export class ListUsersUseCase {
-  constructor(private readonly repository: IUserManagementRepository) {}
+
+  constructor(private readonly repository: IUserManagementRepository) { }
 
   public async execute( input: ListUsersRequestDTO ): Promise<ListUsersResponseDTO> {
     const offset = (input.page - 1) * input.limit;
