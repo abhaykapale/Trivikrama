@@ -22,12 +22,17 @@ export interface UserRecord {
   readonly orgId: string;
 }
 
-export interface UserListFilters extends PaginationOptions {
+export interface UserFilterCriteria {
   readonly orgId?: string;
   readonly role?: UserRole;
   readonly isActive?: boolean;
   readonly search?: string;
 }
+
+export interface UserListFilters extends PaginationOptions, UserFilterCriteria {}
+
+
+export type UserCountFilters = UserFilterCriteria;
 
 export interface CreateUserInput {
   readonly id?: string;
@@ -51,6 +56,8 @@ export interface UpdateUserInput {
   readonly lastLoginAt?: Date | string | null;
 }
 
+
+
 export interface IUserRepository {
   withTransaction(transaction: TransactionClient): IUserRepository;
 
@@ -67,6 +74,8 @@ export interface IUserRepository {
 
   list(filters?: UserListFilters): Promise<PageResult<UserRecord>>;
 
+  count(filters: UserCountFilters): Promise<number>;
+
   create(input: CreateUserInput): Promise<UserRecord>;
 
   update(id: string, input: UpdateUserInput): Promise<UserRecord | null>;
@@ -77,11 +86,13 @@ export interface IUserRepository {
   resetLoginFailures(id: string): Promise<UserRecord | null>;
 
   markLastLogin(id: string, loginAt?: Date): Promise<UserRecord | null>;
-  
+
   lockUserUntil(id: string, lockedUntil: Date): Promise<UserRecord | null>;
 
   /** Existing convenience operation retained for compatibility. */
   recordSuccessfulLogin(id: string, loginAt?: Date): Promise<UserRecord | null>;
+
+
 
   /**
    * @deprecated Use incrementFailedLoginCount and lockUserUntil. The supplied

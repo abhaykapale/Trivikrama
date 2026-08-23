@@ -9,7 +9,7 @@ import type {
 } from "../../../src/modules/users/domain/user-management.contracts.js";
 
 import { ListUsersUseCase } from "../../../src/modules/users/application/use-case/list-users.use-case";
-import { fail } from "node:assert";
+
 
 class FakeUserManagementRepository implements IUserManagementRepository {
   public receivedFilters: ManagedUserFilters | null = null;

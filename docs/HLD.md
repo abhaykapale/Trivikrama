@@ -8,8 +8,8 @@
 | **Version** | 1.0 |
 | **Date** | 2026-07-18 |
 | **Status** | Draft |
-| **Architecture Reference** | [ADR-001](file:///d:/AI%20SIEM/docs/architecture/decisions/ADR-001-modular-monolith.md) |
-| **Requirements Reference** | [SRS-001](file:///d:/AI%20SIEM/docs/SRS.md) |
+| **Architecture Reference** | [ADR-001](docs/architecture/decisions/ADR-001-modular-monolith.md) |
+| **Requirements Reference** | [SRS-001](SRS.md) |
 
 ---
 

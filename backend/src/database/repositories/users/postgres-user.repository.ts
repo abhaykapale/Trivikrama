@@ -1,5 +1,4 @@
 import type { Knex } from "knex";
-
 import {
   ensureNonBlank,
   pageByLimitOffset,
@@ -16,7 +15,10 @@ import type {
   UserListFilters,
   UserRecord,
   UserRole,
+  UserCountFilters,
+  UserFilterCriteria
 } from "./user.repository.js";
+
 
 interface UserRow {
   readonly id: string;
@@ -33,6 +35,12 @@ interface UserRow {
   readonly updated_at: Date | string;
   readonly org_id: string;
 }
+
+interface UserCountRow {
+  count: number | string;
+}
+
+
 
 const USERS_TABLE = "public.users";
 const DEFAULT_ORG_ID = "default";
@@ -68,7 +76,10 @@ export class PostgresUserRepository implements IUserRepository {
     return row ? mapUserRow(row) : null;
   }
 
-  public async findByEmail(email: string, orgId = DEFAULT_ORG_ID): Promise<UserRecord | null> {
+  public async findByEmail(
+    email: string,
+    orgId = DEFAULT_ORG_ID,
+  ): Promise<UserRecord | null> {
     const row = await this.baseQuery()
       .where("email", ensureNonBlank(email, "email"))
       .andWhere("org_id", ensureNonBlank(orgId, "orgId"))
@@ -77,8 +88,12 @@ export class PostgresUserRepository implements IUserRepository {
     return row ? mapUserRow(row) : null;
   }
 
-  public async list(filters: UserListFilters = {}): Promise<PageResult<UserRecord>> {
-    const query = this.baseQuery().orderBy("created_at", "desc").orderBy("id", "asc");
+  public async list(
+    filters: UserListFilters = {},
+  ): Promise<PageResult<UserRecord>> {
+    const query = this.baseQuery()
+      .orderBy("created_at", "desc")
+      .orderBy("id", "asc");
 
     if (filters.orgId !== undefined) {
       query.where("org_id", ensureNonBlank(filters.orgId, "orgId"));
@@ -105,6 +120,41 @@ export class PostgresUserRepository implements IUserRepository {
     return pageByLimitOffset<UserRow, UserRecord>(query, filters, mapUserRow);
   }
 
+  private applyUserFilters(
+    query: Knex.QueryBuilder,
+    filters: UserFilterCriteria,
+  ): void {
+    query.where((builder: Knex.QueryBuilder) => {
+      if (filters.orgId !== undefined) {
+        builder.where("org_id", ensureNonBlank(filters.orgId, "orgId"));
+      }
+      if (filters.isActive !== undefined) {
+        builder.where("is_active", filters.isActive);
+      }
+      if (filters.role !== undefined) {
+        builder.where("role", filters.role);
+      }
+      if (filters.search !== undefined && filters.search.trim().length > 0) {
+        const term = `%${filters.search.trim()}%`;
+
+        builder
+          .whereILike("username", term)
+          .orWhereILike("email", term)
+          .orWhereILike("display_name", term);
+      }
+    });
+  }
+
+  public async count(filters: UserCountFilters): Promise<number> {
+    const query = this.db<UserRow>(USERS_TABLE);
+
+    this.applyUserFilters(query, filters);
+
+    const result = await query.count<UserCountRow[]>({ count: "*" }).first();
+
+    return Number(result?.count ?? 0);
+  }
+
   public async create(input: CreateUserInput): Promise<UserRecord> {
     const insertable = {
       ...(input.id ? { id: input.id } : {}),
@@ -114,14 +164,21 @@ export class PostgresUserRepository implements IUserRepository {
       role: input.role,
       display_name: input.displayName ?? null,
       is_active: input.isActive ?? true,
-      org_id: input.orgId ? ensureNonBlank(input.orgId, "orgId") : DEFAULT_ORG_ID,
+      org_id: input.orgId
+        ? ensureNonBlank(input.orgId, "orgId")
+        : DEFAULT_ORG_ID,
     };
 
-    const [row] = await this.db<UserRow>(USERS_TABLE).insert(insertable).returning("*");
+    const [row] = await this.db<UserRow>(USERS_TABLE)
+      .insert(insertable)
+      .returning("*");
     return mapUserRow(row);
   }
 
-  public async update(id: string, input: UpdateUserInput): Promise<UserRecord | null> {
+  public async update(
+    id: string,
+    input: UpdateUserInput,
+  ): Promise<UserRecord | null> {
     const patch: Record<string, unknown> = {};
 
     if (input.email !== undefined) {
@@ -145,7 +202,10 @@ export class PostgresUserRepository implements IUserRepository {
     }
 
     if (input.failedLoginCount !== undefined) {
-      if (!Number.isInteger(input.failedLoginCount) || input.failedLoginCount < 0) {
+      if (
+        !Number.isInteger(input.failedLoginCount) ||
+        input.failedLoginCount < 0
+      ) {
         throw new Error("failedLoginCount must be a non-negative integer.");
       }
       patch.failed_login_count = input.failedLoginCount;

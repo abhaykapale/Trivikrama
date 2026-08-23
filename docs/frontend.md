@@ -10,9 +10,8 @@
 | **Status** | Draft |
 | **Framework** | Next.js 14+ (App Router) |
 | **Language** | TypeScript |
-| **Architecture Reference** | [ADR-001](file:///d:/AI%20SIEM/docs/architecture/decisions/ADR-001-modular-monolith.md) |
-| **HLD Reference** | [HLD-001](file:///d:/AI%20SIEM/docs/HLD.md) |
-| **Backend API** | [BACKEND-002](file:///d:/AI%20SIEM/docs/backend-detection.md) |
+| **Architecture Reference** | [ADR-001](docs/architecture/decisions/ADR-001-modular-monolith.md) |
+| **Backend API** | [BACKEND-002](docs/backend-detection.md) |
 
 ---
 
