@@ -16,12 +16,14 @@ import type {
 } from "../../../src/modules/auth/domain/index.js";
 import { ListUsersUseCase } from "../../../src/modules/users/application/use-case/list-users.use-case.js";
 import type {
+  GetManagedUserInput,
   IUserManagementRepository,
   ManagedUserFilters,
   ManagedUserRecord,
   PageResult,
 } from "../../../src/modules/users/domain/user-management.contracts.js";
 import { createUsersRouter } from "../../../src/modules/users/http/index.js";
+import { GetUserByIdUseCase } from "../../../src/modules/users/application/use-case/list-getuser.use-case.js";
 
 type TestCase = {
   readonly name: string;
@@ -155,6 +157,9 @@ class FakeUserManagementRepository implements IUserManagementRepository {
     }
 
     return this.result;
+  }
+  getById(input: GetManagedUserInput): Promise<ManagedUserRecord | null> {
+      return Promise.resolve(null);
   }
 }
 
@@ -384,6 +389,7 @@ function createUsersHttpHarness(): {
         config: TEST_CONFIG,
       },
       listUsersUseCase,
+      getUserByIdUseCase: new GetUserByIdUseCase(users),
     }),
   );
 

@@ -1,33 +1,43 @@
-import { Router, type Request, type Response } from "express";
+import { NextFunction, Router, type Request, type Response } from "express";
 
 import { authenticateRequest, type AuthenticateRequestDependencies, requireAuthenticatedPrincipal, requirePermission } from "../../auth/http";
 import { ListUsersUseCase } from "../application/use-case/list-users.use-case";
 import type { ListUsersRequestDTO } from "../application/dto/user.dto";
-import { listUsersQuerySchema } from "./user.schema";
+import { getUserParamsSchema, listUsersQuerySchema } from "./user.schema";
 import { ZodError } from "zod";
 import {  sendError } from "../../auth/http/auth-http.errors";
 import { AuthenticatedPrincipal } from "../../auth/http/authenticated-principal";
+import { GetUserByIdUseCase } from "../application/use-case/list-getuser.use-case";
 
 export interface CreateUsersRouterDependencies {
   readonly authentication: AuthenticateRequestDependencies;
   readonly listUsersUseCase: ListUsersUseCase;
+  readonly getUserByIdUseCase: GetUserByIdUseCase;
 }
-
-
 
 export function createUsersRouter(
   dependencies: CreateUsersRouterDependencies,
 ): Router {
-    const router = Router();
+  const router = Router();
 
-    router.get(
-      "/",
-      authenticateRequest(dependencies.authentication),
-      requirePermission("users.manage"),
-      async (request, response) => {
-        await handleListUsers(request, response, dependencies);
-      },
-    );
+  router.get(
+    "/",
+    authenticateRequest(dependencies.authentication),
+    requirePermission("users.manage"),
+    async (request, response) => {
+      await handleListUsers(request, response, dependencies);
+    },
+  );
+
+  router.get(
+    "/:id",
+    authenticateRequest(dependencies.authentication),
+    requirePermission("users.manage"),
+    async (request, response, next: NextFunction) => {
+      await handleSingleUser(request, response, next, dependencies);
+    },
+  );
+
   return router;
 }
 
@@ -68,6 +78,48 @@ async function handleListUsers(
 
       }
 
+}
+
+
+async function handleSingleUser(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+  dependencies: CreateUsersRouterDependencies,
+): Promise<void> {
+  try {
+    const { id: userId } =
+      getUserParamsSchema.parse(req.params);
+
+    const authenticatedUser =
+      requireAuthenticatedPrincipal(req);
+
+    const result =
+      await dependencies.getUserByIdUseCase.execute({
+        userId,
+        orgId: authenticatedUser.orgId,
+      });
+
+    res.status(200).json(result);
+  } catch (error: unknown) {
+    if (error instanceof ZodError) {
+      sendError(
+        res,
+        400,
+        "VALIDATION_ERROR",
+        "Invalid route parameters.",
+        {
+          issues: error.issues.map((issue) => ({
+            path: issue.path.join("."),
+            message: issue.message,
+          })),
+        },
+      );
+      return;
+    }
+
+    next(error);
+  }
 }
 
 /**

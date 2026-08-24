@@ -13,6 +13,11 @@ export interface ManagedUserRecord {
   readonly createdAt: Date;
 }
 
+export interface GetManagedUserInput {
+  readonly userId: string;
+  readonly orgId: string;
+}
+
 
 export interface ManagedUserFilters {
   readonly orgId: string;
@@ -30,5 +35,6 @@ export interface PageResult<ManagedUserPage> {
 
 export interface IUserManagementRepository {
   list(filters: ManagedUserFilters): Promise<PageResult<ManagedUserRecord>>;
+  getById(input: GetManagedUserInput): Promise<ManagedUserRecord | null>;
 }
 

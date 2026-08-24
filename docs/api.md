@@ -1010,6 +1010,9 @@ List all detection rules.
 
 **Response (200):**
 
+
+
+
 ```json
 {
   "data": [
@@ -1501,6 +1504,26 @@ Get a single user.
 **Access:** Admin only (or the user themselves via `/auth/me`)
 
 **Response (200):** Same structure as list item.
+
+```mermaid
+flowchart TD
+    A["HTTP client"] -->|GET /api/v1/users/:id| B["Express app and users router"]
+    B --> C["Authenticate JWT, session and user"]
+    C --> D["Require users.manage"]
+    D --> E["Validate :id with Zod"]
+    E --> F["Route handler"]
+    F --> G["GetUserByIdUseCase"]
+    G --> H["IUserManagementRepository"]
+    H --> I["UserManagementRepositoryAdapter"]
+    I --> J["PostgresUserRepository"]
+    J --> K["PostgreSQL public.users"]
+
+    K -->|Database row or no row| J
+    J -->|UserRecord or null| I
+    I -->|Safe ManagedUserRecord or null| G
+    G -->|ManagedUserDTO| F
+    F -->|res.status| A
+```
 
 ---
 
