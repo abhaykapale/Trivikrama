@@ -108,6 +108,7 @@ const bootstrap = async (): Promise<void> => {
       users: {
         authentication: authenticationDependencies,
         listUsersUseCase: UserManagementDependencies.listUsersUseCase,
+        getUserByIdUseCase: UserManagementDependencies.getUserByIdUseCase,
       }
     });
 

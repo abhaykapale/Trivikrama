@@ -19,6 +19,24 @@ export const listUsersQuerySchema = z.object({
   search: z.string().trim().max(255).optional(),
 });
 
+
+export const getUserParamsSchema = z.object({
+  id: z.string().trim().uuid("User ID must be a valid UUID."),
+});
+
+export type GetUserParams = z.infer<typeof getUserParamsSchema>;
+
+export type UserParams = z.infer<typeof listUsersQuerySchema>;
+
+
+
+/*
+
+  limit: z.coerce.number().int().min(1).default(25),
+
+  search: z.string().trim().max(255).optional(),
+});
+
 export type UserParams = z.infer<typeof listUsersQuerySchema>;
 
 

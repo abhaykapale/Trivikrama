@@ -1,18 +1,21 @@
 
 import type { IUserRepository } from "../../../database";
 import type { UserListFilters,UserFilterCriteria, } from "../../../database";
-import type { IUserManagementRepository, ManagedUserFilters, ManagedUserRecord, PageResult } from "../domain/user-management.contracts";
+import type { GetManagedUserInput, IUserManagementRepository, ManagedUserFilters, ManagedUserRecord, PageResult } from "../domain/user-management.contracts";
 
 
-type UserManagementPersistence = Pick<IUserRepository, "list" | "count">;
+type UserManagementPersistence = Pick<IUserRepository, "list" | "count"  |"findById" >;
+
+
 
 export class UserManagementRepositoryAdapter implements IUserManagementRepository {
+  public constructor(
+    private readonly userRepository: UserManagementPersistence,
+  ) {}
 
-
-  public constructor(  private readonly userRepository: UserManagementPersistence ) {}
-
-  public async list(filters: ManagedUserFilters ): Promise<PageResult<ManagedUserRecord>> {
-
+  public async list(
+    filters: ManagedUserFilters,
+  ): Promise<PageResult<ManagedUserRecord>> {
     const listFilter: UserListFilters = {
       orgId: filters.orgId,
       role: filters.role,
@@ -28,7 +31,6 @@ export class UserManagementRepositoryAdapter implements IUserManagementRepositor
       isActive: filters.isActive,
       search: filters.search,
     };
-
 
     const [listResult, total] = await Promise.all([
       this.userRepository.list(listFilter),
@@ -51,7 +53,30 @@ export class UserManagementRepositoryAdapter implements IUserManagementRepositor
       total,
     };
   }
+  
+  public async getById(
+    input: GetManagedUserInput,
+  ): Promise<ManagedUserRecord | null> {
+    const user = await this.userRepository.findById(input.userId);
+
+    if (user === null || user.orgId !== input.orgId) {
+      return null;
+    }
+
+    return {
+      id: user.id,
+      username: user.username,
+      email: user.email,
+      role: user.role,
+      displayName: user.displayName,
+      isActive: user.isActive,
+      lastLoginAt: user.lastLoginAt,
+      createdAt: user.createdAt,
+    };
+  }
 }
+
+
 
 /*
 

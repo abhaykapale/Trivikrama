@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 
 import type {
+  GetManagedUserInput,
   IUserManagementRepository,
   ManagedUserFilters,
   ManagedUserRecord,
@@ -11,14 +12,25 @@ import type {
 import { ListUsersUseCase } from "../../../src/modules/users/application/use-case/list-users.use-case";
 
 
-class FakeUserManagementRepository implements IUserManagementRepository {
+class FakeUserManagementRepository
+  implements IUserManagementRepository {
   public receivedFilters: ManagedUserFilters | null = null;
 
-  public constructor(private readonly result: PageResult<ManagedUserRecord>) {}
+  public constructor(
+    private readonly result: PageResult<ManagedUserRecord>,
+  ) {}
 
-  async list(filters: ManagedUserFilters): Promise<PageResult<ManagedUserRecord>> {
+  public async list(
+    filters: ManagedUserFilters,
+  ): Promise<PageResult<ManagedUserRecord>> {
     this.receivedFilters = filters;
-    return this.result
+    return this.result;
+  }
+
+  public async getById(
+    _input: GetManagedUserInput,
+  ): Promise<ManagedUserRecord | null> {
+    return null;
   }
 }
 
