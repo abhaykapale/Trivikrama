@@ -7,8 +7,7 @@
 | **Document ID** | API-001 |
 | **Version** | 1.0 |
 | **Date** | 2026-07-19 |
-| **Status** | Draft |
-| **Base URL (Backend)** | `http://localhost:3000/api/v1` |
+|**Base URL (Backend)** | `http://localhost:3000/api/v1` |
 | **Base URL (AI Engine)** | `http://ai-engine:8000/api/v1` (internal only) |
 | **Authentication** | JWT Bearer Token (httpOnly cookie) |
 | **Content Type** | `application/json` |

@@ -24,7 +24,7 @@ test("passes filters and pagination to list and filters to count", async () => {
     orgId: "org-123",
   };
 
-  const repository: Pick<IUserRepository, "list" | "count" | "findById"> = {
+  const repository: Pick<IUserRepository, "list" | "count" | "findById" | "deactivate"> = {
     list: async (filters) => {
       receivedListFilters = filters;
 
@@ -41,7 +41,8 @@ test("passes filters and pagination to list and filters to count", async () => {
       receivedCountFilters = filters;
       return 25;
     },
-    findById: async () => null
+    findById: async () => null,
+    deactivate: async () => null
   };
 
   const adapter = new UserManagementRepositoryAdapter(repository);
@@ -91,7 +92,7 @@ test("maps database user to managed user without persistence-only fields", async
     orgId: "org-123",
   };
 
-  const repository: Pick<IUserRepository, "list" | "count" | "findById" > = {
+  const repository: Pick<IUserRepository, "list" | "count" | "findById" | "deactivate"> = {
     list: async () => ({
       items: [databaseUser],
       total: 1,
@@ -102,6 +103,7 @@ test("maps database user to managed user without persistence-only fields", async
 
     count: async () => 1,
     findById: async () => null,
+    deactivate: async () => null,
   };
 
   const adapter = new UserManagementRepositoryAdapter(repository);
@@ -135,7 +137,7 @@ test("maps database user to managed user without persistence-only fields", async
 });
 
 test("returns empty items when no users match", async () => {
-  const repository: Pick<IUserRepository, "list" | "count" | "findById"> = {
+  const repository: Pick<IUserRepository, "list" | "count" | "findById" | "deactivate"> = {
     list: async () => ({
       items: [],
       total: 0,
@@ -146,9 +148,11 @@ test("returns empty items when no users match", async () => {
 
     count: async () => 0,
     findById: async () => null,
+    deactivate: async () => null,
   };
 
   const adapter = new UserManagementRepositoryAdapter(repository);
+
 
   const result = await adapter.list({
     orgId: "org-123",
@@ -163,13 +167,14 @@ test("returns empty items when no users match", async () => {
 });
 
 test("propagates repository errors", async () => {
-  const repository: Pick<IUserRepository, "list" | "count" | "findById"> = {
+  const repository: Pick<IUserRepository, "list" | "count" | "findById" | "deactivate"> = {
     list: async () => {
       throw new Error("Database connection failed");
     },
 
     count: async () => 0,
     findById: async () => null,
+    deactivate: async () => null,
   };
 
   const adapter = new UserManagementRepositoryAdapter(repository);

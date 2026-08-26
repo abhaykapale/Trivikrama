@@ -231,6 +231,26 @@ export class PostgresUserRepository implements IUserRepository {
     return row ? mapUserRow(row) : null;
   }
 
+  public async updateByIdAndOrg(
+    id: string,
+    orgId: string,
+    input: UpdateUserInput,
+  ): Promise<UserRecord | null> {
+    const patch = toUserPatch(input);
+
+    if (Object.keys(patch).length === 0) {
+      return null;
+    }
+
+    const [row] = await this.db<UserRow>(USERS_TABLE)
+      .where("id", ensureNonBlank(id, "id"))
+      .andWhere("org_id", ensureNonBlank(orgId, "orgId"))
+      .update(patch)
+      .returning("*");
+
+    return row ? mapUserRow(row) : null;
+  }
+
   public async incrementFailedLoginCount(
     id: string,
   ): Promise<UserRecord | null> {
@@ -333,6 +353,26 @@ export class PostgresUserRepository implements IUserRepository {
   private baseQuery(): Knex.QueryBuilder<UserRow, UserRow[]> {
     return this.db<UserRow>(USERS_TABLE).select("*");
   }
+}
+
+function toUserPatch(input: UpdateUserInput): Record<string, unknown> {
+  const patch: Record<string, unknown> = {};
+
+  if (input.email !== undefined) patch.email = ensureNonBlank(input.email, "email");
+  if (input.passwordHash !== undefined) patch.password_hash = ensureNonBlank(input.passwordHash, "passwordHash");
+  if (input.role !== undefined) patch.role = input.role;
+  if (input.displayName !== undefined) patch.display_name = input.displayName;
+  if (input.isActive !== undefined) patch.is_active = input.isActive;
+  if (input.failedLoginCount !== undefined) {
+    if (!Number.isInteger(input.failedLoginCount) || input.failedLoginCount < 0) {
+      throw new Error("failedLoginCount must be a non-negative integer.");
+    }
+    patch.failed_login_count = input.failedLoginCount;
+  }
+  if (input.lockedUntil !== undefined) patch.locked_until = input.lockedUntil;
+  if (input.lastLoginAt !== undefined) patch.last_login_at = input.lastLoginAt;
+
+  return patch;
 }
 
 function mapUserRow(row: UserRow): UserRecord {

@@ -2,7 +2,12 @@ import test from "node:test";
 import assert from "node:assert/strict";
 
 
-import {listUsersQuerySchema} from "../../../src/modules/users/http/user.schema";
+import {
+  createUserBodySchema,
+  listUsersQuerySchema,
+  resetUserPasswordBodySchema,
+  updateUserBodySchema,
+} from "../../../src/modules/users/http/user.schema";
 
 test("listUsersQuerySchema should validate and transform query parameters correctly", () => {
     const validQuery = {
@@ -101,4 +106,76 @@ test("Rejects search string length less than 0 characters", () => {
         })
     })
 })
+
+test("createUserBodySchema accepts and normalizes a valid user", () => {
+  const result = createUserBodySchema.parse({
+    username: "  agarcia  ",
+    email: "  AGARCIA@CORP.LOCAL  ",
+    password: "InitialP@ss123!",
+    role: "security_engineer",
+    displayName: "  Ana Garcia  ",
+  });
+
+  assert.deepEqual(result, {
+    username: "agarcia",
+    email: "agarcia@corp.local",
+    password: "InitialP@ss123!",
+    role: "security_engineer",
+    displayName: "Ana Garcia",
+  });
+});
+
+test("updateUserBodySchema accepts a role and nullable display name", () => {
+  assert.deepEqual(updateUserBodySchema.parse({ role: "admin", displayName: null }), {
+    role: "admin", displayName: null,
+  });
+});
+
+test("updateUserBodySchema rejects an empty or injected body", () => {
+  assert.throws(() => updateUserBodySchema.parse({}));
+  assert.throws(() => updateUserBodySchema.parse({ isActive: false }));
+});
+
+test("resetUserPasswordBodySchema accepts only a strong new password", () => {
+  assert.deepEqual(resetUserPasswordBodySchema.parse({ newPassword: "NewSecureP@ss456!" }), {
+    newPassword: "NewSecureP@ss456!",
+  });
+  assert.throws(() => resetUserPasswordBodySchema.parse({ newPassword: "weak" }));
+  assert.throws(() => resetUserPasswordBodySchema.parse({ newPassword: "NewSecureP@ss456!", orgId: "other-org" }));
+});
+
+test("createUserBodySchema rejects weak passwords", () => {
+  assert.throws(() =>
+    createUserBodySchema.parse({
+      username: "agarcia",
+      email: "agarcia@corp.local",
+      password: "weakpassword",
+      role: "security_engineer",
+    }),
+  );
+});
+
+test("createUserBodySchema rejects passwords beyond bcrypt's byte limit", () => {
+  assert.throws(() =>
+    createUserBodySchema.parse({
+      username: "agarcia",
+      email: "agarcia@corp.local",
+      password: `Aa1!${"x".repeat(69)}`,
+      role: "security_engineer",
+    }),
+  );
+});
+
+test("createUserBodySchema rejects organization and status injection", () => {
+  assert.throws(() =>
+    createUserBodySchema.parse({
+      username: "agarcia",
+      email: "agarcia@corp.local",
+      password: "InitialP@ss123!",
+      role: "security_engineer",
+      orgId: "attacker-org",
+      isActive: false,
+    }),
+  );
+});
 

@@ -2,6 +2,8 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 
 import type {
+  DeactivatedUser,
+  DeactivateUserByIdInput,
   GetManagedUserInput,
   IUserManagementRepository,
   ManagedUserFilters,
@@ -30,6 +32,11 @@ class FakeUserManagementRepository
   public async getById(
     _input: GetManagedUserInput,
   ): Promise<ManagedUserRecord | null> {
+    return null;
+  }
+  public async deactivateUserById(
+    _input: DeactivateUserByIdInput,
+  ): Promise<DeactivatedUser | null> {
     return null;
   }
 }

@@ -16,6 +16,8 @@ import type {
 import { ListUsersUseCase } from "../../../src/modules/users/application/use-case/list-users.use-case.js";
 import { GetUserByIdUseCase } from "../../../src/modules/users/application/use-case/list-getuser.use-case.js";
 import type {
+  DeactivatedUser,
+  DeactivateUserByIdInput,
   GetManagedUserInput,
   IUserManagementRepository,
   ManagedUserFilters,
@@ -24,6 +26,7 @@ import type {
 } from "../../../src/modules/users/domain/user-management.contracts.js";
 import { createUsersRouter } from "../../../src/modules/users/http/index.js";
 import errorMiddleware from "../../../src/middleware/error.middleware.js";
+import { DeactivateUserByIdUseCase } from "../../../src/modules/users/application/use-case/list-detactivate-user.use-case.js";
 
 const ADMIN_ID = "550e8400-e29b-41d4-a716-446655440001";
 const TARGET_USER_ID = "550e8400-e29b-41d4-a716-446655440002";
@@ -152,6 +155,12 @@ class FakeUserManagementRepository implements IUserManagementRepository {
 
     return this.getResult;
   }
+
+  public async deactivateUserById(
+    _input: DeactivateUserByIdInput,
+  ): Promise<DeactivatedUser | null> {
+    return null;
+  }
 }
 
 interface TestHarness {
@@ -168,6 +177,7 @@ function createHarness(): TestHarness {
 
   const listUsersUseCase = new ListUsersUseCase(managementRepository);
   const getUserByIdUseCase = new GetUserByIdUseCase(managementRepository);
+  const deactivateUserByIdUseCase = new DeactivateUserByIdUseCase(managementRepository);
 
   const app = express();
   app.use(express.json());
@@ -182,6 +192,12 @@ function createHarness(): TestHarness {
       },
       listUsersUseCase,
       getUserByIdUseCase,
+      deactivateUserByIdUseCase,
+      createUserUseCase: {
+        async execute(): Promise<never> {
+          throw new Error("Create user is outside this test harness.");
+        },
+      },
     }),
   );
   app.use(errorMiddleware);

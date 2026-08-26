@@ -81,7 +81,12 @@ const bootstrap = async (): Promise<void> => {
       appConfig: env,
       unitOfWork,
     });
-    const UserManagementDependencies = createUserManagementDependencies({ userRepository: repositories.users });
+    const UserManagementDependencies = createUserManagementDependencies({
+      userRepository: repositories.users,
+      userCreationRepository: repositories.users,
+      passwordHasher: authApplicationDependencies.passwordService,
+      unitOfWork,
+    });
 
     const authenticationDependencies = {
       jwtService: authApplicationDependencies.jwtService,
@@ -109,6 +114,10 @@ const bootstrap = async (): Promise<void> => {
         authentication: authenticationDependencies,
         listUsersUseCase: UserManagementDependencies.listUsersUseCase,
         getUserByIdUseCase: UserManagementDependencies.getUserByIdUseCase,
+        deactivateUserByIdUseCase: UserManagementDependencies.deactivateUserByIdUseCase,
+        createUserUseCase: UserManagementDependencies.createUserUseCase,
+        updateUserUseCase: UserManagementDependencies.updateUserUseCase,
+        resetUserPasswordUseCase: UserManagementDependencies.resetUserPasswordUseCase,
       }
     });
 
