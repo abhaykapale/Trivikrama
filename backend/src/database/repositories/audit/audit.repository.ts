@@ -18,6 +18,7 @@ export type AuditAction =
   | "rule_import"
   | "user_create"
   | "user_update"
+  | "user_password_reset"
   | "user_delete"
   | "config_change"
   | "collector_config_change";

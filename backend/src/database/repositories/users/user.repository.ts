@@ -80,6 +80,13 @@ export interface IUserRepository {
 
   update(id: string, input: UpdateUserInput): Promise<UserRecord | null>;
 
+  /** Updates a user only when it belongs to the supplied organization. */
+  updateByIdAndOrg(
+    id: string,
+    orgId: string,
+    input: UpdateUserInput,
+  ): Promise<UserRecord | null>;
+
   /** Atomically increments failed_login_count and returns the updated row. */
   incrementFailedLoginCount(id: string): Promise<UserRecord | null>;
 

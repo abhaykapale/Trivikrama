@@ -1,5 +1,4 @@
 
-
 export type ManagedUserRole = "admin" | "security_engineer" | "soc_analyst";
 
 export interface ManagedUserRecord {
@@ -32,9 +31,21 @@ export interface PageResult<ManagedUserPage> {
   readonly items: readonly ManagedUserPage[];
   readonly total: number;
 }
+export interface DeactivatedUser {
+
+  readonly id: string;
+  readonly isActive: boolean;
+  readonly updatedAt: Date;
+}
+
+export interface DeactivateUserByIdInput {
+  readonly userId: string;
+  readonly orgId: string;
+}
 
 export interface IUserManagementRepository {
   list(filters: ManagedUserFilters): Promise<PageResult<ManagedUserRecord>>;
   getById(input: GetManagedUserInput): Promise<ManagedUserRecord | null>;
+  deactivateUserById(input: DeactivateUserByIdInput): Promise<DeactivatedUser | null>;
 }
 
