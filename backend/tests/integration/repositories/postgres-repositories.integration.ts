@@ -715,4 +715,54 @@ export const postgresRepositoryIntegrationTests: readonly IntegrationTestCase[] 
         );
       },
     },
+    {
+      name: "user deactivation applies the organization predicate before mutation",
+      run: async ({ repositories }) => {
+        const user = await repositories.users.create({
+          id: testUuid("025"),
+          username: "db09_scoped_deactivation",
+          email: "db09-scoped-deactivation@example.local",
+          passwordHash:
+            "$2b$12$db09integrationtesthashplaceholder0000000000000000000025",
+          role: "soc_analyst",
+          displayName: "Scoped Deactivation",
+          isActive: true,
+          orgId: TEST_ORG_ID,
+        });
+
+        const wrongOrganizationResult =
+          await repositories.users.deactivateByIdAndOrg(
+            user.id,
+            "some-other-organization",
+          );
+
+        assertEqual(
+          wrongOrganizationResult,
+          null,
+          "Wrong organization should not return a deactivated user",
+        );
+
+        const unchangedUser = await repositories.users.findById(user.id);
+        assertDefined(
+          unchangedUser,
+          "User should still exist after rejected deactivation",
+        );
+        assertTrue(
+          unchangedUser.isActive,
+          "Wrong organization should not mutate the user",
+        );
+
+        const correctOrganizationResult =
+          await repositories.users.deactivateByIdAndOrg(user.id, TEST_ORG_ID);
+
+        assertDefined(
+          correctOrganizationResult,
+          "Correct organization should return the updated user",
+        );
+        assertFalse(
+          correctOrganizationResult.isActive,
+          "Correct organization should deactivate the user",
+        );
+      },
+    },
   ];

@@ -1,0 +1,32 @@
+{
+  "contract_version": "1.0.0",
+  "message_type": "rejected_event",
+  "rejection_id": "36b69bcb-0f2e-4514-8fa3-9ed8b32b6bf7",
+  "collector_id": "collector-dev-01",
+  "rejected_at": "2026-08-29T10:00:04.000Z",
+  "source": {
+    "source_id": "simulated-file-01",
+    "adapter_type": "file",
+    "file_identity": "events-jsonl-001",
+    "record_start_offset": 141,
+    "record_end_offset": 285
+  },
+  "rejection": {
+    "stage": "input_validation",
+    "code": "unsupported_event_type",
+    "message": "Unsupported event_type: password_changed"
+  },
+  "payload": {
+    "content_type": "application/json",
+    "byte_length": 144,
+    "sha256": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+    "capture_encoding": "base64",
+    "capture": "eyJlbmRwb2ludF9pZCI6InNlcnZlci0wMSIsInRpbWVzdGFtcCI6IjIwMjYtMDgtMjlUMTA6MDA6MDMuMDAwWiIsImV2ZW50X3R5cGUiOiJwYXNzd29yZF9jaGFuZ2VkIiwidXNlcm5hbWUiOiJhZG1pbiIsInNvdXJjZV9pcCI6IjE5Mi4xNjguMS41MCJ9",
+    "capture_truncated": false
+  },
+  "integrity": {
+    "algorithm": "HMAC-SHA256",
+    "key_id": "collector-key-test-01",
+    "value": "ElkpDAGhOXaJEA4oZjZQkiGEUo-rLl7RwpBEnhWec4Q"
+  }
+}

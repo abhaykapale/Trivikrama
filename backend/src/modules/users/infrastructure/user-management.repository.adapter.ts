@@ -1,16 +1,19 @@
-
 import type { IUserRepository } from "../../../database";
-import type { UserListFilters,UserFilterCriteria, } from "../../../database";
+import type { UserListFilters, UserFilterCriteria } from "../../../database";
 import { DeactivateUserByIdInput } from "../domain/user-management.contracts";
-import type { DeactivatedUser, GetManagedUserInput, IUserManagementRepository, ManagedUserFilters, ManagedUserRecord, PageResult } from "../domain/user-management.contracts";
-
+import type {
+  DeactivatedUser,
+  GetManagedUserInput,
+  IUserManagementRepository,
+  ManagedUserFilters,
+  ManagedUserRecord,
+  PageResult,
+} from "../domain/user-management.contracts";
 
 type UserManagementPersistence = Pick<
   IUserRepository,
-  "list" | "count" | "findById" | "deactivate"
+  "list" | "count" | "findById" | "deactivateByIdAndOrg"
 >;
-
-
 
 export class UserManagementRepositoryAdapter implements IUserManagementRepository {
   public constructor(
@@ -80,13 +83,14 @@ export class UserManagementRepositoryAdapter implements IUserManagementRepositor
   }
 
   public async deactivateUserById(
-    input: DeactivateUserByIdInput
+    input: DeactivateUserByIdInput,
   ): Promise<DeactivatedUser | null> {
+    const user = await this.userRepository.deactivateByIdAndOrg(
+      input.userId,
+      input.orgId,
+    );
 
-
-    const user = await this.userRepository.deactivate(input.userId);
-
-    if (user === null || user.orgId !== input.orgId) {
+    if (user === null) {
       return null;
     }
 
@@ -97,7 +101,3 @@ export class UserManagementRepositoryAdapter implements IUserManagementRepositor
     };
   }
 }
-
-
-
-

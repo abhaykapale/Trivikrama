@@ -1,0 +1,36 @@
+{
+  "mapping_name": "trivikrama.simulated-auth",
+  "mapping_version": "1.0.0",
+  "ocsf_schema_version": "1.1.0",
+  "vectors": [
+    {
+      "name": "failed_login_with_unmapped_field",
+      "source_id": "simulated-file-01",
+      "file_identity": "events-jsonl-001",
+      "record_start_offset": 0,
+      "raw_payload": "{\"endpoint_id\":\"server-01\",\"timestamp\":\"2026-08-29T10:00:00.000Z\",\"event_type\":\"login_failed\",\"username\":\"admin\",\"source_ip\":\"192.168.1.50\",\"department\":\"finance\"}",
+      "expected_event_id": "sha256:e82b8a237f8c8da2895a7dfc902425669ae8a4ab799e3ba3c98a4c32f457f496",
+      "expected_ocsf": {
+        "activity_id": 1,
+        "category_uid": 3,
+        "class_uid": 3002,
+        "severity_id": 3,
+        "status_id": 2,
+        "time": 1787997600000,
+        "type_uid": 300201,
+        "src_endpoint": {
+          "ip": "192.168.1.50"
+        },
+        "dst_endpoint": {
+          "hostname": "server-01"
+        },
+        "user": {
+          "name": "admin"
+        },
+        "unmapped": {
+          "department": "finance"
+        }
+      }
+    }
+  ]
+}

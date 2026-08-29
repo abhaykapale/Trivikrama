@@ -1,0 +1,12 @@
+{
+  "name": "@trivikrama/collector-ingress-contract-v1",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Language-neutral ARCH-01 schemas, fixtures, and contract verifier",
+  "scripts": {
+    "test": "node scripts/verify-contract.cjs"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

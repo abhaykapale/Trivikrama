@@ -1,0 +1,30 @@
+{
+  "contract_version": "1.0.0",
+  "message_type": "heartbeat",
+  "collector_id": "collector-dev-01",
+  "sequence": 42,
+  "timestamp": "2026-08-29T10:00:30.000Z",
+  "started_at": "2026-08-29T09:50:00.000Z",
+  "collector_version": "0.1.0",
+  "configuration_version": "dev-1",
+  "status": "online",
+  "metrics": {
+    "events_received": 2500,
+    "events_published": 2400,
+    "events_rejected": 0,
+    "events_lost_best_effort": 0,
+    "queue_events": 100,
+    "queue_bytes": 1048576,
+    "outbox_batches": 0,
+    "outbox_bytes": 0,
+    "last_batch_id": "77d8092b-6bd8-4acd-ab16-bd56707a1377",
+    "cpu_percent": 4.3,
+    "memory_bytes": 52428800,
+    "disk_available_bytes": 10737418240
+  },
+  "integrity": {
+    "algorithm": "HMAC-SHA256",
+    "key_id": "collector-key-test-01",
+    "value": "tBoYbdLJKDkTMOS0ArMmQ1UolZ8ZgJaWdMu0hXLyeL0"
+  }
+}
