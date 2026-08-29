@@ -1,0 +1,41 @@
+{
+  "contract_version": "1.0.0",
+  "cases": [
+    {
+      "name": "tampered signed batch",
+      "fixture": "fixtures/negative/batch-tampered.json",
+      "validator": "event_batch",
+      "expected_code": "invalid_hmac"
+    },
+    {
+      "name": "validly signed batch with event-count mismatch",
+      "fixture": "fixtures/negative/batch-count-mismatch.json",
+      "validator": "event_batch",
+      "expected_code": "event_count_mismatch"
+    },
+    {
+      "name": "validly signed batch with inconsistent OCSF status/severity",
+      "fixture": "fixtures/negative/batch-ocsf-mismatch.json",
+      "validator": "event_batch",
+      "expected_code": "ocsf_mapping_mismatch"
+    },
+    {
+      "name": "Collector attempts to emit derived offline status",
+      "fixture": "fixtures/negative/heartbeat-offline-status.json",
+      "validator": "heartbeat",
+      "expected_code": "invalid_heartbeat_status"
+    },
+    {
+      "name": "validly signed rejection with mismatched full-payload digest",
+      "fixture": "fixtures/negative/rejection-digest-mismatch.json",
+      "validator": "rejected_event",
+      "expected_code": "capture_digest_mismatch"
+    },
+    {
+      "name": "duplicate JSON object key",
+      "fixture": "fixtures/negative/duplicate-key.json",
+      "validator": "heartbeat",
+      "expected_code": "duplicate_json_key"
+    }
+  ]
+}

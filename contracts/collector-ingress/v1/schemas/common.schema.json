@@ -1,0 +1,78 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:trivikrama:collector-ingress:1.0.0:common",
+  "title": "Trivikrama Collector Ingress Common Definitions",
+  "$defs": {
+    "contractVersion": {
+      "const": "1.0.0"
+    },
+    "collectorId": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 64,
+      "pattern": "^[a-z0-9](?:[a-z0-9._-]{0,62}[a-z0-9])?$"
+    },
+    "sourceId": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128,
+      "pattern": "^[A-Za-z0-9](?:[A-Za-z0-9._:-]{0,126}[A-Za-z0-9])?$"
+    },
+    "uuidV4": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+    },
+    "rfc3339UtcMillis": {
+      "type": "string",
+      "format": "date-time",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}\\.[0-9]{3}Z$"
+    },
+    "sha256": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "safeInteger": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 9007199254740991
+    },
+    "integrity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["algorithm", "key_id", "value"],
+      "properties": {
+        "algorithm": {
+          "const": "HMAC-SHA256"
+        },
+        "key_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64,
+          "pattern": "^[A-Za-z0-9._-]+$"
+        },
+        "value": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9_-]{43}$"
+        }
+      }
+    },
+    "filePosition": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["file_identity", "record_start_offset", "record_end_offset"],
+      "properties": {
+        "file_identity": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "record_start_offset": {
+          "$ref": "#/$defs/safeInteger"
+        },
+        "record_end_offset": {
+          "$ref": "#/$defs/safeInteger"
+        }
+      }
+    }
+  }
+}

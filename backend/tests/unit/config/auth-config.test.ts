@@ -19,7 +19,8 @@ function validEnvironment(): NodeJS.ProcessEnv {
     AUTH_LOCKOUT_ATTEMPTS: "5",
     AUTH_LOCKOUT_MINUTES: "15",
     AUTH_RATE_LIMIT_PER_MINUTE: "10",
-    DATABASE_URL: "postgresql://app:test-password@localhost:5432/trivikrama_test",
+    DATABASE_URL:
+      "postgresql://app:test-password@localhost:5432/trivikrama_test",
     MONGODB_URI: "mongodb://localhost:27017/trivikrama_test",
     REDIS_URL: "redis://localhost:6379",
     COLLECTOR_HMAC_SECRET:
@@ -134,6 +135,10 @@ async function main(): Promise<void> {
   assert.equal(validConfig.auth.lockoutAttempts, 5);
   assert.equal(validConfig.auth.lockoutMinutes, 15);
   assert.equal(validConfig.auth.rateLimitPerMinute, 10);
+  assert.equal(validConfig.database.postgres.connectionTimeoutMs, 5_000);
+  assert.equal(validConfig.database.postgres.queryTimeoutMs, 30_000);
+  assert.equal(validConfig.database.mongodb.serverSelectionTimeoutMs, 5_000);
+  assert.equal(validConfig.database.redis.keyPrefix, "trivikrama");
 
   const redacted = redactSensitiveData({
     jwtSecret: VALID_SECRET,

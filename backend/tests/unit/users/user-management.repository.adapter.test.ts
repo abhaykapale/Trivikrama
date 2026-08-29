@@ -1,7 +1,10 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import type { IUserRepository, UserRecord } from "../../../src/database/repositories/users/user.repository.js";
+import type {
+  IUserRepository,
+  UserRecord,
+} from "../../../src/database/repositories/users/user.repository.js";
 import { UserManagementRepositoryAdapter } from "../../../src/modules/users/infrastructure/user-management.repository.adapter.js";
 
 test("passes filters and pagination to list and filters to count", async () => {
@@ -24,7 +27,10 @@ test("passes filters and pagination to list and filters to count", async () => {
     orgId: "org-123",
   };
 
-  const repository: Pick<IUserRepository, "list" | "count" | "findById" | "deactivate"> = {
+  const repository: Pick<
+    IUserRepository,
+    "list" | "count" | "findById" | "deactivateByIdAndOrg"
+  > = {
     list: async (filters) => {
       receivedListFilters = filters;
 
@@ -42,7 +48,7 @@ test("passes filters and pagination to list and filters to count", async () => {
       return 25;
     },
     findById: async () => null,
-    deactivate: async () => null
+    deactivateByIdAndOrg: async () => null,
   };
 
   const adapter = new UserManagementRepositoryAdapter(repository);
@@ -92,7 +98,10 @@ test("maps database user to managed user without persistence-only fields", async
     orgId: "org-123",
   };
 
-  const repository: Pick<IUserRepository, "list" | "count" | "findById" | "deactivate"> = {
+  const repository: Pick<
+    IUserRepository,
+    "list" | "count" | "findById" | "deactivateByIdAndOrg"
+  > = {
     list: async () => ({
       items: [databaseUser],
       total: 1,
@@ -103,7 +112,7 @@ test("maps database user to managed user without persistence-only fields", async
 
     count: async () => 1,
     findById: async () => null,
-    deactivate: async () => null,
+    deactivateByIdAndOrg: async () => null,
   };
 
   const adapter = new UserManagementRepositoryAdapter(repository);
@@ -137,7 +146,10 @@ test("maps database user to managed user without persistence-only fields", async
 });
 
 test("returns empty items when no users match", async () => {
-  const repository: Pick<IUserRepository, "list" | "count" | "findById" | "deactivate"> = {
+  const repository: Pick<
+    IUserRepository,
+    "list" | "count" | "findById" | "deactivateByIdAndOrg"
+  > = {
     list: async () => ({
       items: [],
       total: 0,
@@ -148,11 +160,10 @@ test("returns empty items when no users match", async () => {
 
     count: async () => 0,
     findById: async () => null,
-    deactivate: async () => null,
+    deactivateByIdAndOrg: async () => null,
   };
 
   const adapter = new UserManagementRepositoryAdapter(repository);
-
 
   const result = await adapter.list({
     orgId: "org-123",
@@ -167,14 +178,17 @@ test("returns empty items when no users match", async () => {
 });
 
 test("propagates repository errors", async () => {
-  const repository: Pick<IUserRepository, "list" | "count" | "findById" | "deactivate"> = {
+  const repository: Pick<
+    IUserRepository,
+    "list" | "count" | "findById" | "deactivateByIdAndOrg"
+  > = {
     list: async () => {
       throw new Error("Database connection failed");
     },
 
     count: async () => 0,
     findById: async () => null,
-    deactivate: async () => null,
+    deactivateByIdAndOrg: async () => null,
   };
 
   const adapter = new UserManagementRepositoryAdapter(repository);
@@ -192,4 +206,88 @@ test("propagates repository errors", async () => {
   );
 });
 
+test("passes the organization to the atomic deactivation operation", async () => {
+  let receivedInput: { id: string; orgId: string } | null = null;
 
+  const databaseUser: UserRecord = {
+    id: "user-1",
+    username: "abhay",
+    email: "abhay@example.com",
+    passwordHash: "hashed-password",
+    role: "admin",
+    displayName: "Abhay",
+    isActive: false,
+    lastLoginAt: null,
+    failedLoginCount: 0,
+    lockedUntil: null,
+    createdAt: new Date("2026-08-01T10:00:00.000Z"),
+    updatedAt: new Date("2026-08-20T10:00:00.000Z"),
+    orgId: "org-123",
+  };
+
+  const repository: Pick<
+    IUserRepository,
+    "list" | "count" | "findById" | "deactivateByIdAndOrg"
+  > = {
+    list: async () => ({
+      items: [],
+      total: 0,
+      limit: 10,
+      offset: 0,
+      hasMore: false,
+    }),
+    count: async () => 0,
+    findById: async () => null,
+    deactivateByIdAndOrg: async (id, orgId) => {
+      receivedInput = { id, orgId };
+      return databaseUser;
+    },
+  };
+
+  const adapter = new UserManagementRepositoryAdapter(repository);
+
+  const result = await adapter.deactivateUserById({
+    userId: "user-1",
+    orgId: "org-123",
+  });
+
+  assert.deepEqual(receivedInput, { id: "user-1", orgId: "org-123" });
+  assert.deepEqual(result, {
+    id: "user-1",
+    isActive: false,
+    updatedAt: new Date("2026-08-20T10:00:00.000Z"),
+  });
+});
+
+test("returns null when the organization-scoped deactivation finds no row", async () => {
+  let called = false;
+
+  const repository: Pick<
+    IUserRepository,
+    "list" | "count" | "findById" | "deactivateByIdAndOrg"
+  > = {
+    list: async () => ({
+      items: [],
+      total: 0,
+      limit: 10,
+      offset: 0,
+      hasMore: false,
+    }),
+    count: async () => 0,
+    findById: async () => null,
+    deactivateByIdAndOrg: async (_id, _orgId) => {
+      called = true;
+      return null;
+    },
+  };
+
+  const adapter = new UserManagementRepositoryAdapter(repository);
+
+  const result = await adapter.deactivateUserById({
+    userId: "user-1",
+    orgId: "other-org",
+  });
+
+  assert.equal(called, true);
+  assert.equal(result, null);
+});

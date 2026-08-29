@@ -1,0 +1,5 @@
+{
+  "warning": "TEST FIXTURE ONLY - NEVER USE IN PRODUCTION",
+  "key_id": "collector-key-test-01",
+  "secret_base64url": "AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8gISIjJCUmJygpKissLS4v"
+}

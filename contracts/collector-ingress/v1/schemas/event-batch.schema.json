@@ -1,0 +1,289 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:trivikrama:collector-ingress:1.0.0:event-batch",
+  "title": "Trivikrama Collector Event Batch 1.0.0",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "contract_version",
+    "message_type",
+    "batch_id",
+    "collector_id",
+    "created_at",
+    "ocsf_schema_version",
+    "event_count",
+    "events",
+    "integrity"
+  ],
+  "properties": {
+    "contract_version": {
+      "$ref": "common.schema.json#/$defs/contractVersion"
+    },
+    "message_type": {
+      "const": "event_batch"
+    },
+    "batch_id": {
+      "$ref": "common.schema.json#/$defs/uuidV4"
+    },
+    "collector_id": {
+      "$ref": "common.schema.json#/$defs/collectorId"
+    },
+    "created_at": {
+      "$ref": "common.schema.json#/$defs/rfc3339UtcMillis"
+    },
+    "ocsf_schema_version": {
+      "const": "1.1.0"
+    },
+    "event_count": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 1000
+    },
+    "events": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 1000,
+      "items": {
+        "$ref": "#/$defs/event"
+      }
+    },
+    "integrity": {
+      "$ref": "common.schema.json#/$defs/integrity"
+    }
+  },
+  "$defs": {
+    "event": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "event_id",
+        "source",
+        "event_time",
+        "received_time",
+        "content_type",
+        "raw_payload",
+        "mapping",
+        "ocsf"
+      ],
+      "properties": {
+        "event_id": {
+          "$ref": "common.schema.json#/$defs/sha256"
+        },
+        "source": {
+          "$ref": "#/$defs/source"
+        },
+        "event_time": {
+          "$ref": "common.schema.json#/$defs/rfc3339UtcMillis"
+        },
+        "received_time": {
+          "$ref": "common.schema.json#/$defs/rfc3339UtcMillis"
+        },
+        "content_type": {
+          "const": "application/json"
+        },
+        "raw_payload": {
+          "type": "string",
+          "minLength": 2
+        },
+        "mapping": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["name", "version"],
+          "properties": {
+            "name": {
+              "const": "trivikrama.simulated-auth"
+            },
+            "version": {
+              "const": "1.0.0"
+            }
+          }
+        },
+        "ocsf": {
+          "$ref": "#/$defs/ocsfAuthentication"
+        }
+      }
+    },
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "source_id",
+        "adapter_type",
+        "upstream_sender_id",
+        "original_endpoint_id",
+        "upstream_event_id",
+        "position"
+      ],
+      "properties": {
+        "source_id": {
+          "$ref": "common.schema.json#/$defs/sourceId"
+        },
+        "adapter_type": {
+          "const": "file"
+        },
+        "upstream_sender_id": {
+          "type": ["string", "null"],
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "original_endpoint_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 253
+        },
+        "upstream_event_id": {
+          "type": ["string", "null"],
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "position": {
+          "$ref": "common.schema.json#/$defs/filePosition"
+        }
+      }
+    },
+    "ocsfAuthentication": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "activity_id",
+        "category_uid",
+        "class_uid",
+        "severity_id",
+        "status_id",
+        "time",
+        "type_uid",
+        "message",
+        "metadata",
+        "src_endpoint",
+        "dst_endpoint",
+        "user"
+      ],
+      "properties": {
+        "activity_id": {
+          "const": 1
+        },
+        "category_uid": {
+          "const": 3
+        },
+        "class_uid": {
+          "const": 3002
+        },
+        "severity_id": {
+          "enum": [1, 3]
+        },
+        "status_id": {
+          "enum": [1, 2]
+        },
+        "time": {
+          "$ref": "common.schema.json#/$defs/safeInteger"
+        },
+        "type_uid": {
+          "const": 300201
+        },
+        "message": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4096
+        },
+        "metadata": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["version", "product"],
+          "properties": {
+            "version": {
+              "const": "1.1.0"
+            },
+            "product": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["name", "vendor_name"],
+              "properties": {
+                "name": {
+                  "const": "Trivikrama Collector"
+                },
+                "vendor_name": {
+                  "const": "Trivikrama"
+                }
+              }
+            }
+          }
+        },
+        "src_endpoint": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["ip"],
+          "properties": {
+            "ip": {
+              "type": "string",
+              "minLength": 2,
+              "maxLength": 45
+            }
+          }
+        },
+        "dst_endpoint": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["hostname"],
+          "properties": {
+            "hostname": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 253
+            }
+          }
+        },
+        "user": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["name"],
+          "properties": {
+            "name": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256
+            }
+          }
+        },
+        "unmapped": {
+          "type": "object"
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "status_id": {
+                "const": 1
+              }
+            },
+            "required": ["status_id"]
+          },
+          "then": {
+            "properties": {
+              "severity_id": {
+                "const": 1
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "status_id": {
+                "const": 2
+              }
+            },
+            "required": ["status_id"]
+          },
+          "then": {
+            "properties": {
+              "severity_id": {
+                "const": 3
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}

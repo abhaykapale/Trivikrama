@@ -9,13 +9,13 @@ export interface PostgresClientOptions {
   readonly poolMin?: number;
   readonly poolMax?: number;
   readonly acquireConnectionTimeoutMs?: number;
+  readonly statementTimeoutMs?: number;
   readonly applicationName?: string;
 }
 
 const DEFAULT_POOL_MIN = 0;
 const DEFAULT_POOL_MAX = 10;
 const DEFAULT_ACQUIRE_CONNECTION_TIMEOUT_MS = 5_000;
-
 
 /**
  * Creates the single Knex instance used by one backend process.
@@ -35,6 +35,7 @@ export function createPostgresClient(
     connection: {
       connectionString: options.connectionString,
       application_name: options.applicationName,
+      statement_timeout: options.statementTimeoutMs,
     },
     pool: {
       min: options.poolMin ?? DEFAULT_POOL_MIN,
@@ -53,7 +54,7 @@ export async function pingPostgres(client: PostgresClient): Promise<number> {
   const startedAt = performance.now();
 
   await client.raw("select 1 as health_check");
-  
+
   return Math.max(0, Math.round(performance.now() - startedAt));
 }
 
@@ -77,10 +78,20 @@ function validateOptions(options: PostgresClientOptions): void {
   }
 
   if (!Number.isInteger(max) || max < 1) {
-    throw new Error("PostgreSQL poolMax must be a positive integer and at least 1");
+    throw new Error(
+      "PostgreSQL poolMax must be a positive integer and at least 1",
+    );
   }
 
   if (min > max) {
     throw new Error("PostgreSQL poolMin cannot exceed poolMax");
+  }
+
+  if (
+    options.statementTimeoutMs !== undefined &&
+    (!Number.isInteger(options.statementTimeoutMs) ||
+      options.statementTimeoutMs <= 0)
+  ) {
+    throw new Error("PostgreSQL statementTimeoutMs must be a positive integer");
   }
 }

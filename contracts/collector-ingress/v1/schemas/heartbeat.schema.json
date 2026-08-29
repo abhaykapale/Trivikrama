@@ -1,0 +1,101 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:trivikrama:collector-ingress:1.0.0:heartbeat",
+  "title": "Trivikrama Collector Heartbeat 1.0.0",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "contract_version",
+    "message_type",
+    "collector_id",
+    "sequence",
+    "timestamp",
+    "started_at",
+    "collector_version",
+    "configuration_version",
+    "status",
+    "metrics",
+    "integrity"
+  ],
+  "properties": {
+    "contract_version": {
+      "$ref": "common.schema.json#/$defs/contractVersion"
+    },
+    "message_type": {
+      "const": "heartbeat"
+    },
+    "collector_id": {
+      "$ref": "common.schema.json#/$defs/collectorId"
+    },
+    "sequence": {
+      "$ref": "common.schema.json#/$defs/safeInteger"
+    },
+    "timestamp": {
+      "$ref": "common.schema.json#/$defs/rfc3339UtcMillis"
+    },
+    "started_at": {
+      "$ref": "common.schema.json#/$defs/rfc3339UtcMillis"
+    },
+    "collector_version": {
+      "type": "string",
+      "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"
+    },
+    "configuration_version": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128
+    },
+    "status": {
+      "enum": ["online", "degraded", "shutting_down"]
+    },
+    "metrics": {
+      "$ref": "#/$defs/metrics"
+    },
+    "integrity": {
+      "$ref": "common.schema.json#/$defs/integrity"
+    }
+  },
+  "$defs": {
+    "metrics": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "events_received",
+        "events_published",
+        "events_rejected",
+        "events_lost_best_effort",
+        "queue_events",
+        "queue_bytes",
+        "outbox_batches",
+        "outbox_bytes",
+        "last_batch_id",
+        "cpu_percent",
+        "memory_bytes",
+        "disk_available_bytes"
+      ],
+      "properties": {
+        "events_received": { "$ref": "common.schema.json#/$defs/safeInteger" },
+        "events_published": { "$ref": "common.schema.json#/$defs/safeInteger" },
+        "events_rejected": { "$ref": "common.schema.json#/$defs/safeInteger" },
+        "events_lost_best_effort": { "$ref": "common.schema.json#/$defs/safeInteger" },
+        "queue_events": { "$ref": "common.schema.json#/$defs/safeInteger" },
+        "queue_bytes": { "$ref": "common.schema.json#/$defs/safeInteger" },
+        "outbox_batches": { "$ref": "common.schema.json#/$defs/safeInteger" },
+        "outbox_bytes": { "$ref": "common.schema.json#/$defs/safeInteger" },
+        "last_batch_id": {
+          "oneOf": [
+            { "$ref": "common.schema.json#/$defs/uuidV4" },
+            { "type": "null" }
+          ]
+        },
+        "cpu_percent": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100
+        },
+        "memory_bytes": { "$ref": "common.schema.json#/$defs/safeInteger" },
+        "disk_available_bytes": { "$ref": "common.schema.json#/$defs/safeInteger" }
+      }
+    }
+  }
+}

@@ -24,7 +24,7 @@ import type { IUserMutationAuditWriter, IUserMutationUnitOfWork, UserMutationAud
 export interface CreateUserManagementDependencies {
   readonly userRepository: Pick<
     IUserRepository,
-    "list" | "count" | "findById" | "deactivate"
+    "list" | "count" | "findById" | "deactivateByIdAndOrg"
   >;
   readonly userCreationRepository: Pick<
     IUserRepository,

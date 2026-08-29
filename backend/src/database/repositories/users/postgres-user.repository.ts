@@ -16,9 +16,8 @@ import type {
   UserRecord,
   UserRole,
   UserCountFilters,
-  UserFilterCriteria
+  UserFilterCriteria,
 } from "./user.repository.js";
-
 
 interface UserRow {
   readonly id: string;
@@ -39,8 +38,6 @@ interface UserRow {
 interface UserCountRow {
   count: number | string;
 }
-
-
 
 const USERS_TABLE = "public.users";
 const DEFAULT_ORG_ID = "default";
@@ -350,6 +347,19 @@ export class PostgresUserRepository implements IUserRepository {
     return this.update(id, { isActive: false });
   }
 
+  public async deactivateByIdAndOrg(
+    id: string,
+    orgId: string,
+  ): Promise<UserRecord | null> {
+    const [row] = await this.db<UserRow>(USERS_TABLE)
+      .where("id", ensureNonBlank(id, "id"))
+      .andWhere("org_id", ensureNonBlank(orgId, "orgId"))
+      .update({ is_active: false })
+      .returning("*");
+
+    return row ? mapUserRow(row) : null;
+  }
+
   private baseQuery(): Knex.QueryBuilder<UserRow, UserRow[]> {
     return this.db<UserRow>(USERS_TABLE).select("*");
   }
@@ -358,13 +368,18 @@ export class PostgresUserRepository implements IUserRepository {
 function toUserPatch(input: UpdateUserInput): Record<string, unknown> {
   const patch: Record<string, unknown> = {};
 
-  if (input.email !== undefined) patch.email = ensureNonBlank(input.email, "email");
-  if (input.passwordHash !== undefined) patch.password_hash = ensureNonBlank(input.passwordHash, "passwordHash");
+  if (input.email !== undefined)
+    patch.email = ensureNonBlank(input.email, "email");
+  if (input.passwordHash !== undefined)
+    patch.password_hash = ensureNonBlank(input.passwordHash, "passwordHash");
   if (input.role !== undefined) patch.role = input.role;
   if (input.displayName !== undefined) patch.display_name = input.displayName;
   if (input.isActive !== undefined) patch.is_active = input.isActive;
   if (input.failedLoginCount !== undefined) {
-    if (!Number.isInteger(input.failedLoginCount) || input.failedLoginCount < 0) {
+    if (
+      !Number.isInteger(input.failedLoginCount) ||
+      input.failedLoginCount < 0
+    ) {
       throw new Error("failedLoginCount must be a non-negative integer.");
     }
     patch.failed_login_count = input.failedLoginCount;

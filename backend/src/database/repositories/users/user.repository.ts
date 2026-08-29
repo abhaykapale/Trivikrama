@@ -29,8 +29,8 @@ export interface UserFilterCriteria {
   readonly search?: string;
 }
 
-export interface UserListFilters extends PaginationOptions, UserFilterCriteria {}
-
+export interface UserListFilters
+  extends PaginationOptions, UserFilterCriteria {}
 
 export type UserCountFilters = UserFilterCriteria;
 
@@ -55,8 +55,6 @@ export interface UpdateUserInput {
   readonly lockedUntil?: Date | null;
   readonly lastLoginAt?: Date | string | null;
 }
-
-
 
 export interface IUserRepository {
   withTransaction(transaction: TransactionClient): IUserRepository;
@@ -99,8 +97,6 @@ export interface IUserRepository {
   /** Existing convenience operation retained for compatibility. */
   recordSuccessfulLogin(id: string, loginAt?: Date): Promise<UserRecord | null>;
 
-
-
   /**
    * @deprecated Use incrementFailedLoginCount and lockUserUntil. The supplied
    * count is ignored so this method cannot reintroduce a read-modify-write race.
@@ -111,5 +107,12 @@ export interface IUserRepository {
     lockedUntil?: Date | null,
   ): Promise<UserRecord | null>;
 
+  /** Atomically deactivates a user only when it belongs to the supplied organization. */
+  deactivateByIdAndOrg(id: string, orgId: string): Promise<UserRecord | null>;
+
+  /**
+   * @deprecated Use deactivateByIdAndOrg for organization-scoped management
+   * operations.
+   */
   deactivate(id: string): Promise<UserRecord | null>;
 }

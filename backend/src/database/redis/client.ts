@@ -6,6 +6,7 @@ export type RedisClient = Redis;
 
 export interface RedisClientOptions {
   readonly url: string;
+  readonly keyPrefix?: string;
   readonly connectTimeoutMs?: number;
   readonly commandTimeoutMs?: number;
   readonly maxRetriesPerRequest?: number;
@@ -22,18 +23,15 @@ const MAX_RECONNECT_DELAY_MS = 2_000;
  * BullMQ workers should create their own dedicated Redis connections through
  * the ingestion infrastructure because BullMQ has different retry semantics.
  */
-export function createRedisClient(
-  options: RedisClientOptions,
-): RedisClient {
+export function createRedisClient(options: RedisClientOptions): RedisClient {
   validateOptions(options);
 
   const redisOptions: RedisOptions = {
     lazyConnect: true,
     enableReadyCheck: true,
-    connectTimeout:
-      options.connectTimeoutMs ?? DEFAULT_CONNECT_TIMEOUT_MS,
-    commandTimeout:
-      options.commandTimeoutMs ?? DEFAULT_COMMAND_TIMEOUT_MS,
+    keyPrefix: options.keyPrefix,
+    connectTimeout: options.connectTimeoutMs ?? DEFAULT_CONNECT_TIMEOUT_MS,
+    commandTimeout: options.commandTimeoutMs ?? DEFAULT_COMMAND_TIMEOUT_MS,
     maxRetriesPerRequest:
       options.maxRetriesPerRequest ?? DEFAULT_MAX_RETRIES_PER_REQUEST,
     retryStrategy(attempt: number): number {
@@ -103,10 +101,19 @@ function validateOptions(options: RedisClientOptions): void {
     throw new Error("Redis URL is required");
   }
 
+  if (
+    options.keyPrefix !== undefined &&
+    options.keyPrefix.trim().length === 0
+  ) {
+    throw new Error("Redis keyPrefix cannot be empty when provided");
+  }
+
   const maxRetries =
     options.maxRetriesPerRequest ?? DEFAULT_MAX_RETRIES_PER_REQUEST;
 
   if (!Number.isInteger(maxRetries) || maxRetries < 0) {
-    throw new Error("Redis maxRetriesPerRequest must be a non-negative integer");
+    throw new Error(
+      "Redis maxRetriesPerRequest must be a non-negative integer",
+    );
   }
 }

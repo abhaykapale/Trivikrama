@@ -1,0 +1,66 @@
+{
+  "contract_version": "1.0.0",
+  "message_type": "event_batch",
+  "batch_id": "77d8092b-6bd8-4acd-ab16-bd56707a1377",
+  "collector_id": "collector-dev-01",
+  "created_at": "2026-08-29T10:00:05.000Z",
+  "ocsf_schema_version": "1.1.0",
+  "event_count": 1,
+  "events": [
+    {
+      "event_id": "sha256:e82b8a237f8c8da2895a7dfc902425669ae8a4ab799e3ba3c98a4c32f457f496",
+      "source": {
+        "source_id": "simulated-file-01",
+        "adapter_type": "file",
+        "upstream_sender_id": null,
+        "original_endpoint_id": "server-01",
+        "upstream_event_id": null,
+        "position": {
+          "file_identity": "events-jsonl-001",
+          "record_start_offset": 0,
+          "record_end_offset": 140
+        }
+      },
+      "event_time": "2026-08-29T10:00:00.000Z",
+      "received_time": "2026-08-29T10:00:01.000Z",
+      "content_type": "application/json",
+      "raw_payload": "{\"endpoint_id\":\"server-01\",\"timestamp\":\"2026-08-29T10:00:00.000Z\",\"event_type\":\"login_failed\",\"username\":\"admin\",\"source_ip\":\"192.168.1.50\"}",
+      "mapping": {
+        "name": "trivikrama.simulated-auth",
+        "version": "1.0.0"
+      },
+      "ocsf": {
+        "activity_id": 1,
+        "category_uid": 3,
+        "class_uid": 3002,
+        "severity_id": 3,
+        "status_id": 2,
+        "time": 1787997600000,
+        "type_uid": 300201,
+        "message": "Failed login for admin",
+        "metadata": {
+          "version": "1.1.0",
+          "product": {
+            "name": "Trivikrama Collector",
+            "vendor_name": "Trivikrama"
+          }
+        },
+        "src_endpoint": {
+          "ip": "192.168.1.50"
+        },
+        "dst_endpoint": {
+          "hostname": "server-01"
+        },
+        "user": {
+          "name": "admin"
+        },
+        "unmapped": {}
+      }
+    }
+  ],
+  "integrity": {
+    "algorithm": "HMAC-SHA256",
+    "key_id": "collector-key-test-01",
+    "value": "zR-Nvxx18QH2ayvEOauG2JmD4ypZmBT6SDMr39bifp8"
+  }
+}
