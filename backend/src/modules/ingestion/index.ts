@@ -93,3 +93,35 @@ export type { CollectorTrustConfiguration } from "./infrastructure/collector-tru
 export { InMemoryCollectorTrustStore } from "./infrastructure/collector-trust.store.js";
 
 export type { CollectorTrustStoreEntry } from "./infrastructure/collector-trust.store.js";
+
+// -----------------------------------------------------------------------------
+// Safe Collector file intake (BE-ING-01B)
+// -----------------------------------------------------------------------------
+
+export { MAX_COLLECTOR_BATCH_BYTES } from "./domain/collector-file-intake.contracts.js";
+
+export type {
+    ClaimedCollectorBatchFile,
+    CollectorBatchQuarantineReason,
+    CollectorFileIntakeConfiguration,
+    CollectorFileIntakeReport,
+    CollectorFileRecoveryReport,
+    CollectorIntakeIgnoredFileReason,
+    ICollectorFileIntake,
+    IgnoredCollectorFile,
+    QuarantinedCollectorBatchFile,
+} from "./domain/collector-file-intake.contracts.js";
+
+export {
+    COLLECTOR_FILE_INTAKE_ERROR_CODES,
+    CollectorFileIntakeError,
+    isCollectorFileIntakeError,
+} from "./domain/collector-file-intake.errors.js";
+
+export type {
+    CollectorFileIntakeErrorCode,
+    CollectorFileIntakeErrorDetails,
+    CollectorFileIntakeStage,
+} from "./domain/collector-file-intake.errors.js";
+
+export { CollectorFileIntakeService } from "./infrastructure/collector-file-intake.service.js";

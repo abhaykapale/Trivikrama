@@ -1,243 +1,423 @@
-# Trivikrama Architecture Documentation Rules
+# Trivikrama 
 
-## Purpose
+## Repository Overview
 
-Trivikrama maintains lightweight architecture documentation using
-`ARCHITECTURE.md` Markdown files.
+Trivikrama is a multi-component software repository.
 
-These files exist to allow developers to understand the architecture,
-responsibilities, dependencies, and important execution flows without
-reading the entire source code.
+Major components may include:
 
-Source code is always the source of truth.
+- backend
+- frontend
+- collector
+- contracts
+- database
+- scripts
+- shared infrastructure
+- architecture/documentation
 
----
+The repository is organized into architectural boundaries.
+Understand the relevant boundary before making changes.
 
-# Documentation Synchronization
+The source code is the source of truth.
 
-Architecture documentation is synchronized before creating a PR.
+## Source of Truth
 
-The documentation workflow analyzes the Git changes introduced by the
-current branch compared with its base branch.
+Always inspect the actual implementation before making architectural claims.
 
-The relevant comparison is:
+Do not infer behavior solely from:
 
-    git diff <base-branch>...HEAD
-
-The workflow must consider:
-
-- added files
-- modified files
-- deleted files
-- renamed files
-
----
-
-# Architecture Impact
-
-Determine whether a code change affects:
-
-- architecture
-- module responsibilities
-- execution flow
-- request flow
-- data flow
-- API routes
-- middleware
-- authentication
-- authorization
-- database interactions
-- external services
-- module dependencies
-- lifecycle behavior
-- important error flows
-- security mechanisms
-- architectural boundaries
-
-Only update documentation when the documented architecture or an
-important documented flow has changed.
-
----
-
-# No-Impact Changes
-
-Do NOT update architecture documentation for insignificant changes such as:
-
-- variable renaming
-- formatting
+- filenames
+- folder names
 - comments
-- typo fixes
-- internal refactoring that preserves architecture
-- implementation details that do not change documented behavior
+- existing documentation
+- variable names
+- assumptions about common architecture patterns
 
----
-
-# Documentation Hierarchy
-
-Use the nearest meaningful `ARCHITECTURE.md`.
-
-Examples:
-
-    backend/src/modules/auth/ARCHITECTURE.md
-
-    backend/src/modules/users/ARCHITECTURE.md
-
-    collector/ARCHITECTURE.md
-
-Use higher-level architecture documents for higher-level architecture.
-
-For example:
-
-    src/ARCHITECTURE.md
-
-describes the architecture of the source tree rather than every
-implementation detail.
-
-Do not create an architecture document for every trivial folder.
-
----
-
-# New Modules
-
-When a meaningful new module is introduced:
-
-1. Create an appropriate `ARCHITECTURE.md`.
-2. Explain its responsibility.
-3. List only important components.
-4. Explain important dependencies.
-5. Add concise Mermaid diagrams.
-6. Update parent architecture documentation when required.
-
----
-
-# Mermaid
-
-Use Mermaid diagrams when they improve architectural understanding.
-
-Preferred diagram types:
-
-- `flowchart TD` for execution/control flow
-- `sequenceDiagram` for request/response interactions
-- `stateDiagram-v2` for meaningful state transitions
-- `erDiagram` for important database relationships
-
-Keep diagrams small, readable, and focused.
-
-Do not create giant diagrams.
-
----
-
-# Documentation Content
-
-Architecture documentation should focus on:
-
-- responsibility
-- important components
-- dependencies
-- execution flow
-- request flow
-- data flow
-- important architectural decisions
-- security behavior
-- important failure paths
-
-Do NOT document:
-
-- every function
-- every variable
-- every import
-- every TypeScript type
-- obvious implementation details
-- boilerplate
-- line-by-line source code
-
----
-
-# Documentation Size
-
-Keep documentation concise.
-
-A meaningful module should generally remain around 50-150 lines unless
-additional complexity genuinely requires more.
-
-Prefer diagrams over large blocks of explanatory text when a diagram
-communicates the architecture more effectively.
-
----
-
-# Cross-Module Changes
-
-If only one module changes:
-
-Update that module's architecture documentation.
-
-If multiple modules change:
-
-Update the relevant module documentation.
-
-If the overall system architecture changes:
-
-Update the appropriate top-level architecture documentation.
-
-Avoid duplicating detailed module documentation in higher-level files.
-
----
-
-# Source Code Safety
-
-The architecture synchronization workflow must ONLY create or modify
-architecture Markdown files.
-
-Allowed:
-
-    *.md
-
-Especially:
-
-    ARCHITECTURE.md
-
-Do NOT modify:
-
-- TypeScript
-- JavaScript
-- tests
-- configuration
-- package files
-- database files
-- environment files
-- source code
-
-Do not automatically commit changes.
-
-Do not push changes.
-
----
-
-# Accuracy
-
-Before updating documentation:
-
-1. Inspect the actual implementation.
-2. Trace relevant dependencies.
-3. Verify the execution flow.
-4. Verify referenced files exist.
-5. Remove stale architectural information.
+Verify relationships using the actual source code, imports, function calls,
+constructors, interfaces, factories, dependency wiring, and runtime entry
+points.
 
 Never invent architecture.
 
-If the implementation is unclear, inspect more source code before
-documenting it.
+## Architecture
 
----
+When analyzing the repository, identify:
 
-# Final Verification
+- application boundaries
+- module boundaries
+- domain boundaries
+- infrastructure boundaries
+- shared components
+- external integrations
+- persistence
+- contracts
+- composition roots
 
-After documentation synchronization:
+For important components determine:
 
-1. Verify only architecture Markdown files were modified or created.
-2. Verify Mermaid syntax is structurally valid.
-3. Verify referenced files exist.
-4. Verify no secrets or credentials appear in documentation.
-5. Verify unrelated documentation was not modified.
+- who owns the responsibility
+- who calls it
+- what it calls
+- what it depends on
+- what depends on it
+- where data enters
+- where data leaves
+- how errors propagate
+- how security is enforced
 
-The resulting documentation must represent the current implementation.
+
+## Dependency Injection
+
+Whenever Dependency Injection exists, trace it completely.
+
+Identify:
+
+- composition root
+- dependency factories
+- dependency creation
+- interfaces/contracts
+- concrete implementations
+- constructor injection
+- function-parameter injection
+- factory-based injection
+- middleware injection
+- router injection
+- service/use-case injection
+- dependency wiring
+
+Documentation should show:
+
+Concrete Implementation
+        ↓
+Interface / Contract
+        ↓
+Injected Into
+        ↓
+Consumer
+        ↓
+Runtime Usage
+
+Do not merely state that Dependency Injection is used.
+
+Show where the dependency is created, where it is wired, where it is
+injected, and how the consumer uses it.
+
+Only document DI relationships verified from the implementation.
+
+
+## Architecture Documentation
+
+ARCHITECTURE.md files are visual documentation of the actual implementation.
+
+Their purpose is to allow a developer to understand a folder/module
+without reading the entire source code.
+
+Each meaningful architectural folder should have an ARCHITECTURE.md.
+
+Documentation should explain:
+
+1. Folder/module responsibility
+2. Internal folder structure
+3. Important components
+4. Relationships between components
+5. Relationships with other folders/modules
+6. Important classes
+7. Important functions
+8. Dependency Injection
+9. Execution flow
+10. Request/response flow when applicable
+11. Data flow
+12. Persistence flow
+13. Security flow when applicable
+14. Important error/failure flow
+15. External integrations
+16. Important interfaces/contracts
+
+## Architecture Diagrams
+
+Prefer detailed Mermaid diagrams over large amounts of prose.
+
+Diagrams must show actual implementation relationships.
+
+A useful diagram should allow a developer to answer:
+
+- Where does execution start?
+- What happens next?
+- Which function calls which function?
+- Which class creates which object?
+- Which class depends on which interface?
+- Which implementation satisfies the interface?
+- Where does Dependency Injection occur?
+- Where does data move?
+- Where does the request end?
+- Where are errors handled?
+- Where does the database/external service enter the flow?
+
+Do not create diagrams containing only high-level boxes such as:
+
+Controller → Service → Repository
+
+unless that is genuinely the complete architecture.
+
+Use actual class and function names whenever possible.
+
+Prefer multiple focused detailed diagrams over one giant unreadable diagram.
+
+
+## Mermaid Standards
+
+Use the diagram type that best represents the information.
+
+Use:
+
+- flowchart TD for execution and dependency flows
+- sequenceDiagram for request/response interactions
+- stateDiagram-v2 for state transitions
+- erDiagram for important database relationships
+
+Use subgraphs when they help represent architectural boundaries.
+
+Clearly distinguish:
+
+- callers
+- consumers
+- interfaces
+- implementations
+- infrastructure
+- external systems
+- databases
+- composition roots
+
+## Folder Relationships
+
+Architecture documentation must show how meaningful folders connect.
+
+For example:
+
+HTTP Layer
+    ↓
+Application Layer
+    ↓
+Domain Layer
+    ↓
+Infrastructure Layer
+    ↓
+Database
+
+However, do not assume this structure.
+
+Trace the actual implementation and use the real project structure.
+
+Where a component depends on another folder/module, show the relationship
+using actual files, classes, interfaces, or functions.
+
+## Class and Function Flow
+
+For important flows, trace execution beyond the folder level.
+
+Show meaningful relationships such as:
+
+Route
+  ↓
+Controller function
+  ↓
+Use-case function
+  ↓
+Repository method
+  ↓
+Database operation
+
+and:
+
+Factory
+  ↓
+Dependency construction
+  ↓
+Dependency injection
+  ↓
+Consumer constructor
+  ↓
+Runtime method call
+
+Do not document every helper function.
+
+Focus on functions and classes that are important for understanding the
+architecture and execution flow.
+
+## Security
+
+When security is relevant, document the actual security flow.
+
+Examples include:
+
+- authentication
+- authorization
+- token validation
+- session validation
+- password hashing
+- HMAC verification
+- cryptographic verification
+- input validation
+- trust boundaries
+- secret handling
+
+Never expose actual secrets.
+
+Never place:
+
+- passwords
+- API keys
+- tokens
+- private keys
+- credentials
+
+inside documentation.
+
+## Documentation Size
+
+Documentation should be concise but architecturally complete.
+
+Do NOT:
+
+- document every file
+- document every import
+- document every variable
+- copy source code
+- repeat implementation details unnecessarily
+- write textbook explanations of common programming concepts
+
+DO:
+
+- document important architectural relationships
+- document important execution paths
+- document important dependencies
+- use diagrams to replace unnecessary prose
+
+The objective is:
+
+"Understand the architecture without reading the entire source code."
+
+Not:
+
+"Create a written copy of the source code."
+
+
+## Documentation Hierarchy
+
+Avoid unnecessary duplication between ARCHITECTURE.md files.
+
+Higher-level ARCHITECTURE.md files should explain:
+
+- major architectural boundaries
+- major components
+- relationships between modules
+
+Lower-level ARCHITECTURE.md files should explain:
+
+- internal structure
+- detailed class/function flow
+- detailed dependency flow
+- DI wiring
+- detailed runtime behavior
+
+Do not copy an entire child architecture into its parent.
+
+## Initial Architecture Documentation
+
+When asked to generate the initial architecture documentation:
+
+1. Inspect the complete repository structure.
+2. Identify meaningful architectural boundaries.
+3. Inspect the implementation of each meaningful boundary.
+4. Trace important dependencies.
+5. Trace important execution flows.
+6. Trace Dependency Injection.
+7. Trace important data flows.
+8. Trace security flows where applicable.
+9. Create ARCHITECTURE.md files in appropriate folders.
+
+Do not create documentation for trivial folders.
+
+Do not create documentation based solely on folder names.
+
+The initial documentation should represent the architecture that actually
+exists in the current codebase.
+
+
+## Architecture Documentation Updates
+
+When asked to update architecture documentation based on Git changes:
+
+1. Inspect the current Git status.
+2. Inspect the relevant Git diff.
+3. Compare the current branch against the appropriate base branch.
+4. Identify changed files.
+5. Determine which architectural boundaries are affected.
+6. Inspect the affected implementation.
+7. Determine whether the documented architecture changed.
+8. Update only the relevant ARCHITECTURE.md files.
+
+Do not update documentation merely because source code changed.
+
+Update documentation when changes affect:
+
+- architecture
+- module boundaries
+- dependencies
+- DI wiring
+- important classes
+- important functions
+- execution flow
+- data flow
+- security flow
+- persistence
+- external integrations
+- interfaces/contracts
+
+## Documentation-Only Safety Rule
+
+When the task is explicitly an architecture documentation task:
+
+ONLY Markdown files may be created or modified.
+
+Allowed:
+
+- *.md
+
+Forbidden:
+
+- *.ts
+- *.tsx
+- *.js
+- *.jsx
+- package.json
+- lock files
+- configuration files
+- .env files
+- database files
+- scripts
+- source code
+- tests
+
+Do not commit.
+Do not push.
+
+The source code must be treated as read-only during documentation tasks.
+
+## Documentation Verification
+
+Before completing an architecture documentation task:
+
+1. Verify every documented relationship against the implementation.
+2. Verify referenced files exist.
+3. Verify class names are correct.
+4. Verify function names are correct.
+5. Verify interface/implementation relationships.
+6. Verify DI relationships.
+7. Verify execution flows.
+8. Verify data flows.
+9. Verify Mermaid syntax.
+10. Ensure diagrams are readable.
+11. Ensure there is no unnecessary duplication.
+12. Ensure no secrets are exposed.
+13. Verify that ONLY Markdown files were modified.
