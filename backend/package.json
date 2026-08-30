@@ -52,7 +52,8 @@
     "test:ingestion:be-ing-01a:trust-config": "node --import tsx tests/unit/ingestion/be-ing-01a-trust-configuration.test.ts",
     "test:ingestion:be-ing-01a:configured-composition": "node --import tsx tests/unit/ingestion/be-ing-01a-configured-composition.test.ts",
     "test:ingestion:be-ing-01a": "npm run test:ingestion:be-ing-01a:primitives && npm run test:ingestion:be-ing-01a:contract && npm run test:ingestion:be-ing-01a:trust-config && npm run test:ingestion:be-ing-01a:configured-composition && npm run test:ingestion:be-ing-01a:runtime-wiring",
-    "test:ingestion:be-ing-01a:runtime-wiring": "node --import tsx tests/unit/ingestion/be-ing-01a-runtime-wiring.test.ts"
+    "test:ingestion:be-ing-01a:runtime-wiring": "node --import tsx tests/unit/ingestion/be-ing-01a-runtime-wiring.test.ts",
+    "test:ingestion:be-ing-01b": "node --import tsx tests/unit/ingestion/be-ing-01b-file-intake.test.ts"
   },
   "keywords": [],
   "author": "",

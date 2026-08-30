@@ -1,249 +1,366 @@
 $ErrorActionPreference = "Stop"
 
+$RepoRoot = Split-Path -Parent $PSScriptRoot
+
 Write-Host ""
-Write-Host "============================================="
-Write-Host "     TRIVIKRAMA ARCHITECTURE DOC SYNC"
-Write-Host "============================================="
-Write-Host ""
-
-# --------------------------------------------------
-# 1. Verify we are inside a Git repository
-# --------------------------------------------------
-
-$repoRoot = git rev-parse --show-toplevel
-
-if ($LASTEXITCODE -ne 0) {
-    Write-Error "Not inside a Git repository."
-    exit 1
-}
-
-Set-Location $repoRoot
-
-Write-Host "Repository: $repoRoot"
-
-# --------------------------------------------------
-# 2. Determine current branch
-# --------------------------------------------------
-
-$currentBranch = git branch --show-current
-
-if ([string]::IsNullOrWhiteSpace($currentBranch)) {
-    Write-Error "Unable to determine current Git branch."
-    exit 1
-}
-
-Write-Host "Current branch: $currentBranch"
-
-# --------------------------------------------------
-# 3. Determine base branch
-# --------------------------------------------------
-
-$baseBranch = "main"
-
-Write-Host "Base branch:    $baseBranch"
+Write-Host "========================================="
+Write-Host " Trivikrama Architecture Documentation"
+Write-Host "========================================="
 Write-Host ""
 
-# --------------------------------------------------
-# 4. Verify base branch exists
-# --------------------------------------------------
+Set-Location $RepoRoot
 
-git rev-parse --verify $baseBranch *> $null
+Write-Host "Checking repository..."
+git status --short
 
-if ($LASTEXITCODE -ne 0) {
-    Write-Error "Base branch '$baseBranch' does not exist."
-    exit 1
-}
-
-# --------------------------------------------------
-# 5. Get changes introduced by this branch
-# --------------------------------------------------
-
-Write-Host "Analyzing Git changes..."
+Write-Host ""
+Write-Host "Checking changes against main..."
 Write-Host ""
 
-$changedFiles = git diff --name-status "$baseBranch...HEAD"
-
-if ($LASTEXITCODE -ne 0) {
-    Write-Error "Unable to calculate Git diff."
-    exit 1
-}
-
-if ([string]::IsNullOrWhiteSpace($changedFiles)) {
-    Write-Host "No changes detected against $baseBranch."
-    exit 0
-}
-
-Write-Host "Changed files:"
-Write-Host "---------------------------------------------"
-Write-Host $changedFiles
-Write-Host "---------------------------------------------"
+Write-Host "Committed changes compared with main:"
 Write-Host ""
 
-# --------------------------------------------------
-# 6. Save the diff for Codex
-# --------------------------------------------------
+git diff --name-status main...HEAD
 
-$diffFile = Join-Path $repoRoot ".docs-sync-diff.txt"
+Write-Host ""
+Write-Host "Uncommitted tracked changes:"
+Write-Host ""
 
-git diff "$baseBranch...HEAD" -- . > $diffFile
+git diff --name-status
 
-if ($LASTEXITCODE -ne 0) {
-    Write-Error "Unable to generate Git diff."
-    exit 1
-}
+Write-Host ""
+Write-Host "Untracked files:"
+Write-Host ""
 
-# --------------------------------------------------
-# 7. Snapshot working tree before Codex
-# --------------------------------------------------
+git ls-files --others --exclude-standard
 
-$beforeStatus = git status --porcelain
-
-# --------------------------------------------------
-# 8. Run Codex
-# --------------------------------------------------
-
+Write-Host ""
 Write-Host "Starting Codex..."
 Write-Host ""
 
 $prompt = @"
-You are synchronizing Trivikrama architecture documentation.
+Read and follow the repository AGENTS.md and any applicable nested
+AGENTS.md files before doing anything.
 
-Read and follow AGENTS.md before doing anything.
+This is an architecture documentation synchronization task.
 
-The complete Git diff between the base branch and HEAD is available in:
+Repository root:
 
-.docs-sync-diff.txt
+$RepoRoot
 
-Use the Git diff as the initial scope of investigation.
+============================================================
+OBJECTIVE
+============================================================
 
-Then inspect the actual source code affected by those changes.
+Update the existing ARCHITECTURE.md documentation so that it accurately
+represents the current implementation.
 
-Determine whether the changes affect documented architecture or important
-documented execution/data/request flows.
+The source code is the source of truth.
 
-If architecture has changed:
+Use Git changes to identify the likely architectural scope, but inspect the
+actual implementation before changing documentation.
 
-- update the relevant ARCHITECTURE.md files
-- create an ARCHITECTURE.md for a new meaningful module when necessary
-- update parent architecture documentation when necessary
-- update Mermaid diagrams when necessary
-- remove stale architectural information when necessary
+First inspect:
 
-If architecture has NOT changed:
+git status --short
 
-- do not modify any ARCHITECTURE.md files.
+Then inspect:
 
-IMPORTANT SAFETY RULE:
+git diff main...HEAD
 
-You may ONLY create or modify architecture Markdown documentation.
+Also inspect unstaged and untracked changes when relevant.
 
-Allowed:
-- ARCHITECTURE.md files
-- other Markdown files only if explicitly required by existing
-  architecture documentation rules
+============================================================
+IMPORTANT
+============================================================
 
-Do NOT modify:
+You may ONLY create or modify Markdown (.md) files.
+
+DO NOT modify:
+
 - TypeScript
 - JavaScript
+- TSX
+- JSX
 - tests
+- package.json
+- lock files
 - configuration
-- package files
+- .env files
 - database files
-- environment files
+- scripts
 - source code
+- any other non-Markdown files
 
 Do NOT commit.
 Do NOT push.
 
-Keep documentation concise and readable.
+============================================================
+CHANGE ANALYSIS
+============================================================
 
-The source code is the source of truth.
+Determine which architectural areas are affected by the current changes.
 
-After making changes, verify that the documentation accurately represents
-the current implementation.
+Do not assume that every changed source file requires documentation.
+
+Determine whether the change affects:
+
+- architecture
+- module boundaries
+- folder relationships
+- dependencies
+- Dependency Injection
+- composition root
+- interfaces/contracts
+- concrete implementations
+- class relationships
+- function relationships
+- execution flow
+- data flow
+- security flow
+- persistence
+- external integrations
+- error flow
+
+If a change does not affect architecture or architectural understanding,
+do not unnecessarily modify ARCHITECTURE.md.
+
+============================================================
+DOCUMENTATION UPDATE
+============================================================
+
+For each affected architectural area:
+
+1. Read the existing ARCHITECTURE.md.
+2. Inspect the changed implementation.
+3. Inspect related classes/functions/interfaces.
+4. Trace dependencies.
+5. Trace Dependency Injection.
+6. Trace the runtime flow.
+7. Determine what changed architecturally.
+8. Update only the relevant Markdown documentation.
+
+Preserve accurate existing documentation.
+
+Do not rewrite documents unnecessarily.
+
+============================================================
+DEPENDENCY INJECTION
+============================================================
+
+If the change affects Dependency Injection, update the DI documentation.
+
+Verify:
+
+- composition root
+- dependency construction
+- concrete implementations
+- interfaces/contracts
+- dependency wiring
+- constructor injection
+- function injection
+- factory injection
+- router/application factory injection
+- consumers
+- runtime usage
+
+Show the actual implementation names.
+
+Do not use generic names when actual names are available.
+
+============================================================
+DI + RUNTIME
+============================================================
+
+Keep static dependency wiring and runtime execution understandable.
+
+Where useful, maintain separate diagrams:
+
+STATIC DI:
+
+Composition Root
+      ↓
+Dependency Construction
+      ↓
+Concrete Implementation
+      ↓
+Interface / Contract
+      ↓
+Injection
+      ↓
+Consumer
+
+
+RUNTIME:
+
+Request/Event
+      ↓
+Entry Point
+      ↓
+Handler
+      ↓
+Consumer
+      ↓
+Injected Dependency
+      ↓
+Concrete Implementation
+      ↓
+Database / External System
+      ↓
+Result
+
+Use actual implementation names.
+
+============================================================
+DETAILED DIAGRAMS
+============================================================
+
+Architecture diagrams must be detailed enough that a developer can
+understand the implementation by looking at the diagram.
+
+Show important:
+
+- folders
+- files
+- classes
+- functions
+- interfaces
+- implementations
+- dependencies
+- DI wiring
+- execution steps
+- data movement
+- external systems
+
+Avoid shallow diagrams such as:
+
+Controller -> Service -> Repository
+
+when the implementation contains more meaningful relationships.
+
+Use multiple focused diagrams rather than one giant unreadable diagram.
+
+============================================================
+EXISTING DOCUMENTATION
+============================================================
+
+Do not blindly append information.
+
+If an existing ARCHITECTURE.md can be made:
+
+- clearer
+- more accurate
+- easier to understand
+- more detailed where necessary
+- less repetitive
+- better structured
+- better diagrammed
+
+improve it.
+
+If it is already accurate and sufficiently clear, leave it alone.
+
+============================================================
+FOLDER DOCUMENTATION
+============================================================
+
+Update the appropriate ARCHITECTURE.md based on the architectural
+boundary affected by the change.
+
+Do not create documentation for trivial folders.
+
+Do not duplicate the same architectural information unnecessarily between
+parent and child ARCHITECTURE.md files.
+
+============================================================
+VERIFICATION
+============================================================
+
+Before finishing:
+
+1. Verify every documented relationship against the source.
+2. Verify every class/function name.
+3. Verify interfaces and implementations.
+4. Verify DI wiring.
+5. Verify runtime flow.
+6. Verify folder relationships.
+7. Verify referenced files exist.
+8. Verify Mermaid syntax.
+9. Ensure diagrams are readable.
+10. Ensure no secrets are exposed.
+11. Ensure documentation is concise.
+12. Ensure only Markdown files were modified.
+
+Finally run:
+
+git status --short
+
+and verify that no non-Markdown files were modified.
+
+Do not revert existing user changes.
+
+Do not commit.
+Do not push.
+
+The task is complete only when the architecture documentation accurately
+represents the current implementation.
 "@
 
-$prompt | codex exec `
-    -C $repoRoot `
+codex exec `
+    -C $RepoRoot `
     -s workspace-write `
-    --ask-for-approval never `
-    --ephemeral `
-    -
+    -- "$prompt"
 
 if ($LASTEXITCODE -ne 0) {
-    Write-Error "Codex documentation synchronization failed."
-    exit 1
-}
-
-# --------------------------------------------------
-# 9. Remove temporary diff
-# --------------------------------------------------
-
-Remove-Item $diffFile -Force -ErrorAction SilentlyContinue
-
-# --------------------------------------------------
-# 10. Check what changed
-# --------------------------------------------------
-
-Write-Host ""
-Write-Host "============================================="
-Write-Host "             POST-SYNC CHECK"
-Write-Host "============================================="
-Write-Host ""
-
-$afterStatus = git status --porcelain
-
-if ([string]::IsNullOrWhiteSpace($afterStatus)) {
-    Write-Host "No documentation changes were required."
     Write-Host ""
-    exit 0
+    Write-Host "Codex failed. Architecture documentation was NOT updated." -ForegroundColor Red
+    Write-Host "Exit code: $LASTEXITCODE" -ForegroundColor Red
+    exit $LASTEXITCODE
 }
 
-Write-Host "Working tree changes:"
-Write-Host "---------------------------------------------"
-Write-Host $afterStatus
-Write-Host "---------------------------------------------"
+Write-Host ""
+Write-Host "========================================="
+Write-Host " Architecture update complete"
+Write-Host "========================================="
 Write-Host ""
 
-# --------------------------------------------------
-# 11. Verify only Markdown files changed
-# --------------------------------------------------
+Write-Host "Changed files:"
+git status --short
 
-$invalidChanges = @()
+Write-Host ""
+Write-Host "Review the Markdown changes before committing."
+Write-Host ""
+Write-Host "Validating documentation-only changes..."
+Write-Host ""
 
-foreach ($line in ($afterStatus -split "`n")) {
+$changedFiles = git status --short
 
-    if ([string]::IsNullOrWhiteSpace($line)) {
+$invalidFiles = @()
+
+foreach ($line in $changedFiles) {
+    if ($line.Length -lt 4) {
         continue
     }
 
-    # Git status format:
-    # XY filename
-
     $file = $line.Substring(3).Trim()
 
-    if ($file -notmatch "\.md$") {
-        $invalidChanges += $file
+    if ($file -notmatch '\.md$') {
+        $invalidFiles += $file
     }
 }
 
-if ($invalidChanges.Count -gt 0) {
-
+if ($invalidFiles.Count -gt 0) {
     Write-Host ""
-    Write-Host "❌ SAFETY CHECK FAILED" -ForegroundColor Red
-    Write-Host ""
-    Write-Host "Codex modified non-Markdown files:"
+    Write-Host "ERROR: Non-Markdown files were modified:" -ForegroundColor Red
 
-    foreach ($file in $invalidChanges) {
-        Write-Host "  $file"
+    foreach ($file in $invalidFiles) {
+        Write-Host "  $file" -ForegroundColor Red
     }
 
     Write-Host ""
-    Write-Host "Review your working tree before continuing."
+    Write-Host "Review the changes before proceeding."
+
     exit 1
 }
 
-Write-Host "✓ Only Markdown files were modified."
-Write-Host ""
-Write-Host "Architecture documentation synchronization complete."
-Write-Host ""
+Write-Host "Documentation-only validation passed."
