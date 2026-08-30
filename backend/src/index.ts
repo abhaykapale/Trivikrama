@@ -22,3 +22,16 @@ export {
   type CreateUsersRouterDependencies,
 } from "./modules/users/http/index.js";
 
+export {
+    createConfiguredCollectorMessageVerifier,
+    createCollectorMessageVerifier,
+    CollectorTrustConfigurationError,
+    CollectorVerificationError,
+    isCollectorVerificationError,
+} from "./modules/ingestion/index.js";
+
+export type {
+    CollectorVerificationRuntimeConfiguration,
+    ICollectorMessageVerifier,
+    VerifiedCollectorMessage,
+} from "./modules/ingestion/index.js";

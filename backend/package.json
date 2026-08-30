@@ -45,7 +45,14 @@
     "test:auth:be01d": "node --import tsx tests/unit/auth/be01d-auth-verification.test.ts && node --import tsx tests/integration/auth/be01d-auth-http.test.ts",
     "test:build-contract": "node tests/unit/build-contract.test.cjs",
     "verify:build-contract": "node tests/unit/build-contract.test.cjs --verify-dist",
-    "test:stb003": "npm run test:build-contract && npm run typecheck && npm run test:auth:be01d && node --import tsx --test tests/unit/shared/http-contract.test.ts tests/unit/users/create-user.http.test.ts tests/unit/users/deactivate-user-by-id.http.test.ts tests/unit/users/get-user-by-id.http.test.ts tests/unit/users/user-mutation.http.test.ts && node --import tsx tests/unit/users/users-http.test.ts"
+    "test:stb003": "npm run test:build-contract && npm run typecheck && npm run test:auth:be01d && node --import tsx --test tests/unit/shared/http-contract.test.ts tests/unit/users/create-user.http.test.ts tests/unit/users/deactivate-user-by-id.http.test.ts tests/unit/users/get-user-by-id.http.test.ts tests/unit/users/user-mutation.http.test.ts && node --import tsx tests/unit/users/users-http.test.ts",
+    "docs:sync": "node scripts/docs-sync.js",
+    "test:ingestion:be-ing-01a:primitives": "node --import tsx tests/unit/ingestion/be-ing-01a-security-primitives.test.ts",
+    "test:ingestion:be-ing-01a:contract": "node --import tsx tests/unit/ingestion/be-ing-01a-contract-fixtures.test.ts",
+    "test:ingestion:be-ing-01a:trust-config": "node --import tsx tests/unit/ingestion/be-ing-01a-trust-configuration.test.ts",
+    "test:ingestion:be-ing-01a:configured-composition": "node --import tsx tests/unit/ingestion/be-ing-01a-configured-composition.test.ts",
+    "test:ingestion:be-ing-01a": "npm run test:ingestion:be-ing-01a:primitives && npm run test:ingestion:be-ing-01a:contract && npm run test:ingestion:be-ing-01a:trust-config && npm run test:ingestion:be-ing-01a:configured-composition && npm run test:ingestion:be-ing-01a:runtime-wiring",
+    "test:ingestion:be-ing-01a:runtime-wiring": "node --import tsx tests/unit/ingestion/be-ing-01a-runtime-wiring.test.ts"
   },
   "keywords": [],
   "author": "",

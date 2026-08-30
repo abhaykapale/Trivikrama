@@ -1,10 +1,12 @@
 # Dependencies
 node_modules/
+
 .gitignore
+
 # Environment / secrets
 .env
 .env.*
-!.env.example
+.env.example
 
 # TypeScript build cache
 *.tsbuildinfo
@@ -25,4 +27,4 @@ Thumbs.db
 .vscode/
 *.zip
 docs/
-
+commands.txt
