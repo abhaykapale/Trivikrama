@@ -37,53 +37,60 @@ const ADMIN_ID = "550e8400-e29b-41d4-a716-446655440001";
 const CREATED_USER_ID = "550e8400-e29b-41d4-a716-446655440002";
 
 const TEST_CONFIG: AppConfig = {
-  server: { port: 3000, nodeEnv: "test", apiPrefix: "/api/v1" },
-  database: {
-    DATABASE_URL: "postgres://example.test/trivikrama",
-    MONGODB_URI: "mongodb://example.test/trivikrama",
-    REDIS_URL: "redis://example.test:6379",
-    postgres: {
-      poolMin: 1,
-      poolMax: 2,
-      connectionTimeoutMs: 5000,
-      queryTimeoutMs: 30000,
+    server: { port: 3000, nodeEnv: "test", apiPrefix: "/api/v1" },
+    database: {
+        DATABASE_URL: "postgres://example.test/trivikrama",
+        MONGODB_URI: "mongodb://example.test/trivikrama",
+        REDIS_URL: "redis://example.test:6379",
+        postgres: {
+            poolMin: 1,
+            poolMax: 2,
+            connectionTimeoutMs: 5000,
+            queryTimeoutMs: 30000,
+        },
+        mongodb: { poolSize: 2, serverSelectionTimeoutMs: 5000 },
+        redis: { keyPrefix: "trivikrama-test" },
     },
-    mongodb: { poolSize: 2, serverSelectionTimeoutMs: 5000 },
-    redis: { keyPrefix: "trivikrama-test" },
-  },
-  jwt: {
-    algorithm: "HS256",
-    secret: "test-jwt-secret-that-is-long-enough-for-production-validation",
-    accessTokenExpiry: "1h",
-    refreshWindow: "5m",
-    maxSessionDuration: "7d",
-    issuer: "ai-siem",
-    cookie: {
-      name: "siem_token",
-      httpOnly: true,
-      secure: true,
-      sameSite: "strict",
+    jwt: {
+        algorithm: "HS256",
+        secret: "test-jwt-secret-that-is-long-enough-for-production-validation",
+        accessTokenExpiry: "1h",
+        refreshWindow: "5m",
+        maxSessionDuration: "7d",
+        issuer: "ai-siem",
+        cookie: {
+            name: "siem_token",
+            httpOnly: true,
+            secure: true,
+            sameSite: "strict",
+        },
     },
-  },
-  auth: {
-    bcryptRounds: 12,
-    lockoutAttempts: 5,
-    lockoutMinutes: 15,
-    rateLimitPerMinute: 10,
-  },
-  security: {
-    bcryptSaltRounds: 12,
-    collectorHmacSecret: "collector-hmac-secret-for-create-user-test",
-  },
-  collector: { directory: "./collector" },
-  ai: {
-    engineUrl: "http://localhost:8000",
-    timeoutMs: 5000,
-    batchSize: 100,
-    threshold: 0.65,
-  },
-  frontend: { url: "http://localhost:3001" },
-  logging: { level: "debug", format: "pretty" },
+    auth: {
+        bcryptRounds: 12,
+        lockoutAttempts: 5,
+        lockoutMinutes: 15,
+        rateLimitPerMinute: 10,
+    },
+    security: {
+        bcryptSaltRounds: 12,
+        collectorHmacSecret: "collector-hmac-secret-for-create-user-test",
+    },
+    collector: {
+        directory: "./collector",
+        trust: {
+            collectorId: "collector-test-01",
+            keyId: "collector-key-test-01",
+            secretBase64Url: "c8Wm1Qx4Ny7Rt2Ks5Vb9Lp3Hd6Fj0Za8Pe1Uy4Mi7Go2Cq5Xs9Dv3Ln6Ak0Jr8Tw",
+        },
+    },
+    ai: {
+        engineUrl: "http://localhost:8000",
+        timeoutMs: 5000,
+        batchSize: 100,
+        threshold: 0.65,
+    },
+    frontend: { url: "http://localhost:3001" },
+    logging: { level: "debug", format: "pretty" },
 };
 
 class FakeJwtService implements IJwtService {

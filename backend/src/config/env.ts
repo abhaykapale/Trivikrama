@@ -29,64 +29,73 @@ const booleanEnvironmentSchema = z.preprocess((value) => {
   return value;
 }, z.boolean());
 
+const collectorIdEnvironmentSchema = z
+    .string()
+    .regex(
+        /^[a-z0-9](?:[a-z0-9._-]{0,62}[a-z0-9])?$/u,
+        "must be between 1 and 64 characters and contain only lowercase letters, numbers, periods, underscores, or hyphens",
+    );
+
+const collectorKeyIdEnvironmentSchema = z
+    .string()
+    .regex(
+        /^[A-Za-z0-9._-]{1,64}$/u,
+        "must be between 1 and 64 characters and contain only letters, numbers, periods, underscores, or hyphens",
+    );
+
+const collectorHmacSecretEnvironmentSchema = z
+    .string()
+    .regex(/^[A-Za-z0-9_-]{64}$/u, "must contain exactly 64 unpadded base64url characters");
+
 const envSchema = z.object({
-  NODE_ENV: z
-    .enum(["development", "production", "test"])
-    .default("development"),
-  PORT: z.coerce.number().int().positive().max(65535).default(3000),
-  API_PREFIX: z.string().trim().min(1).default("/api/v1"),
+    NODE_ENV: z.enum(["development", "production", "test"]).default("development"),
+    PORT: z.coerce.number().int().positive().max(65535).default(3000),
+    API_PREFIX: z.string().trim().min(1).default("/api/v1"),
 
-  JWT_SECRET: z.string().trim().min(1, "is required"),
-  JWT_ACCESS_TOKEN_EXPIRY: durationSchema.default("1h"),
-  JWT_REFRESH_WINDOW: durationSchema.default("5m"),
-  JWT_MAX_SESSION_DURATION: durationSchema.default("7d"),
-  JWT_ISSUER: z.literal("ai-siem").default("ai-siem"),
-  JWT_COOKIE_NAME: z.literal("siem_token").default("siem_token"),
-  JWT_COOKIE_SECURE: booleanEnvironmentSchema.default(false),
-  BCRYPT_ROUNDS: z.coerce.number().int().min(12).max(15).default(12),
-  AUTH_LOCKOUT_ATTEMPTS: z.coerce.number().int().positive().default(5),
-  AUTH_LOCKOUT_MINUTES: z.coerce.number().int().positive().default(15),
-  AUTH_RATE_LIMIT_PER_MINUTE: z.coerce
-    .number()
-    .int()
-    .positive()
-    .default(10),
+    JWT_SECRET: z.string().trim().min(1, "is required"),
+    JWT_ACCESS_TOKEN_EXPIRY: durationSchema.default("1h"),
+    JWT_REFRESH_WINDOW: durationSchema.default("5m"),
+    JWT_MAX_SESSION_DURATION: durationSchema.default("7d"),
+    JWT_ISSUER: z.literal("ai-siem").default("ai-siem"),
+    JWT_COOKIE_NAME: z.literal("siem_token").default("siem_token"),
+    JWT_COOKIE_SECURE: booleanEnvironmentSchema.default(false),
+    BCRYPT_ROUNDS: z.coerce.number().int().min(12).max(15).default(12),
+    AUTH_LOCKOUT_ATTEMPTS: z.coerce.number().int().positive().default(5),
+    AUTH_LOCKOUT_MINUTES: z.coerce.number().int().positive().default(15),
+    AUTH_RATE_LIMIT_PER_MINUTE: z.coerce.number().int().positive().default(10),
 
-  DATABASE_URL: z.string().trim().min(1),
-  POSTGRES_POOL_MIN: z.coerce.number().int().nonnegative().default(2),
-  POSTGRES_POOL_MAX: z.coerce.number().int().positive().default(10),
-  POSTGRES_CONNECTION_TIMEOUT_MS: z.coerce
-    .number()
-    .int()
-    .positive()
-    .default(5000),
-  POSTGRES_QUERY_TIMEOUT_MS: z.coerce.number().int().positive().default(30000),
+    DATABASE_URL: z.string().trim().min(1),
+    POSTGRES_POOL_MIN: z.coerce.number().int().nonnegative().default(2),
+    POSTGRES_POOL_MAX: z.coerce.number().int().positive().default(10),
+    POSTGRES_CONNECTION_TIMEOUT_MS: z.coerce.number().int().positive().default(5000),
+    POSTGRES_QUERY_TIMEOUT_MS: z.coerce.number().int().positive().default(30000),
 
-  MONGODB_URI: z.string().trim().min(1),
-  MONGODB_POOL_SIZE: z.coerce.number().int().positive().default(10),
-  MONGODB_SERVER_SELECTION_TIMEOUT_MS: z.coerce
-    .number()
-    .int()
-    .positive()
-    .default(5000),
+    MONGODB_URI: z.string().trim().min(1),
+    MONGODB_POOL_SIZE: z.coerce.number().int().positive().default(10),
+    MONGODB_SERVER_SELECTION_TIMEOUT_MS: z.coerce.number().int().positive().default(5000),
 
-  REDIS_URL: z.string().trim().min(1),
-  REDIS_KEY_PREFIX: z.string().trim().min(1).default("trivikrama"),
+    REDIS_URL: z.string().trim().min(1),
+    REDIS_KEY_PREFIX: z.string().trim().min(1).default("trivikrama"),
 
-  COLLECTOR_DIR: z.string().trim().min(1).default("./collector"),
-  COLLECTOR_HMAC_SECRET: z.string().trim().min(32),
+    COLLECTOR_DIR: z.string().trim().min(1).default("./collector"),
 
-  AI_ENGINE_URL: z.string().url().default("http://localhost:8000"),
-  AI_TIMEOUT: z.coerce.number().int().positive().default(5000),
-  AI_BATCH_SIZE: z.coerce.number().int().positive().default(100),
-  AI_THRESHOLD: z.coerce.number().min(0).max(1).default(0.65),
+    COLLECTOR_ID: collectorIdEnvironmentSchema,
 
-  FRONTEND_URL: z.string().url().default("http://localhost:3001"),
+    COLLECTOR_HMAC_KEY_ID: collectorKeyIdEnvironmentSchema,
 
-  LOG_LEVEL: z
-    .enum(["error", "warn", "info", "http", "verbose", "debug", "silly"])
-    .default("debug"),
-  LOG_FORMAT: z.enum(["pretty", "json"]).default("pretty"),
+    COLLECTOR_HMAC_SECRET: collectorHmacSecretEnvironmentSchema,
+
+    AI_ENGINE_URL: z.string().url().default("http://localhost:8000"),
+    AI_TIMEOUT: z.coerce.number().int().positive().default(5000),
+    AI_BATCH_SIZE: z.coerce.number().int().positive().default(100),
+    AI_THRESHOLD: z.coerce.number().min(0).max(1).default(0.65),
+
+    FRONTEND_URL: z.string().url().default("http://localhost:3001"),
+
+    LOG_LEVEL: z
+        .enum(["error", "warn", "info", "http", "verbose", "debug", "silly"])
+        .default("debug"),
+    LOG_FORMAT: z.enum(["pretty", "json"]).default("pretty"),
 });
 
 export class EnvironmentConfigurationError extends Error {
@@ -142,81 +151,87 @@ export function loadEnvironmentConfig(
   }
 
   return {
-    server: {
-      port: env.PORT,
-      nodeEnv: env.NODE_ENV,
-      apiPrefix: env.API_PREFIX,
-    },
-
-    database: {
-      DATABASE_URL: env.DATABASE_URL,
-      MONGODB_URI: env.MONGODB_URI,
-      REDIS_URL: env.REDIS_URL,
-
-      postgres: {
-        poolMin: env.POSTGRES_POOL_MIN,
-        poolMax: env.POSTGRES_POOL_MAX,
-        connectionTimeoutMs: env.POSTGRES_CONNECTION_TIMEOUT_MS,
-        queryTimeoutMs: env.POSTGRES_QUERY_TIMEOUT_MS,
+      server: {
+          port: env.PORT,
+          nodeEnv: env.NODE_ENV,
+          apiPrefix: env.API_PREFIX,
       },
 
-      mongodb: {
-        poolSize: env.MONGODB_POOL_SIZE,
-        serverSelectionTimeoutMs: env.MONGODB_SERVER_SELECTION_TIMEOUT_MS,
+      database: {
+          DATABASE_URL: env.DATABASE_URL,
+          MONGODB_URI: env.MONGODB_URI,
+          REDIS_URL: env.REDIS_URL,
+
+          postgres: {
+              poolMin: env.POSTGRES_POOL_MIN,
+              poolMax: env.POSTGRES_POOL_MAX,
+              connectionTimeoutMs: env.POSTGRES_CONNECTION_TIMEOUT_MS,
+              queryTimeoutMs: env.POSTGRES_QUERY_TIMEOUT_MS,
+          },
+
+          mongodb: {
+              poolSize: env.MONGODB_POOL_SIZE,
+              serverSelectionTimeoutMs: env.MONGODB_SERVER_SELECTION_TIMEOUT_MS,
+          },
+
+          redis: {
+              keyPrefix: env.REDIS_KEY_PREFIX,
+          },
       },
 
-      redis: {
-        keyPrefix: env.REDIS_KEY_PREFIX,
+      jwt: {
+          algorithm: "HS256" as const,
+          secret: env.JWT_SECRET,
+          accessTokenExpiry: env.JWT_ACCESS_TOKEN_EXPIRY,
+          refreshWindow: env.JWT_REFRESH_WINDOW,
+          maxSessionDuration: env.JWT_MAX_SESSION_DURATION,
+          issuer: env.JWT_ISSUER,
+          cookie: {
+              name: env.JWT_COOKIE_NAME,
+              httpOnly: true as const,
+              secure: env.JWT_COOKIE_SECURE,
+              sameSite: "strict" as const,
+          },
       },
-    },
 
-    jwt: {
-      algorithm: "HS256" as const,
-      secret: env.JWT_SECRET,
-      accessTokenExpiry: env.JWT_ACCESS_TOKEN_EXPIRY,
-      refreshWindow: env.JWT_REFRESH_WINDOW,
-      maxSessionDuration: env.JWT_MAX_SESSION_DURATION,
-      issuer: env.JWT_ISSUER,
-      cookie: {
-        name: env.JWT_COOKIE_NAME,
-        httpOnly: true as const,
-        secure: env.JWT_COOKIE_SECURE,
-        sameSite: "strict" as const,
+      auth: {
+          bcryptRounds: env.BCRYPT_ROUNDS,
+          lockoutAttempts: env.AUTH_LOCKOUT_ATTEMPTS,
+          lockoutMinutes: env.AUTH_LOCKOUT_MINUTES,
+          rateLimitPerMinute: env.AUTH_RATE_LIMIT_PER_MINUTE,
       },
-    },
 
-    auth: {
-      bcryptRounds: env.BCRYPT_ROUNDS,
-      lockoutAttempts: env.AUTH_LOCKOUT_ATTEMPTS,
-      lockoutMinutes: env.AUTH_LOCKOUT_MINUTES,
-      rateLimitPerMinute: env.AUTH_RATE_LIMIT_PER_MINUTE,
-    },
+      security: {
+          // Backward-compatible read model; BCRYPT_ROUNDS is the single source.
+          bcryptSaltRounds: env.BCRYPT_ROUNDS,
+          collectorHmacSecret: env.COLLECTOR_HMAC_SECRET,
+      },
 
-    security: {
-      // Backward-compatible read model; BCRYPT_ROUNDS is the single source.
-      bcryptSaltRounds: env.BCRYPT_ROUNDS,
-      collectorHmacSecret: env.COLLECTOR_HMAC_SECRET,
-    },
+      collector: {
+          directory: env.COLLECTOR_DIR,
 
-    collector: {
-      directory: env.COLLECTOR_DIR,
-    },
+          trust: {
+              collectorId: env.COLLECTOR_ID,
+              keyId: env.COLLECTOR_HMAC_KEY_ID,
+              secretBase64Url: env.COLLECTOR_HMAC_SECRET,
+          },
+      },
 
-    ai: {
-      engineUrl: env.AI_ENGINE_URL,
-      timeoutMs: env.AI_TIMEOUT,
-      batchSize: env.AI_BATCH_SIZE,
-      threshold: env.AI_THRESHOLD,
-    },
+      ai: {
+          engineUrl: env.AI_ENGINE_URL,
+          timeoutMs: env.AI_TIMEOUT,
+          batchSize: env.AI_BATCH_SIZE,
+          threshold: env.AI_THRESHOLD,
+      },
 
-    frontend: {
-      url: env.FRONTEND_URL,
-    },
+      frontend: {
+          url: env.FRONTEND_URL,
+      },
 
-    logging: {
-      level: env.LOG_LEVEL,
-      format: env.LOG_FORMAT,
-    },
+      logging: {
+          level: env.LOG_LEVEL,
+          format: env.LOG_FORMAT,
+      },
   } as const;
 }
 

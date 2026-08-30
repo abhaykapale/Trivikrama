@@ -5,29 +5,29 @@ const VALID_SECRET =
 
 function validEnvironment(): NodeJS.ProcessEnv {
   return {
-    NODE_ENV: "test",
-    PORT: "3000",
-    API_PREFIX: "/api/v1",
-    JWT_SECRET: VALID_SECRET,
-    JWT_ACCESS_TOKEN_EXPIRY: "1h",
-    JWT_REFRESH_WINDOW: "5m",
-    JWT_MAX_SESSION_DURATION: "7d",
-    JWT_ISSUER: "ai-siem",
-    JWT_COOKIE_NAME: "siem_token",
-    JWT_COOKIE_SECURE: "false",
-    BCRYPT_ROUNDS: "12",
-    AUTH_LOCKOUT_ATTEMPTS: "5",
-    AUTH_LOCKOUT_MINUTES: "15",
-    AUTH_RATE_LIMIT_PER_MINUTE: "10",
-    DATABASE_URL:
-      "postgresql://app:test-password@localhost:5432/trivikrama_test",
-    MONGODB_URI: "mongodb://localhost:27017/trivikrama_test",
-    REDIS_URL: "redis://localhost:6379",
-    COLLECTOR_HMAC_SECRET:
-      "c8Wm1Qx4Ny7Rt2Ks5Vb9Lp3Hd6Fj0Za8Pe1Uy4Mi7Go2Cq5Xs9Dv3Ln6Ak0Jr8Tw",
-    FRONTEND_URL: "http://localhost:3001",
-    LOG_LEVEL: "error",
-    LOG_FORMAT: "json",
+      NODE_ENV: "test",
+      PORT: "3000",
+      API_PREFIX: "/api/v1",
+      JWT_SECRET: VALID_SECRET,
+      JWT_ACCESS_TOKEN_EXPIRY: "1h",
+      JWT_REFRESH_WINDOW: "5m",
+      JWT_MAX_SESSION_DURATION: "7d",
+      JWT_ISSUER: "ai-siem",
+      JWT_COOKIE_NAME: "siem_token",
+      JWT_COOKIE_SECURE: "false",
+      BCRYPT_ROUNDS: "12",
+      AUTH_LOCKOUT_ATTEMPTS: "5",
+      AUTH_LOCKOUT_MINUTES: "15",
+      AUTH_RATE_LIMIT_PER_MINUTE: "10",
+      DATABASE_URL: "postgresql://app:test-password@localhost:5432/trivikrama_test",
+      MONGODB_URI: "mongodb://localhost:27017/trivikrama_test",
+      REDIS_URL: "redis://localhost:6379",
+      COLLECTOR_ID: "collector-dev-01",
+      COLLECTOR_HMAC_KEY_ID: "collector-key-dev-01",
+      COLLECTOR_HMAC_SECRET: "c8Wm1Qx4Ny7Rt2Ks5Vb9Lp3Hd6Fj0Za8Pe1Uy4Mi7Go2Cq5Xs9Dv3Ln6Ak0Jr8Tw",
+      FRONTEND_URL: "http://localhost:3001",
+      LOG_LEVEL: "error",
+      LOG_FORMAT: "json",
   };
 }
 
@@ -52,6 +52,10 @@ async function main(): Promise<void> {
 
         if (environment.JWT_SECRET !== undefined) {
           assert.equal(error.message.includes(environment.JWT_SECRET), false);
+        }
+
+        if (environment.COLLECTOR_HMAC_SECRET !== undefined) {
+            assert.equal(error.message.includes(environment.COLLECTOR_HMAC_SECRET), false);
         }
 
         return true;
@@ -96,6 +100,49 @@ async function main(): Promise<void> {
     "BCRYPT_ROUNDS",
   );
 
+    const missingCollectorId = validEnvironment();
+    delete missingCollectorId.COLLECTOR_ID;
+
+    expectConfigurationFailure(missingCollectorId, "COLLECTOR_ID");
+
+    expectConfigurationFailure(
+        {
+            ...validEnvironment(),
+            COLLECTOR_ID: "Collector DEV 01",
+        },
+        "COLLECTOR_ID",
+    );
+
+    const missingCollectorKeyId = validEnvironment();
+    delete missingCollectorKeyId.COLLECTOR_HMAC_KEY_ID;
+
+    expectConfigurationFailure(missingCollectorKeyId, "COLLECTOR_HMAC_KEY_ID");
+
+    expectConfigurationFailure(
+        {
+            ...validEnvironment(),
+            COLLECTOR_HMAC_KEY_ID: "collector key dev 01",
+        },
+        "COLLECTOR_HMAC_KEY_ID",
+    );
+
+    expectConfigurationFailure(
+        {
+            ...validEnvironment(),
+            COLLECTOR_HMAC_SECRET: "too-short",
+        },
+        "COLLECTOR_HMAC_SECRET",
+    );
+
+    expectConfigurationFailure(
+        {
+            ...validEnvironment(),
+            COLLECTOR_HMAC_SECRET:
+                "AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8gISIjJCUmJygpKissLS4=",
+        },
+        "COLLECTOR_HMAC_SECRET",
+    );
+
   expectConfigurationFailure(
     {
       ...validEnvironment(),
@@ -124,6 +171,11 @@ async function main(): Promise<void> {
   assert.equal(validProductionConfig.frontend.url, "https://soc.example.com");
 
   const validConfig = loadEnvironmentConfig(validEnvironment());
+
+  assert.equal(validConfig.collector.directory, "./collector");
+  assert.equal(validConfig.collector.trust.collectorId, "collector-dev-01");
+  assert.equal(validConfig.collector.trust.keyId, "collector-key-dev-01");
+  assert.equal(validConfig.collector.trust.secretBase64Url,validEnvironment().COLLECTOR_HMAC_SECRET,);
   assert.equal(validConfig.jwt.algorithm, "HS256");
   assert.equal(validConfig.jwt.accessTokenExpiry, "1h");
   assert.equal(validConfig.jwt.refreshWindow, "5m");
@@ -175,7 +227,7 @@ async function main(): Promise<void> {
       {
         success: true,
         suite: "BE-01A auth configuration foundation",
-        tests: 11,
+        tests: 17,
       },
       null,
       2,

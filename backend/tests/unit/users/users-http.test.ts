@@ -84,7 +84,13 @@ const TEST_CONFIG: AppConfig = {
   },
   collector: {
     directory: "./collector",
-  },
+    trust: {
+        collectorId: "collector-test-01",
+        keyId: "collector-key-test-01",
+        secretBase64Url:
+            "c8Wm1Qx4Ny7Rt2Ks5Vb9Lp3Hd6Fj0Za8Pe1Uy4Mi7Go2Cq5Xs9Dv3Ln6Ak0Jr8Tw",
+    },
+},
   ai: {
     engineUrl: "http://localhost:8000",
     timeoutMs: 5000,
