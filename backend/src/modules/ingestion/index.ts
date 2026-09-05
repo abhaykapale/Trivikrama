@@ -125,3 +125,22 @@ export type {
 } from "./domain/collector-file-intake.errors.js";
 
 export { CollectorFileIntakeService } from "./infrastructure/collector-file-intake.service.js";
+
+export type {
+    CollectorProcessingJob,
+    IProcessingQueue,
+    ProcessingQueueEnqueueResult,
+} from "./domain/processing-queue.contracts.js";
+
+export { InMemoryProcessingQueue } from "./infrastructure/in-memory-processing.queue.js";
+
+export { BullMqProcessingQueue } from "./infrastructure/bullmq-processing.queue.js";
+
+export type { BullMqProcessingQueueConfiguration } from "./infrastructure/bullmq-processing.queue.js";
+
+export { createConfiguredCollectorIntakeCycle } from "./composition/configured-collector-intake-cycle.dependencies.js";
+
+export type {
+    CollectorIntakeCycleRuntimeConfiguration,
+    ConfiguredCollectorIntakeCycle,
+} from "./composition/configured-collector-intake-cycle.dependencies.js";

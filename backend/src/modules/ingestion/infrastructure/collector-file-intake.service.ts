@@ -143,12 +143,16 @@ export class CollectorFileIntakeService implements ICollectorFileIntake {
                 }
 
                 if (outcome.byteLength === 0) {
-                    report.quarantined.push(await this.quarantine(outcome, "EMPTY_FILE"));
+                    report.quarantined.push(
+                        await this.quarantineClaimedBatch(outcome, "EMPTY_FILE"),
+                    );
                     continue;
                 }
 
                 if (outcome.byteLength > this.maxBatchBytes) {
-                    report.quarantined.push(await this.quarantine(outcome, "FILE_TOO_LARGE"));
+                    report.quarantined.push(
+                        await this.quarantineClaimedBatch(outcome, "FILE_TOO_LARGE"),
+                    );
                     continue;
                 }
 
@@ -197,12 +201,12 @@ export class CollectorFileIntakeService implements ICollectorFileIntake {
             };
 
             if (claimed.byteLength === 0) {
-                report.quarantined.push(await this.quarantine(claimed, "EMPTY_FILE"));
+                report.quarantined.push(await this.quarantineClaimedBatch(claimed, "EMPTY_FILE"));
                 continue;
             }
 
             if (claimed.byteLength > this.maxBatchBytes) {
-                report.quarantined.push(await this.quarantine(claimed, "FILE_TOO_LARGE"));
+                report.quarantined.push(await this.quarantineClaimedBatch(claimed, "FILE_TOO_LARGE"));
                 continue;
             }
 
@@ -216,7 +220,7 @@ export class CollectorFileIntakeService implements ICollectorFileIntake {
         };
     }
 
-    private async quarantine(
+    public async quarantineClaimedBatch(
         claimedFile: ClaimedCollectorBatchFile,
         reason: CollectorBatchQuarantineReason,
     ): Promise<QuarantinedCollectorBatchFile> {
@@ -237,11 +241,7 @@ export class CollectorFileIntakeService implements ICollectorFileIntake {
         const quarantineFileName = this.createQuarantineFileName(claimedFile, reason);
         const quarantinePath = this.pathWithin(this.layout.quarantine, quarantineFileName);
 
-        await this.renameClaimedFile(
-            claimedFile.processingPath,
-            quarantinePath,
-            "quarantine",
-        );
+        await this.renameClaimedFile(claimedFile.processingPath, quarantinePath, "quarantine");
 
         return {
             ...claimedFile,
@@ -411,9 +411,14 @@ export class CollectorFileIntakeService implements ICollectorFileIntake {
                 throw error;
             }
 
-            throw this.filesystemError(stage, "Unable to prepare the Collector handoff directory.", error, {
-                path,
-            });
+            throw this.filesystemError(
+                stage,
+                "Unable to prepare the Collector handoff directory.",
+                error,
+                {
+                    path,
+                },
+            );
         }
     }
 
@@ -422,16 +427,18 @@ export class CollectorFileIntakeService implements ICollectorFileIntake {
             const entries = await readdir(path, { withFileTypes: true });
             return entries.sort((left, right) => left.name.localeCompare(right.name));
         } catch (error) {
-            throw this.filesystemError(stage, "Unable to read a Collector handoff directory.", error, {
-                path,
-            });
+            throw this.filesystemError(
+                stage,
+                "Unable to read a Collector handoff directory.",
+                error,
+                {
+                    path,
+                },
+            );
         }
     }
 
-    private async safeLstat(
-        path: string,
-        stage: CollectorFileIntakeStage,
-    ): Promise<Stats>;
+    private async safeLstat(path: string, stage: CollectorFileIntakeStage): Promise<Stats>;
     private async safeLstat(
         path: string,
         stage: CollectorFileIntakeStage,
@@ -449,9 +456,14 @@ export class CollectorFileIntakeService implements ICollectorFileIntake {
                 return undefined;
             }
 
-            throw this.filesystemError(stage, "Unable to inspect a Collector handoff path.", error, {
-                path,
-            });
+            throw this.filesystemError(
+                stage,
+                "Unable to inspect a Collector handoff path.",
+                error,
+                {
+                    path,
+                },
+            );
         }
     }
 

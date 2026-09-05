@@ -2,6 +2,8 @@ require("dotenv").config({ quiet: true });
 
 const bcrypt = require("bcrypt");
 const { Client } = require("pg");
+// const { loggers } = require("winston");
+import logger from "../shared/logger/logger.js";
 
 (async () => {
   const client = new Client({
@@ -31,7 +33,7 @@ const { Client } = require("pg");
       throw new Error("Exactly one Admin user was not found.");
     }
 
-    console.log("Admin password reset succeeded.");
+    logger.info("Admin password reset succeeded.");
   } finally {
     await client.end();
   }

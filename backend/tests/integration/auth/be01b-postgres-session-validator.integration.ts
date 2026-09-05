@@ -3,6 +3,7 @@ import knexFactory from "knex";
 import { PostgresSessionValidator } from "../../../src/modules/auth/infrastructure/session/postgres-session-validator.js";
 import { UuidIdGenerator } from "../../../src/modules/auth/infrastructure/id/uuid-id-generator.js";
 import env from "../../../src/config/env.js";
+import logger from "../../../src/shared/logger/logger.js";
 class FixedClock {
   public constructor(private readonly current: Date) {}
 
@@ -15,7 +16,7 @@ void main();
 
 async function main(): Promise<void> {
   if (process.env.ALLOW_BE01B_INTEGRATION_TESTS !== "true") {
-    console.log(
+    logger.info(
       JSON.stringify(
         {
           success: true,
@@ -102,7 +103,7 @@ async function main(): Promise<void> {
       reason: "expired",
     });
 
-    console.log(
+    logger.info(
       JSON.stringify(
         {
           success: true,

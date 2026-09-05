@@ -1,3 +1,4 @@
+import type { CollectorVerificationErrorCode } from "./collector-verification.errors.js";
 // -----------------------------------------------------------------------------
 // Collector handoff layout
 // -----------------------------------------------------------------------------
@@ -30,9 +31,7 @@ export interface IgnoredCollectorFile {
     readonly reason: CollectorIntakeIgnoredFileReason;
 }
 
-export type CollectorBatchQuarantineReason =
-    | "EMPTY_FILE"
-    | "FILE_TOO_LARGE";
+export type CollectorBatchQuarantineReason = "EMPTY_FILE" | CollectorVerificationErrorCode;
 
 export interface ClaimedCollectorBatchFile {
     readonly collectorId: string;
@@ -76,4 +75,11 @@ export interface ICollectorFileIntake {
     claimPublishedBatches(): Promise<CollectorFileIntakeReport>;
 
     recoverClaimedBatches(): Promise<CollectorFileRecoveryReport>;
+
+    quarantineClaimedBatch(
+        claimedFile: ClaimedCollectorBatchFile,
+        reason: CollectorBatchQuarantineReason,
+    ): Promise<QuarantinedCollectorBatchFile>;
 }
+
+
