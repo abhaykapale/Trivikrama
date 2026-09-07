@@ -8,11 +8,13 @@ import type {
 } from "../../../src/modules/ingestion/application/verify-and-queue-claimed-batch.service.js";
 import type {
     ClaimedCollectorBatchFile,
+    CollectorBatchQuarantineReason,
     CollectorFileIntakeReport,
     CollectorFileRecoveryReport,
     ICollectorFileIntake,
     QuarantinedCollectorBatchFile,
 } from "../../../src/modules/ingestion/domain/collector-file-intake.contracts.js";
+import { CollectorProcessingJob } from "../../../src/modules/ingestion/index.js";
 
 function createClaimedFile(batchId: string): ClaimedCollectorBatchFile {
     return {
@@ -49,6 +51,13 @@ class FakeFileIntake implements ICollectorFileIntake {
         this.calls.push("claim");
 
         return this.discovery;
+    }
+
+    public async quarantineProcessingJob(
+        _job: CollectorProcessingJob,
+        _reason: CollectorBatchQuarantineReason,
+    ): Promise<QuarantinedCollectorBatchFile> {
+        throw new Error("quarantineProcessingJob is not used by this BE-ING-01C test.");
     }
 
     public async quarantineClaimedBatch(

@@ -1,31 +1,29 @@
 import { lstat, readFile } from "node:fs/promises";
 import { basename, join, resolve } from "node:path";
 
-import type { ClaimedCollectorBatchFile } from "../domain/collector-file-intake.contracts.js";
 import { MAX_COLLECTOR_BATCH_BYTES } from "../domain/collector-file-intake.contracts.js";
-import type { IClaimedCollectorBatchReader } from "../domain/claimed-collector-batch-reader.contracts.js";
 import { CollectorFileIntakeError } from "../domain/collector-file-intake.errors.js";
+import type {
+    ClaimedCollectorBatchReadRequest,
+    IClaimedCollectorBatchReader,
+} from "../domain/claimed-collector-batch-reader.contracts.js";
+
+const UUID_V4_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/u;
+
+const CLAIMED_BATCH_FILE_PATTERN =
+    /^batch_([0-9a-f-]+)__collector_([A-Za-z0-9_-]+)__claim_([0-9a-f-]+)\.json$/u;
 
 export interface ClaimedCollectorBatchReaderConfiguration {
-    /** The same COLLECTOR_DIR used by CollectorFileIntakeService. */
     readonly handoffRoot: string;
-
-    /** Allows a smaller limit in tests; production cannot exceed 8 MB. */
     readonly maxBatchBytes?: number;
 }
 
-/**
- * Reads an already claimed Collector batch from the backend-owned processing
- * directory. It never accepts a path supplied directly by an external caller.
- */
 export class ClaimedCollectorBatchReader implements IClaimedCollectorBatchReader {
     private readonly processingDirectory: string;
     private readonly maxBatchBytes: number;
 
     public constructor(configuration: ClaimedCollectorBatchReaderConfiguration) {
-        const handoffRoot = resolve(configuration.handoffRoot);
-
-        this.processingDirectory = join(handoffRoot, "processing");
+        this.processingDirectory = join(resolve(configuration.handoffRoot), "processing");
         this.maxBatchBytes = configuration.maxBatchBytes ?? MAX_COLLECTOR_BATCH_BYTES;
 
         if (
@@ -37,27 +35,39 @@ export class ClaimedCollectorBatchReader implements IClaimedCollectorBatchReader
                 "INVALID_INTAKE_CONFIGURATION",
                 "read",
                 "maxBatchBytes must be a positive safe integer no greater than the ARCH-01 8 MiB limit.",
-                { maxBatchBytes: this.maxBatchBytes },
             );
         }
     }
 
-    public async read(claimedFile: ClaimedCollectorBatchFile): Promise<Uint8Array> {
-        this.assertSafeClaimedPath(claimedFile);
+    public async read(request: ClaimedCollectorBatchReadRequest): Promise<Uint8Array> {
+        const processingPath = this.resolveSafeProcessingPath(request);
+
+        if (
+            !Number.isSafeInteger(request.byteLength) ||
+            request.byteLength <= 0 ||
+            request.byteLength > this.maxBatchBytes
+        ) {
+            throw new CollectorFileIntakeError(
+                "CLAIMED_FILE_CHANGED",
+                "read",
+                "The queued byte length is not a valid claimed batch size.",
+                {
+                    byteLength: request.byteLength,
+                    maxBatchBytes: this.maxBatchBytes,
+                },
+            );
+        }
 
         let stats;
 
         try {
-            stats = await lstat(claimedFile.processingPath);
-        } catch (error) {
+            stats = await lstat(processingPath);
+        } catch {
             throw new CollectorFileIntakeError(
                 "CLAIMED_FILE_MISSING",
                 "read",
-                "The claimed batch file no longer exists.",
-                {
-                    processingFileName: claimedFile.processingFileName,
-                },
-                { cause: error },
+                "The claimed batch file no longer exists in the processing directory.",
+                { processingFileName: request.processingFileName },
             );
         }
 
@@ -65,22 +75,19 @@ export class ClaimedCollectorBatchReader implements IClaimedCollectorBatchReader
             throw new CollectorFileIntakeError(
                 "CLAIMED_FILE_NOT_REGULAR",
                 "read",
-                "The claimed batch file must be a regular file and not a symbolic link.",
-                {
-                    processingFileName: claimedFile.processingFileName,
-                },
+                "The claimed batch path is not a regular file.",
+                { processingFileName: request.processingFileName },
             );
         }
 
-        if (stats.size !== claimedFile.byteLength || stats.size > this.maxBatchBytes) {
+        if (stats.size !== request.byteLength || stats.size > this.maxBatchBytes) {
             throw new CollectorFileIntakeError(
                 "CLAIMED_FILE_CHANGED",
                 "read",
-                "The claimed batch file changed after it was claimed.",
+                "The claimed batch file size changed after it was queued.",
                 {
-                    expectedByteLength: claimedFile.byteLength,
+                    expectedByteLength: request.byteLength,
                     actualByteLength: stats.size,
-                    maxBatchBytes: this.maxBatchBytes,
                 },
             );
         }
@@ -88,16 +95,13 @@ export class ClaimedCollectorBatchReader implements IClaimedCollectorBatchReader
         let contents: Uint8Array;
 
         try {
-            contents = new Uint8Array(await readFile(claimedFile.processingPath));
-        } catch (error) {
+            contents = new Uint8Array(await readFile(processingPath));
+        } catch {
             throw new CollectorFileIntakeError(
                 "FILESYSTEM_OPERATION_FAILED",
                 "read",
-                "The claimed batch file could not be read.",
-                {
-                    processingFileName: claimedFile.processingFileName,
-                },
-                { cause: error },
+                "Unable to read the claimed batch file.",
+                { processingFileName: request.processingFileName },
             );
         }
 
@@ -116,23 +120,60 @@ export class ClaimedCollectorBatchReader implements IClaimedCollectorBatchReader
         return contents;
     }
 
-    private assertSafeClaimedPath(claimedFile: ClaimedCollectorBatchFile): void {
-        const expectedPath = resolve(this.processingDirectory, claimedFile.processingFileName);
+    private resolveSafeProcessingPath(request: ClaimedCollectorBatchReadRequest): string {
+        if (basename(request.processingFileName) !== request.processingFileName) {
+            throw new CollectorFileIntakeError(
+                "CLAIMED_FILE_UNSAFE_PATH",
+                "read",
+                "The queued processing file name must not contain path segments.",
+                { processingFileName: request.processingFileName },
+            );
+        }
 
-        const suppliedPath = resolve(claimedFile.processingPath);
+        const match = CLAIMED_BATCH_FILE_PATTERN.exec(request.processingFileName);
+
+        if (match === null) {
+            throw new CollectorFileIntakeError(
+                "CLAIMED_FILE_UNSAFE_PATH",
+                "read",
+                "The queued processing file name has an invalid format.",
+                { processingFileName: request.processingFileName },
+            );
+        }
+
+        const [, fileBatchId, encodedCollectorId, claimId] = match;
+        const fileCollectorId = decodeCollectorId(encodedCollectorId);
 
         if (
-            basename(suppliedPath) !== claimedFile.processingFileName ||
-            suppliedPath !== expectedPath
+            !UUID_V4_PATTERN.test(request.batchId) ||
+            fileBatchId !== request.batchId ||
+            fileCollectorId !== request.collectorId ||
+            !UUID_V4_PATTERN.test(claimId)
         ) {
             throw new CollectorFileIntakeError(
                 "CLAIMED_FILE_UNSAFE_PATH",
                 "read",
-                "The claimed batch path is outside the backend processing directory.",
+                "The queued processing file name does not match its collector and batch identity.",
                 {
-                    processingFileName: claimedFile.processingFileName,
+                    collectorId: request.collectorId,
+                    batchId: request.batchId,
+                    processingFileName: request.processingFileName,
                 },
             );
         }
+
+        return join(this.processingDirectory, request.processingFileName);
     }
 }
+
+    function decodeCollectorId(encodedCollectorId: string): string | undefined {
+        try {
+            const collectorId = Buffer.from(encodedCollectorId, "base64url").toString("utf8");
+
+            const canonicalEncoding = Buffer.from(collectorId, "utf8").toString("base64url");
+
+            return canonicalEncoding === encodedCollectorId ? collectorId : undefined;
+        } catch {
+            return undefined;
+        }
+    }

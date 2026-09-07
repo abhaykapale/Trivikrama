@@ -15,72 +15,96 @@ import {
   type MongoPaginationOptions,
 } from "./mongo-repository.types.js";
 import type {
-  CreateRawEventArchiveInput,
-  IRawEventArchiveRepository,
-  RawEventArchiveDocument,
-  RawEventArchiveListFilters,
+    CreateRawEventArchiveInput,
+    IRawEventArchiveRepository,
+    RawEventArchiveDocument,
+    RawEventArchiveListFilters,
+    CreateRawEventArchiveIfAbsentResult,
 } from "./raw-event-archive.repository.js";
 
 const COLLECTION_NAME = "raw_events_archive";
+const SHA256_DIGEST_PATTERN = /^sha256:[a-f0-9]{64}$/;
 
 type MutableMongoFilter = Record<string, unknown>;
 
 export class MongoRawEventArchiveRepository implements IRawEventArchiveRepository {
-  public constructor(private readonly client: MongoDbClient) {}
+    public constructor(private readonly client: MongoDbClient) {}
 
-  public async create(
-    input: CreateRawEventArchiveInput,
-  ): Promise<RawEventArchiveDocument> {
-    validateRawArchive(input);
-    await this.collection().insertOne(
-      toMongoRawEventArchiveDocument(input) as never,
-    );
-    return input;
+    public async create(input: CreateRawEventArchiveInput): Promise<RawEventArchiveDocument> {
+        validateRawArchive(input);
+        await this.collection().insertOne(toMongoRawEventArchiveDocument(input) as never);
+        return input;
+  }
+  
+    public async createIfAbsent(
+        input: CreateRawEventArchiveInput,
+    ): Promise<CreateRawEventArchiveIfAbsentResult> {
+        try {
+            const document = await this.create(input);
+
+            return {
+                status: "created",
+                document,
+            };
+        } catch (error) {
+            if (!isRawArchiveBatchIdDuplicate(error)) {
+                throw error;
+            }
+
+            const existing = await this.findByBatchId(input.batch_id);
+
+            if (existing === null) {
+                throw error;
+            }
+
+            return {
+                status: "already_exists",
+                document: existing,
+            };
+        }
   }
 
-  public async findByBatchId(
-    batchId: string,
-  ): Promise<RawEventArchiveDocument | null> {
-    return this.collection().findOne({
-      batch_id: requireNonBlank(batchId, "batchId"),
-    });
-  }
+    public async findByBatchId(batchId: string): Promise<RawEventArchiveDocument | null> {
+        return this.collection().findOne({
+            batch_id: requireNonBlank(batchId, "batchId"),
+        });
+    }
 
-  public async list(
-    filters: RawEventArchiveListFilters = {},
-  ): Promise<MongoPageResult<RawEventArchiveDocument>> {
-    const { limit, offset } = normalizeMongoPagination(filters);
-    const query = buildRawArchiveFilter(filters);
-    const sort: Sort = {
-      archived_at: filters.sortDirection === "asc" ? 1 : -1,
-      batch_id: 1,
-    };
+    public async list(
+        filters: RawEventArchiveListFilters = {},
+    ): Promise<MongoPageResult<RawEventArchiveDocument>> {
+        const { limit, offset } = normalizeMongoPagination(filters);
+        const query = buildRawArchiveFilter(filters);
+        const sort: Sort = {
+            archived_at: filters.sortDirection === "asc" ? 1 : -1,
+            batch_id: 1,
+        };
 
-    const items = await this.collection()
-      .find(query)
-      .sort(sort)
-      .skip(offset)
-      .limit(limit + 1)
-      .toArray();
+        const items = await this.collection()
+            .find(query)
+            .sort(sort)
+            .skip(offset)
+            .limit(limit + 1)
+            .toArray();
 
-    return toMongoPage(items, limit, offset);
-  }
+        return toMongoPage(items, limit, offset);
+    }
 
-  public async listByCollectorId(
-    collectorId: string,
-    options?: MongoPaginationOptions,
-  ): Promise<MongoPageResult<RawEventArchiveDocument>> {
-    return this.list({
-      ...options,
-      collectorId: requireNonBlank(collectorId, "collectorId"),
-    });
-  }
+    public async listByCollectorId(
+        collectorId: string,
+        options?: MongoPaginationOptions,
+    ): Promise<MongoPageResult<RawEventArchiveDocument>> {
+        return this.list({
+            ...options,
+            collectorId: requireNonBlank(collectorId, "collectorId"),
+        });
+    }
 
-  private collection(): Collection<RawEventArchiveDocument> {
-    return requireMongoDatabase(
-      this.client,
-    ).collection<RawEventArchiveDocument>(COLLECTION_NAME);
-  }
+    private collection(): Collection<RawEventArchiveDocument> {
+        return requireMongoDatabase(this.client).collection<RawEventArchiveDocument>(
+            COLLECTION_NAME,
+        );
+    }
 }
 
 function buildRawArchiveFilter(
@@ -113,10 +137,36 @@ function buildRawArchiveFilter(
   return query as Filter<RawEventArchiveDocument>;
 }
 
+function isRawArchiveBatchIdDuplicate(error: unknown): boolean {
+    if (typeof error !== "object" || error === null) {
+        return false;
+    }
+
+    const candidate = error as {
+        readonly code?: unknown;
+        readonly keyPattern?: unknown;
+    };
+
+    if (
+        candidate.code !== 11000 ||
+        typeof candidate.keyPattern !== "object" ||
+        candidate.keyPattern === null
+    ) {
+        return false;
+    }
+
+    return (candidate.keyPattern as Record<string, unknown>).batch_id === 1;
+}
+
 function validateRawArchive(input: CreateRawEventArchiveInput): void {
   requireNonBlank(input.batch_id, "batch_id");
   requireNonBlank(input.collector_id, "collector_id");
 
+  if (!SHA256_DIGEST_PATTERN.test(input.canonical_unsigned_sha256)) {
+      throw new Error(
+          "canonical_unsigned_sha256 must be a sha256: digest with 64 lowercase hexadecimal characters",
+      );
+  }
   if (!Array.isArray(input.events)) {
     throw new Error("events must be an array");
   }

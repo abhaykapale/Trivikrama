@@ -1,10 +1,10 @@
-import type { ClaimedCollectorBatchFile } from "./collector-file-intake.contracts.js";
+export interface ClaimedCollectorBatchReadRequest {
+  readonly collectorId: string;
+  readonly batchId: string;
+  readonly processingFileName: string;
+  readonly byteLength: number;
+}
 
-/**
- * Reads bytes only from a file that the intake service has already claimed.
- *
- * The application coordinator depends on this interface, not on node:fs.
- */
 export interface IClaimedCollectorBatchReader {
-    read(claimedFile: ClaimedCollectorBatchFile): Promise<Uint8Array>;
+  read(request: ClaimedCollectorBatchReadRequest): Promise<Uint8Array>;
 }

@@ -1,4 +1,5 @@
 import type { CollectorVerificationErrorCode } from "./collector-verification.errors.js";
+import { CollectorProcessingJob } from "./processing-queue.contracts.js";
 // -----------------------------------------------------------------------------
 // Collector handoff layout
 // -----------------------------------------------------------------------------
@@ -31,7 +32,11 @@ export interface IgnoredCollectorFile {
     readonly reason: CollectorIntakeIgnoredFileReason;
 }
 
-export type CollectorBatchQuarantineReason = "EMPTY_FILE" | CollectorVerificationErrorCode;
+export type CollectorBatchQuarantineReason =
+    | "EMPTY_FILE"
+    | CollectorVerificationErrorCode
+    | "BATCH_DIGEST_MISMATCH"
+    | "BATCH_ID_COLLISION";
 
 export interface ClaimedCollectorBatchFile {
     readonly collectorId: string;
@@ -78,6 +83,11 @@ export interface ICollectorFileIntake {
 
     quarantineClaimedBatch(
         claimedFile: ClaimedCollectorBatchFile,
+        reason: CollectorBatchQuarantineReason,
+    ): Promise<QuarantinedCollectorBatchFile>;
+
+    quarantineProcessingJob(
+        job: CollectorProcessingJob,
         reason: CollectorBatchQuarantineReason,
     ): Promise<QuarantinedCollectorBatchFile>;
 }

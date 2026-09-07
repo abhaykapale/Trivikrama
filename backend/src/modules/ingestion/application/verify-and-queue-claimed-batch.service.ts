@@ -64,9 +64,11 @@ export class VerifyAndQueueClaimedBatchService implements IClaimedCollectorBatch
             }
 
             const queueResult = await this.dependencies.processingQueue.enqueue({
+
                 batchId: message.batch_id,
                 collectorId: message.collector_id,
                 processingFileName: claimedFile.processingFileName,
+                byteLength: claimedFile.byteLength,
                 canonicalUnsignedSha256: verified.canonicalUnsignedSha256,
                 enqueuedAt: new Date().toISOString(),
             });

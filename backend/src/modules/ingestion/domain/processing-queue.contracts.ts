@@ -4,6 +4,7 @@ export interface CollectorProcessingJob {
     readonly batchId: string;
     readonly collectorId: string;
     readonly processingFileName: string;
+    readonly byteLength: number;
     readonly canonicalUnsignedSha256: Sha256Digest;
     readonly enqueuedAt: string;
 }

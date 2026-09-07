@@ -18,6 +18,7 @@ import {
     CollectorFileIntakeError,
     type CollectorFileIntakeStage,
 } from "../domain/collector-file-intake.errors.js";
+import { CollectorProcessingJob } from "../domain/processing-queue.contracts.js";
 
 const COLLECTOR_ID_PATTERN = /^[a-z0-9](?:[a-z0-9._-]{0,62}[a-z0-9])?$/u;
 const UUID_V4_PATTERN =
@@ -206,7 +207,9 @@ export class CollectorFileIntakeService implements ICollectorFileIntake {
             }
 
             if (claimed.byteLength > this.maxBatchBytes) {
-                report.quarantined.push(await this.quarantineClaimedBatch(claimed, "FILE_TOO_LARGE"));
+                report.quarantined.push(
+                    await this.quarantineClaimedBatch(claimed, "FILE_TOO_LARGE"),
+                );
                 continue;
             }
 
@@ -250,6 +253,53 @@ export class CollectorFileIntakeService implements ICollectorFileIntake {
             quarantineReason: reason,
             quarantinedAt: new Date().toISOString(),
         };
+    }
+    
+    public async quarantineProcessingJob(
+        job: CollectorProcessingJob,
+        reason: CollectorBatchQuarantineReason,
+    ): Promise<QuarantinedCollectorBatchFile> {
+        await this.initialize();
+
+        const processingPath = this.pathWithin(this.layout.processing, job.processingFileName);
+
+        const parsedClaim = this.parseClaimedFileName(job.processingFileName, processingPath);
+
+        if (
+            parsedClaim === undefined ||
+            parsedClaim.collectorId !== job.collectorId ||
+            parsedClaim.batchId !== job.batchId
+        ) {
+            throw new CollectorFileIntakeError(
+                "INVALID_INTAKE_CONFIGURATION",
+                "quarantine",
+                "The processing job does not match a valid claimed batch file.",
+                {
+                    collectorId: job.collectorId,
+                    batchId: job.batchId,
+                    processingFileName: job.processingFileName,
+                },
+            );
+        }
+
+        const stats = await this.safeLstat(processingPath, "quarantine");
+
+        if (stats.isSymbolicLink() || !stats.isFile()) {
+            throw new CollectorFileIntakeError(
+                "CLAIMED_FILE_MISSING",
+                "quarantine",
+                "The claimed file is no longer a regular file in the processing directory.",
+                { processingFileName: job.processingFileName },
+            );
+        }
+
+        return this.quarantineClaimedBatch(
+            {
+                ...parsedClaim,
+                byteLength: stats.size,
+            },
+            reason,
+        );
     }
 
     private async claimCandidate(
