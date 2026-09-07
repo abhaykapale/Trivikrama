@@ -61,6 +61,7 @@ test("atomically publishes, verifies, claims, and queues an official Collector b
     });
 
     const firstCycle = await intakeCycle.execute();
+    
 
     assert.equal(firstCycle.discovery.claimed.length, 1);
     assert.equal(firstCycle.processed.length, 1);

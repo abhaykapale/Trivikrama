@@ -8,6 +8,8 @@ import {
   testDate,
 } from "./test-harness.js";
 
+
+
 export const mongoRepositoryIntegrationTests: readonly IntegrationTestCase[] = [
   {
     name: "mongodb repositories insert and query normalized events, AI results, and raw archives",
@@ -130,31 +132,45 @@ export const mongoRepositoryIntegrationTests: readonly IntegrationTestCase[] = [
       assertEqual(anomalies.items.length, 1, "AI anomaly query should return one test result");
 
       const rawArchive = await mongoRepositories.rawEventArchive.create({
-        batch_id: batchId,
-        collector_id: "db09-test-collector-mongo",
-        event_count: 1,
-        schema_version: "1.0.0",
-        events: [
-          {
-            message: "Failed password for root from 10.90.0.10",
-            source: "db09",
-          },
-        ],
-        file_size_bytes: 512,
-        archived_at: testDate(303),
-        org_id: TEST_ORG_ID,
+          batch_id: batchId,
+          collector_id: "db09-test-collector-mongo",
+          canonical_unsigned_sha256:"sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+          event_count: 1,
+          schema_version: "1.0.0",
+          events: [
+              {
+                  message: "Failed password for root from 10.90.0.10",
+                  source: "db09",
+              },
+          ],
+          file_size_bytes: 512,
+          archived_at: testDate(303),
+          org_id: TEST_ORG_ID,
       });
       assertEqual(rawArchive.batch_id, batchId, "Raw archive should be inserted");
 
       const foundArchive = await mongoRepositories.rawEventArchive.findByBatchId(batchId);
       assertDefined(foundArchive, "Raw archive should be findable by batch_id");
       assertEqual(foundArchive.event_count, 1, "Raw archive event count should roundtrip");
+      assertEqual(
+          foundArchive.canonical_unsigned_sha256,
+          rawArchive.canonical_unsigned_sha256,
+          "Raw archive digest should roundtrip",
+      );
 
       const archivePage = await mongoRepositories.rawEventArchive.listByCollectorId(
         "db09-test-collector-mongo",
         { limit: 10 },
       );
       assertEqual(archivePage.items.length, 1, "Raw archive list by collector should return one record");
+
+      const duplicateArchive = await mongoRepositories.rawEventArchive.createIfAbsent(rawArchive);
+
+      assertEqual(
+          duplicateArchive.status,
+          "already_exists",
+          "A repeated batch_id should return the existing archive",
+      );
     },
   },
 ];

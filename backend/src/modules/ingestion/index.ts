@@ -144,3 +144,18 @@ export type {
     CollectorIntakeCycleRuntimeConfiguration,
     ConfiguredCollectorIntakeCycle,
 } from "./composition/configured-collector-intake-cycle.dependencies.js";
+
+export { BullMqCollectorProcessingWorker } from "./infrastructure/bullmq-collector-processing.worker.js";
+
+export type {
+    BullMqCollectorProcessingWorkerConfiguration,
+    BullMqCollectorProcessingWorkerDependencies,
+} from "./infrastructure/bullmq-collector-processing.worker.js";
+
+export { createConfiguredCollectorProcessingWorker } from "./composition/configured-collector-processing-worker.dependencies.js";
+
+export type {
+    CollectorProcessingWorkerRuntimeConfiguration,
+    ConfiguredCollectorProcessingWorker,
+} from "./composition/configured-collector-processing-worker.dependencies.js";
+

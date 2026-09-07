@@ -11,6 +11,7 @@ const TEST_JOB = {
     canonicalUnsignedSha256:
         "sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
     enqueuedAt: "2026-09-04T12:00:00.000Z",
+    byteLength: 512,
 } as const;
 
 test("InMemoryProcessingQueue enqueues a new batch using batchId as jobId", async () => {

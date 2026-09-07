@@ -18,381 +18,390 @@ const AI_RESULTS_RETENTION_SECONDS = 90 * 24 * 60 * 60;
 const RAW_EVENTS_ARCHIVE_RETENTION_SECONDS = 30 * 24 * 60 * 60;
 
 export const MONGO_COLLECTION_DEFINITIONS: readonly MongoCollectionDefinition[] = [
-  {
-    name: NORMALIZED_EVENTS_COLLECTION,
-    validator: {
-      $jsonSchema: {
-        bsonType: "object",
-        required: [
-          "event_id",
-          "class_uid",
-          "category_uid",
-          "severity_id",
-          "time",
-          "message",
-          "metadata",
-          "ingestion",
+    {
+        name: NORMALIZED_EVENTS_COLLECTION,
+        validator: {
+            $jsonSchema: {
+                bsonType: "object",
+                required: [
+                    "event_id",
+                    "class_uid",
+                    "category_uid",
+                    "severity_id",
+                    "time",
+                    "message",
+                    "metadata",
+                    "ingestion",
+                ],
+                properties: {
+                    event_id: {
+                        bsonType: "string",
+                        description: "Unique event identifier (UUID v4)",
+                    },
+                    dedup_hash: {
+                        bsonType: "string",
+                        description: "SHA-256 deduplication hash",
+                    },
+                    class_uid: {
+                        bsonType: "int",
+                        description: "OCSF event class UID",
+                    },
+                    category_uid: {
+                        bsonType: "int",
+                        description: "OCSF event category UID",
+                    },
+                    severity_id: {
+                        bsonType: "int",
+                        minimum: 0,
+                        maximum: 6,
+                        description:
+                            "OCSF severity (0=Unknown, 1=Info, 2=Low, 3=Medium, 4=High, 5=Critical, 6=Fatal)",
+                    },
+                    time: {
+                        bsonType: "date",
+                        description: "Event timestamp normalized to UTC",
+                    },
+                    message: {
+                        bsonType: "string",
+                        description: "Human-readable event message",
+                    },
+                    src_endpoint: {
+                        bsonType: "object",
+                        properties: {
+                            ip: { bsonType: "string" },
+                            hostname: { bsonType: "string" },
+                            port: { bsonType: "int" },
+                            mac: { bsonType: "string" },
+                        },
+                    },
+                    dst_endpoint: {
+                        bsonType: "object",
+                        properties: {
+                            ip: { bsonType: "string" },
+                            hostname: { bsonType: "string" },
+                            port: { bsonType: "int" },
+                            mac: { bsonType: "string" },
+                        },
+                    },
+                    actor: {
+                        bsonType: "object",
+                        properties: {
+                            user: {
+                                bsonType: "object",
+                                properties: {
+                                    name: { bsonType: "string" },
+                                    uid: { bsonType: "string" },
+                                    domain: { bsonType: "string" },
+                                    type: { bsonType: "string" },
+                                },
+                            },
+                            process: {
+                                bsonType: "object",
+                                properties: {
+                                    name: { bsonType: "string" },
+                                    pid: { bsonType: "int" },
+                                    cmd_line: { bsonType: "string" },
+                                    path: { bsonType: "string" },
+                                },
+                            },
+                            session: {
+                                bsonType: "object",
+                                properties: {
+                                    uid: { bsonType: "string" },
+                                    type: { bsonType: "string" },
+                                },
+                            },
+                        },
+                    },
+                    device: {
+                        bsonType: "object",
+                        properties: {
+                            hostname: { bsonType: "string" },
+                            ip: { bsonType: "string" },
+                            os: {
+                                bsonType: "object",
+                                properties: {
+                                    name: { bsonType: "string" },
+                                    version: { bsonType: "string" },
+                                },
+                            },
+                            type: { bsonType: "string" },
+                        },
+                    },
+                    metadata: {
+                        bsonType: "object",
+                        required: ["version"],
+                        properties: {
+                            version: { bsonType: "string" },
+                            product: {
+                                bsonType: "object",
+                                properties: {
+                                    name: { bsonType: "string" },
+                                    vendor_name: { bsonType: "string" },
+                                    version: { bsonType: "string" },
+                                },
+                            },
+                            log_level: { bsonType: "string" },
+                        },
+                    },
+                    enrichments: {
+                        bsonType: "object",
+                        properties: {
+                            geo_src: {
+                                bsonType: "object",
+                                properties: {
+                                    country: { bsonType: "string" },
+                                    city: { bsonType: "string" },
+                                    latitude: { bsonType: "double" },
+                                    longitude: { bsonType: "double" },
+                                    asn: { bsonType: "string" },
+                                },
+                            },
+                            geo_dst: {
+                                bsonType: "object",
+                                properties: {
+                                    country: { bsonType: "string" },
+                                    city: { bsonType: "string" },
+                                    latitude: { bsonType: "double" },
+                                    longitude: { bsonType: "double" },
+                                    asn: { bsonType: "string" },
+                                },
+                            },
+                            reverse_dns_src: { bsonType: "string" },
+                            reverse_dns_dst: { bsonType: "string" },
+                            asset_criticality: { bsonType: "double" },
+                        },
+                    },
+                    features: {
+                        bsonType: "object",
+                        properties: {
+                            temporal: { bsonType: "object" },
+                            frequency: { bsonType: "object" },
+                            entropy: { bsonType: "object" },
+                            volume: { bsonType: "object" },
+                            process: { bsonType: "object" },
+                            authentication: { bsonType: "object" },
+                            network: { bsonType: "object" },
+                        },
+                    },
+                    unmapped: {
+                        bsonType: "object",
+                        description: "Fields not mapped to OCSF schema",
+                    },
+                    schema_valid: {
+                        bsonType: "bool",
+                        description: "Whether event passed OCSF schema validation",
+                    },
+                    validation_errors: {
+                        bsonType: "array",
+                        items: { bsonType: "string" },
+                    },
+                    ingestion: {
+                        bsonType: "object",
+                        required: ["batch_id", "collector_id", "ingested_at"],
+                        properties: {
+                            batch_id: { bsonType: "string" },
+                            collector_id: { bsonType: "string" },
+                            ingested_at: { bsonType: "date" },
+                            pipeline_duration_ms: { bsonType: "int" },
+                        },
+                    },
+                    raw_event: {
+                        bsonType: "object",
+                        description: "Original event before normalization",
+                    },
+                    org_id: { bsonType: "string" },
+                },
+            },
+        },
+        indexes: [
+            { name: "idx_event_id", keys: { event_id: 1 }, unique: true },
+            { name: "idx_dedup_hash", keys: { dedup_hash: 1 } },
+            { name: "idx_time_desc", keys: { time: -1 } },
+            { name: "idx_severity_time", keys: { severity_id: 1, time: -1 } },
+            { name: "idx_class_time", keys: { class_uid: 1, time: -1 } },
+            {
+                name: "idx_src_ip_time",
+                keys: { "src_endpoint.ip": 1, time: -1 },
+                sparse: true,
+            },
+            {
+                name: "idx_dst_ip_time",
+                keys: { "dst_endpoint.ip": 1, time: -1 },
+                sparse: true,
+            },
+            {
+                name: "idx_actor_user_time",
+                keys: { "actor.user.name": 1, time: -1 },
+                sparse: true,
+            },
+            {
+                name: "idx_device_hostname_time",
+                keys: { "device.hostname": 1, time: -1 },
+                sparse: true,
+            },
+            { name: "idx_batch_id", keys: { "ingestion.batch_id": 1 } },
+            {
+                name: "idx_collector_time",
+                keys: { "ingestion.collector_id": 1, time: -1 },
+            },
+            { name: "idx_message_text", keys: { message: "text" } },
+            {
+                name: "idx_ttl_expiry",
+                keys: { "ingestion.ingested_at": 1 },
+                expireAfterSeconds: NORMALIZED_EVENTS_RETENTION_SECONDS,
+            },
+            { name: "idx_org_time", keys: { org_id: 1, time: -1 } },
         ],
-        properties: {
-          event_id: {
-            bsonType: "string",
-            description: "Unique event identifier (UUID v4)",
-          },
-          dedup_hash: {
-            bsonType: "string",
-            description: "SHA-256 deduplication hash",
-          },
-          class_uid: {
-            bsonType: "int",
-            description: "OCSF event class UID",
-          },
-          category_uid: {
-            bsonType: "int",
-            description: "OCSF event category UID",
-          },
-          severity_id: {
-            bsonType: "int",
-            minimum: 0,
-            maximum: 6,
-            description:
-              "OCSF severity (0=Unknown, 1=Info, 2=Low, 3=Medium, 4=High, 5=Critical, 6=Fatal)",
-          },
-          time: {
-            bsonType: "date",
-            description: "Event timestamp normalized to UTC",
-          },
-          message: {
-            bsonType: "string",
-            description: "Human-readable event message",
-          },
-          src_endpoint: {
-            bsonType: "object",
-            properties: {
-              ip: { bsonType: "string" },
-              hostname: { bsonType: "string" },
-              port: { bsonType: "int" },
-              mac: { bsonType: "string" },
-            },
-          },
-          dst_endpoint: {
-            bsonType: "object",
-            properties: {
-              ip: { bsonType: "string" },
-              hostname: { bsonType: "string" },
-              port: { bsonType: "int" },
-              mac: { bsonType: "string" },
-            },
-          },
-          actor: {
-            bsonType: "object",
-            properties: {
-              user: {
-                bsonType: "object",
-                properties: {
-                  name: { bsonType: "string" },
-                  uid: { bsonType: "string" },
-                  domain: { bsonType: "string" },
-                  type: { bsonType: "string" },
-                },
-              },
-              process: {
-                bsonType: "object",
-                properties: {
-                  name: { bsonType: "string" },
-                  pid: { bsonType: "int" },
-                  cmd_line: { bsonType: "string" },
-                  path: { bsonType: "string" },
-                },
-              },
-              session: {
-                bsonType: "object",
-                properties: {
-                  uid: { bsonType: "string" },
-                  type: { bsonType: "string" },
-                },
-              },
-            },
-          },
-          device: {
-            bsonType: "object",
-            properties: {
-              hostname: { bsonType: "string" },
-              ip: { bsonType: "string" },
-              os: {
-                bsonType: "object",
-                properties: {
-                  name: { bsonType: "string" },
-                  version: { bsonType: "string" },
-                },
-              },
-              type: { bsonType: "string" },
-            },
-          },
-          metadata: {
-            bsonType: "object",
-            required: ["version"],
-            properties: {
-              version: { bsonType: "string" },
-              product: {
-                bsonType: "object",
-                properties: {
-                  name: { bsonType: "string" },
-                  vendor_name: { bsonType: "string" },
-                  version: { bsonType: "string" },
-                },
-              },
-              log_level: { bsonType: "string" },
-            },
-          },
-          enrichments: {
-            bsonType: "object",
-            properties: {
-              geo_src: {
-                bsonType: "object",
-                properties: {
-                  country: { bsonType: "string" },
-                  city: { bsonType: "string" },
-                  latitude: { bsonType: "double" },
-                  longitude: { bsonType: "double" },
-                  asn: { bsonType: "string" },
-                },
-              },
-              geo_dst: {
-                bsonType: "object",
-                properties: {
-                  country: { bsonType: "string" },
-                  city: { bsonType: "string" },
-                  latitude: { bsonType: "double" },
-                  longitude: { bsonType: "double" },
-                  asn: { bsonType: "string" },
-                },
-              },
-              reverse_dns_src: { bsonType: "string" },
-              reverse_dns_dst: { bsonType: "string" },
-              asset_criticality: { bsonType: "double" },
-            },
-          },
-          features: {
-            bsonType: "object",
-            properties: {
-              temporal: { bsonType: "object" },
-              frequency: { bsonType: "object" },
-              entropy: { bsonType: "object" },
-              volume: { bsonType: "object" },
-              process: { bsonType: "object" },
-              authentication: { bsonType: "object" },
-              network: { bsonType: "object" },
-            },
-          },
-          unmapped: {
-            bsonType: "object",
-            description: "Fields not mapped to OCSF schema",
-          },
-          schema_valid: {
-            bsonType: "bool",
-            description: "Whether event passed OCSF schema validation",
-          },
-          validation_errors: {
-            bsonType: "array",
-            items: { bsonType: "string" },
-          },
-          ingestion: {
-            bsonType: "object",
-            required: ["batch_id", "collector_id", "ingested_at"],
-            properties: {
-              batch_id: { bsonType: "string" },
-              collector_id: { bsonType: "string" },
-              ingested_at: { bsonType: "date" },
-              pipeline_duration_ms: { bsonType: "int" },
-            },
-          },
-          raw_event: {
-            bsonType: "object",
-            description: "Original event before normalization",
-          },
-          org_id: { bsonType: "string" },
-        },
-      },
     },
-    indexes: [
-      { name: "idx_event_id", keys: { event_id: 1 }, unique: true },
-      { name: "idx_dedup_hash", keys: { dedup_hash: 1 } },
-      { name: "idx_time_desc", keys: { time: -1 } },
-      { name: "idx_severity_time", keys: { severity_id: 1, time: -1 } },
-      { name: "idx_class_time", keys: { class_uid: 1, time: -1 } },
-      {
-        name: "idx_src_ip_time",
-        keys: { "src_endpoint.ip": 1, time: -1 },
-        sparse: true,
-      },
-      {
-        name: "idx_dst_ip_time",
-        keys: { "dst_endpoint.ip": 1, time: -1 },
-        sparse: true,
-      },
-      {
-        name: "idx_actor_user_time",
-        keys: { "actor.user.name": 1, time: -1 },
-        sparse: true,
-      },
-      {
-        name: "idx_device_hostname_time",
-        keys: { "device.hostname": 1, time: -1 },
-        sparse: true,
-      },
-      { name: "idx_batch_id", keys: { "ingestion.batch_id": 1 } },
-      {
-        name: "idx_collector_time",
-        keys: { "ingestion.collector_id": 1, time: -1 },
-      },
-      { name: "idx_message_text", keys: { message: "text" } },
-      {
-        name: "idx_ttl_expiry",
-        keys: { "ingestion.ingested_at": 1 },
-        expireAfterSeconds: NORMALIZED_EVENTS_RETENTION_SECONDS,
-      },
-      { name: "idx_org_time", keys: { org_id: 1, time: -1 } },
-    ],
-  },
-  {
-    name: AI_RESULTS_COLLECTION,
-    validator: {
-      $jsonSchema: {
-        bsonType: "object",
-        required: [
-          "event_id",
-          "model_name",
-          "model_version",
-          "anomaly_score",
-          "is_anomaly",
-          "created_at",
+    {
+        name: AI_RESULTS_COLLECTION,
+        validator: {
+            $jsonSchema: {
+                bsonType: "object",
+                required: [
+                    "event_id",
+                    "model_name",
+                    "model_version",
+                    "anomaly_score",
+                    "is_anomaly",
+                    "created_at",
+                ],
+                properties: {
+                    event_id: {
+                        bsonType: "string",
+                        description: "References normalized_events.event_id",
+                    },
+                    batch_id: {
+                        bsonType: "string",
+                        description: "Batch this result was produced in",
+                    },
+                    model_name: {
+                        bsonType: "string",
+                        description: "Model identifier",
+                    },
+                    model_version: {
+                        bsonType: "string",
+                        description: "Model version string",
+                    },
+                    anomaly_score: {
+                        bsonType: "double",
+                        description: "Anomaly score 0.0 to 1.0",
+                    },
+                    is_anomaly: {
+                        bsonType: "bool",
+                        description: "Whether score exceeds threshold",
+                    },
+                    confidence: {
+                        bsonType: "double",
+                        description: "Model confidence 0.0 to 1.0",
+                    },
+                    threat_category: {
+                        bsonType: "string",
+                        description: "Classification result",
+                    },
+                    threat_confidence: { bsonType: "double" },
+                    shap_explanation: {
+                        bsonType: "object",
+                        properties: {
+                            base_value: {
+                                bsonType: "double",
+                                description: "Expected model output",
+                            },
+                            features: {
+                                bsonType: "array",
+                                description: "Feature contributions sorted by absolute SHAP value",
+                                items: {
+                                    bsonType: "object",
+                                    properties: {
+                                        name: { bsonType: "string" },
+                                        value: { bsonType: "double" },
+                                        shap_value: { bsonType: "double" },
+                                    },
+                                },
+                            },
+                        },
+                    },
+                    input_features: {
+                        bsonType: "object",
+                        description: "Feature vector sent to the model",
+                    },
+                    processing_time_ms: {
+                        bsonType: "int",
+                        description: "Model inference time",
+                    },
+                    used_fallback: {
+                        bsonType: "bool",
+                        description: "Whether fallback was used",
+                    },
+                    created_at: { bsonType: "date" },
+                    org_id: { bsonType: "string" },
+                },
+            },
+        },
+        indexes: [
+            { name: "idx_ai_event_id", keys: { event_id: 1 } },
+            {
+                name: "idx_ai_anomaly_score",
+                keys: { anomaly_score: -1, created_at: -1 },
+            },
+            { name: "idx_ai_is_anomaly", keys: { is_anomaly: 1, created_at: -1 } },
+            {
+                name: "idx_ai_model_version",
+                keys: { model_name: 1, model_version: 1, created_at: -1 },
+            },
+            { name: "idx_ai_batch_id", keys: { batch_id: 1 } },
+            {
+                name: "idx_ai_ttl_expiry",
+                keys: { created_at: 1 },
+                expireAfterSeconds: AI_RESULTS_RETENTION_SECONDS,
+            },
         ],
-        properties: {
-          event_id: {
-            bsonType: "string",
-            description: "References normalized_events.event_id",
-          },
-          batch_id: {
-            bsonType: "string",
-            description: "Batch this result was produced in",
-          },
-          model_name: {
-            bsonType: "string",
-            description: "Model identifier",
-          },
-          model_version: {
-            bsonType: "string",
-            description: "Model version string",
-          },
-          anomaly_score: {
-            bsonType: "double",
-            description: "Anomaly score 0.0 to 1.0",
-          },
-          is_anomaly: {
-            bsonType: "bool",
-            description: "Whether score exceeds threshold",
-          },
-          confidence: {
-            bsonType: "double",
-            description: "Model confidence 0.0 to 1.0",
-          },
-          threat_category: {
-            bsonType: "string",
-            description: "Classification result",
-          },
-          threat_confidence: { bsonType: "double" },
-          shap_explanation: {
-            bsonType: "object",
-            properties: {
-              base_value: {
-                bsonType: "double",
-                description: "Expected model output",
-              },
-              features: {
-                bsonType: "array",
-                description:
-                  "Feature contributions sorted by absolute SHAP value",
-                items: {
-                  bsonType: "object",
-                  properties: {
-                    name: { bsonType: "string" },
-                    value: { bsonType: "double" },
-                    shap_value: { bsonType: "double" },
-                  },
+    },
+    {
+        name: RAW_EVENTS_ARCHIVE_COLLECTION,
+        validator: {
+            $jsonSchema: {
+                bsonType: "object",
+                required: [
+                    "batch_id",
+                    "collector_id",
+                    "canonical_unsigned_sha256",
+                    "events",
+                    "archived_at",
+                ],
+                properties: {
+                    batch_id: {
+                        bsonType: "string",
+                        description: "Collector batch identifier",
+                    },
+                    collector_id: { bsonType: "string" },
+                    event_count: { bsonType: "int" },
+                    schema_version: { bsonType: "string" },
+                    events: {
+                        bsonType: "array",
+                        description: "Raw OCSF events from collector batch file",
+                    },
+                    file_size_bytes: { bsonType: "int" },
+                    archived_at: { bsonType: "date" },
+                    org_id: { bsonType: "string" },
+                    canonical_unsigned_sha256: {
+                        bsonType: "string",
+                        pattern: "^sha256:[a-f0-9]{64}$",
+                    },
                 },
-              },
             },
-          },
-          input_features: {
-            bsonType: "object",
-            description: "Feature vector sent to the model",
-          },
-          processing_time_ms: {
-            bsonType: "int",
-            description: "Model inference time",
-          },
-          used_fallback: {
-            bsonType: "bool",
-            description: "Whether fallback was used",
-          },
-          created_at: { bsonType: "date" },
-          org_id: { bsonType: "string" },
         },
-      },
+        indexes: [
+            { name: "idx_raw_batch_id", keys: { batch_id: 1 }, unique: true },
+            { name: "idx_raw_collector", keys: { collector_id: 1, archived_at: -1 } },
+            {
+                name: "idx_raw_ttl_expiry",
+                keys: { archived_at: 1 },
+                expireAfterSeconds: RAW_EVENTS_ARCHIVE_RETENTION_SECONDS,
+            },
+        ],
     },
-    indexes: [
-      { name: "idx_ai_event_id", keys: { event_id: 1 } },
-      {
-        name: "idx_ai_anomaly_score",
-        keys: { anomaly_score: -1, created_at: -1 },
-      },
-      { name: "idx_ai_is_anomaly", keys: { is_anomaly: 1, created_at: -1 } },
-      {
-        name: "idx_ai_model_version",
-        keys: { model_name: 1, model_version: 1, created_at: -1 },
-      },
-      { name: "idx_ai_batch_id", keys: { batch_id: 1 } },
-      {
-        name: "idx_ai_ttl_expiry",
-        keys: { created_at: 1 },
-        expireAfterSeconds: AI_RESULTS_RETENTION_SECONDS,
-      },
-    ],
-  },
-  {
-    name: RAW_EVENTS_ARCHIVE_COLLECTION,
-    validator: {
-      $jsonSchema: {
-        bsonType: "object",
-        required: ["batch_id", "collector_id", "events", "archived_at"],
-        properties: {
-          batch_id: {
-            bsonType: "string",
-            description: "Collector batch identifier",
-          },
-          collector_id: { bsonType: "string" },
-          event_count: { bsonType: "int" },
-          schema_version: { bsonType: "string" },
-          events: {
-            bsonType: "array",
-            description: "Raw OCSF events from collector batch file",
-          },
-          file_size_bytes: { bsonType: "int" },
-          archived_at: { bsonType: "date" },
-          org_id: { bsonType: "string" },
-        },
-      },
-    },
-    indexes: [
-      { name: "idx_raw_batch_id", keys: { batch_id: 1 }, unique: true },
-      { name: "idx_raw_collector", keys: { collector_id: 1, archived_at: -1 } },
-      {
-        name: "idx_raw_ttl_expiry",
-        keys: { archived_at: 1 },
-        expireAfterSeconds: RAW_EVENTS_ARCHIVE_RETENTION_SECONDS,
-      },
-    ],
-  },
 ];
 
 interface BootstrapCounters {

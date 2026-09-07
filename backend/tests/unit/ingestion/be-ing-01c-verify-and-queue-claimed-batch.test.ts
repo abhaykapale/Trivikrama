@@ -4,6 +4,7 @@ import test from "node:test";
 import { VerifyAndQueueClaimedBatchService } from "../../../src/modules/ingestion/application/verify-and-queue-claimed-batch.service.js";
 import type {
     ClaimedCollectorBatchFile,
+    CollectorBatchQuarantineReason,
     CollectorFileIntakeReport,
     CollectorFileRecoveryReport,
     ICollectorFileIntake,
@@ -97,6 +98,13 @@ class FakeFileIntake implements ICollectorFileIntake {
             quarantineReason: reason,
             quarantinedAt: "2026-09-05T12:00:00.000Z",
         };
+    }
+
+    public async quarantineProcessingJob(
+        _job: CollectorProcessingJob,
+        _reason: CollectorBatchQuarantineReason,
+    ): Promise<QuarantinedCollectorBatchFile> {
+        throw new Error("quarantineProcessingJob is not used by this BE-ING-01C test.");
     }
 }
 

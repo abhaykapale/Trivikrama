@@ -58,6 +58,10 @@
     "test:ingestion:be-ing-01c:integration": "node --import tsx tests/integration/ingestion/be-ing-01c-bullmq-queue.integration.ts && node --import tsx tests/integration/ingestion/be-ing-01c-intake-cycle.integration.test.ts",
     "test:ingestion:be-ing-01c": "npm run test:ingestion:be-ing-01c:unit && npm run test:ingestion:be-ing-01c:integration"
     ,"ingestion:run-once": "tsx src/scripts/run-collector-intake-cycle.ts"
+    , "ingestion:worker": "tsx src/scripts/run-collector-processing-worker.ts",
+    "test:ingestion:be-ing-01d:unit": "node --import tsx tests/unit/ingestion/be-ing-01d-archive-verified-collector-batch.test.ts && node --import tsx tests/unit/ingestion/be-ing-01d-process-collector-processing-job.test.ts && node --import tsx tests/unit/ingestion/be-ing-01d-quarantine-processing-job.test.ts && node --import tsx tests/unit/ingestion/be-ing-01d-handle-collector-processing-job.test.ts",
+    "test:ingestion:be-ing-01d:integration": "node --import tsx tests/integration/ingestion/be-ing-01d-bullmq-worker.integration.test.ts",
+    "test:ingestion:be-ing-01d": "npm run test:ingestion:be-ing-01d:unit && npm run test:ingestion:be-ing-01d:integration"
   },
   "keywords": [],
   "author": "",

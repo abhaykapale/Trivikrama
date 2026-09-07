@@ -7,9 +7,9 @@ import type {
     ProcessingQueueEnqueueResult,
 } from "../domain/processing-queue.contracts.js";
 
-const PROCESS_COLLECTOR_BATCH_JOB_NAME = "process-collector-batch";
-const DEFAULT_QUEUE_NAME = "collector-processing";
-const DEFAULT_QUEUE_PREFIX = "trivikrama";
+export const PROCESS_COLLECTOR_BATCH_JOB_NAME = "process-collector-batch";
+export const DEFAULT_QUEUE_NAME = "collector-processing";
+export const DEFAULT_QUEUE_PREFIX = "trivikrama";
 
 export interface BullMqProcessingQueueConfiguration {
     readonly redisUrl: string;
