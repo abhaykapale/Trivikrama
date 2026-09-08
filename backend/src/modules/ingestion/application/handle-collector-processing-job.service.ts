@@ -1,4 +1,4 @@
-import type { ICollectorFileIntake } from "../domain/collector-file-intake.contracts.js";
+import type { ICollectorProcessingFileLifecycle } from "../domain/collector-file-intake.contracts.js";
 import type { CollectorProcessingJob } from "../domain/processing-queue.contracts.js";
 import type {
     ProcessCollectorProcessingJobResult,
@@ -8,7 +8,7 @@ import type {
 export interface HandleCollectorProcessingJobDependencies {
     readonly processor: Pick<ProcessCollectorProcessingJobService, "execute">;
 
-    readonly fileIntake: Pick<ICollectorFileIntake, "quarantineProcessingJob">;
+    readonly fileIntake: ICollectorProcessingFileLifecycle;
 }
 
 /**
@@ -26,6 +26,8 @@ export class HandleCollectorProcessingJobService {
 
         if (result.status === "quarantine") {
             await this.dependencies.fileIntake.quarantineProcessingJob(job, result.reason);
+        } else {
+            await this.dependencies.fileIntake.completeProcessingJob(job);
         }
 
         return result;

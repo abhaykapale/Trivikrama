@@ -18,6 +18,7 @@ import {
 } from "./mongo-repository.types.js";
 import type {
   CreateNormalizedEventInput,
+  CreateNormalizedEventsIfAbsentResult,
   INormalizedEventRepository,
   NormalizedEventDocument,
   NormalizedEventListFilters,
@@ -58,6 +59,53 @@ export class MongoNormalizedEventRepository implements INormalizedEventRepositor
       },
     );
     return result.insertedCount;
+  }
+
+  public async createManyIfAbsent(
+    inputs: readonly CreateNormalizedEventInput[],
+  ): Promise<CreateNormalizedEventsIfAbsentResult> {
+    if (inputs.length === 0) {
+      return {
+        insertedCount: 0,
+        existingCount: 0,
+        documents: [],
+      };
+    }
+
+    for (const input of inputs) {
+      validateNormalizedEvent(input);
+    }
+
+    const eventIds = inputs.map((input) => input.event_id);
+
+    if (new Set(eventIds).size !== eventIds.length) {
+      throw new Error("createManyIfAbsent requires unique event_id values within one call");
+    }
+
+    const result = await this.collection().bulkWrite(
+      inputs.map((input) => ({
+        updateOne: {
+          filter: { event_id: input.event_id },
+          update: {
+            $setOnInsert: toMongoNormalizedEventDocument(input),
+          },
+          upsert: true,
+        },
+      })) as never,
+      { ordered: false },
+    );
+
+    const documents = await this.listByEventIds(eventIds);
+
+    if (documents.length !== inputs.length) {
+      throw new Error("Normalized-event idempotent persistence returned an incomplete result");
+    }
+
+    return {
+      insertedCount: result.upsertedCount,
+      existingCount: inputs.length - result.upsertedCount,
+      documents,
+    };
   }
 
   public async findByEventId(

@@ -8,9 +8,11 @@ import { createMongoRepositories } from "../../../database/repositories/mongodb/
 import { ArchiveVerifiedCollectorBatchService } from "../application/archive-verified-collector-batch.service.js";
 import { HandleCollectorProcessingJobService } from "../application/handle-collector-processing-job.service.js";
 import { ProcessCollectorProcessingJobService } from "../application/process-collector-processing-job.service.js";
+import { PersistNormalizedCollectorEventsService } from "../application/persist-normalized-collector-events.service.js";
 import { BullMqCollectorProcessingWorker } from "../infrastructure/bullmq-collector-processing.worker.js";
 import { ClaimedCollectorBatchReader } from "../infrastructure/claimed-collector-batch.reader.js";
 import { CollectorFileIntakeService } from "../infrastructure/collector-file-intake.service.js";
+import { OcsfCollectorEventNormalizer } from "../infrastructure/ocsf-collector-event.normalizer.js";
 import type { CollectorVerificationRuntimeConfiguration } from "./configured-ingestion-verification.dependencies.js";
 import { createConfiguredCollectorMessageVerifier } from "./configured-ingestion-verification.dependencies.js";
 
@@ -54,10 +56,18 @@ export async function createConfiguredCollectorProcessingWorker(
             rawEventArchive: repositories.rawEventArchive,
         });
 
+        const normalizer = new OcsfCollectorEventNormalizer();
+        const normalizedEventPersistence = new PersistNormalizedCollectorEventsService({
+            normalizedEvents: repositories.normalizedEvents,
+        });
+
         const processor = new ProcessCollectorProcessingJobService({
             reader,
             verifier,
             rawBatchArchive,
+            normalizer,
+            normalizedEventPersistence,
+            now: () => new Date(),
         });
 
         const jobHandler = new HandleCollectorProcessingJobService({
@@ -75,13 +85,14 @@ export async function createConfiguredCollectorProcessingWorker(
         );
 
         await worker.waitUntilReady();
-            const ConfiguredWorker = worker;
+        const startedWorker = worker;
+
         return {
-            worker : ConfiguredWorker,
+            worker: startedWorker,
 
             async close(): Promise<void> {
                 try {
-                    await ConfiguredWorker.close();
+                    await startedWorker.close();
                 } finally {
                     await closeMongoDb(mongoClient);
                 }

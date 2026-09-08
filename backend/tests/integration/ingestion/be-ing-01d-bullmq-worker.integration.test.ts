@@ -78,7 +78,13 @@ class RecordingJobHandler {
         this.jobs.push(job);
         this.resolveReceivedJob(job);
 
-        return { status: "archived" };
+        return {
+            status: "processed",
+            archiveStatus: "archived",
+            totalEvents: 1,
+            insertedEvents: 1,
+            alreadyPresentEvents: 0,
+        };
     }
 }
 

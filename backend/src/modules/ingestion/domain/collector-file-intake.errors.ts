@@ -4,6 +4,7 @@ export type CollectorFileIntakeStage =
     | "claim"
     | "recovery"
     | "quarantine"
+    | "complete"
     | "read";
 
 export const COLLECTOR_FILE_INTAKE_ERROR_CODES = {

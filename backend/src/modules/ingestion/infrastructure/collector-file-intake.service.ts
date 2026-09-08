@@ -6,6 +6,7 @@ import { basename, join, relative, resolve } from "node:path";
 import type {
     ClaimedCollectorBatchFile,
     CollectorBatchQuarantineReason,
+    CompleteCollectorProcessingJobResult,
     CollectorFileIntakeConfiguration,
     CollectorFileIntakeReport,
     CollectorFileRecoveryReport,
@@ -43,6 +44,7 @@ interface IntakeLayout {
     readonly root: string;
     readonly incoming: string;
     readonly processing: string;
+    readonly processed: string;
     readonly quarantine: string;
 }
 
@@ -61,6 +63,7 @@ export class CollectorFileIntakeService implements ICollectorFileIntake {
             root,
             incoming: join(root, "incoming"),
             processing: join(root, "processing"),
+            processed: join(root, "processed"),
             quarantine: join(root, "quarantine"),
         };
 
@@ -84,6 +87,7 @@ export class CollectorFileIntakeService implements ICollectorFileIntake {
         await this.ensureDirectory(this.layout.root, "layout");
         await this.ensureDirectory(this.layout.incoming, "layout");
         await this.ensureDirectory(this.layout.processing, "layout");
+        await this.ensureDirectory(this.layout.processed, "layout");
         await this.ensureDirectory(this.layout.quarantine, "layout");
     }
 
@@ -300,6 +304,90 @@ export class CollectorFileIntakeService implements ICollectorFileIntake {
             },
             reason,
         );
+    }
+
+    public async completeProcessingJob(
+        job: CollectorProcessingJob,
+    ): Promise<CompleteCollectorProcessingJobResult> {
+        await this.initialize();
+
+        const processingPath = this.pathWithin(this.layout.processing, job.processingFileName);
+        const processedPath = this.pathWithin(this.layout.processed, job.processingFileName);
+        const parsedClaim = this.parseClaimedFileName(job.processingFileName, processingPath);
+
+        if (
+            parsedClaim === undefined ||
+            parsedClaim.collectorId !== job.collectorId ||
+            parsedClaim.batchId !== job.batchId
+        ) {
+            throw new CollectorFileIntakeError(
+                "INVALID_INTAKE_CONFIGURATION",
+                "complete",
+                "The processing job does not match a valid claimed batch file.",
+                {
+                    collectorId: job.collectorId,
+                    batchId: job.batchId,
+                    processingFileName: job.processingFileName,
+                },
+            );
+        }
+
+        const processingStats = await this.safeLstat(processingPath, "complete", true);
+
+        if (processingStats === undefined) {
+            const completedStats = await this.safeLstat(processedPath, "complete", true);
+
+            if (
+                completedStats !== undefined &&
+                !completedStats.isSymbolicLink() &&
+                completedStats.isFile() &&
+                completedStats.size === job.byteLength
+            ) {
+                return {
+                    status: "already_completed",
+                    processedPath,
+                };
+            }
+
+            throw new CollectorFileIntakeError(
+                "CLAIMED_FILE_MISSING",
+                "complete",
+                "The processing file is missing and no matching completed file exists.",
+                { processingFileName: job.processingFileName },
+            );
+        }
+
+        if (
+            processingStats.isSymbolicLink() ||
+            !processingStats.isFile() ||
+            processingStats.size !== job.byteLength
+        ) {
+            throw new CollectorFileIntakeError(
+                "CLAIMED_FILE_CHANGED",
+                "complete",
+                "The processing file changed before successful completion.",
+                { processingFileName: job.processingFileName },
+            );
+        }
+
+
+        const existingProcessedStats = await this.safeLstat(processedPath, "complete", true);
+
+        if (existingProcessedStats !== undefined) {
+            throw new CollectorFileIntakeError(
+                "FILESYSTEM_OPERATION_FAILED",
+                "complete",
+                "A completed file already exists for this processing job.",
+                { processingFileName: job.processingFileName },
+            );
+        }
+
+        await this.renameClaimedFile(processingPath, processedPath, "complete");
+
+        return {
+            status: "completed",
+            processedPath,
+        };
     }
 
     private async claimCandidate(

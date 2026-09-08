@@ -66,6 +66,20 @@ export const mongoRepositoryIntegrationTests: readonly IntegrationTestCase[] = [
 
       assertEqual(normalizedEvent.event_id, eventId, "Normalized event should be inserted");
 
+      const normalizedReplay = await mongoRepositories.normalizedEvents.createManyIfAbsent([
+        normalizedEvent,
+      ]);
+      assertEqual(
+        normalizedReplay.insertedCount,
+        0,
+        "A repeated normalized event_id should not be inserted twice",
+      );
+      assertEqual(
+        normalizedReplay.existingCount,
+        1,
+        "A repeated normalized event_id should return the existing event",
+      );
+
       const foundEvent = await mongoRepositories.normalizedEvents.findByEventId(eventId);
       assertDefined(foundEvent, "Normalized event should be findable by event_id");
       assertEqual(foundEvent.class_uid, 3002, "Normalized event class_uid should roundtrip");

@@ -15,6 +15,8 @@ import type {
 } from "../../../src/modules/ingestion/domain/collector-verification.contracts.js";
 import { CollectorVerificationError } from "../../../src/modules/ingestion/domain/collector-verification.errors.js";
 import type { CollectorProcessingJob } from "../../../src/modules/ingestion/domain/processing-queue.contracts.js";
+import type { ICollectorEventNormalizer } from "../../../src/modules/ingestion/domain/collector-event-normalization.contracts.js";
+import type { PersistNormalizedCollectorEventsResult } from "../../../src/modules/ingestion/application/persist-normalized-collector-events.service.js";
 
 const BATCH_ID = "77d8092b-6bd8-4acd-ab16-bd56707a1377";
 const COLLECTOR_ID = "collector-dev-01";
@@ -63,6 +65,29 @@ class FakeRawBatchArchive {
     ): Promise<ArchiveVerifiedCollectorBatchResult> {
         this.inputs.push(input);
         return this.outcome;
+    }
+}
+
+class FakeNormalizer implements ICollectorEventNormalizer {
+    public normalize() {
+        return {
+            events: [],
+            stats: {
+                totalEvents: 0,
+                schemaValid: 0,
+                schemaInvalid: 0,
+            },
+        };
+    }
+}
+
+class FakeNormalizedEventPersistence {
+    public async execute(): Promise<PersistNormalizedCollectorEventsResult> {
+        return {
+            status: "persisted",
+            insertedCount: 0,
+            alreadyPresentCount: 0,
+        };
     }
 }
 
@@ -124,6 +149,9 @@ function createService(
         reader,
         verifier,
         rawBatchArchive: archive,
+        normalizer: new FakeNormalizer(),
+        normalizedEventPersistence: new FakeNormalizedEventPersistence(),
+        now: () => new Date("2026-09-07T00:00:00.000Z"),
     });
 }
 
@@ -137,7 +165,13 @@ test("archives a safely reread and reverified queued batch", async () => {
 
     const result = await createService(reader, verifier, archive).execute(createJob());
 
-    assert.deepEqual(result, { status: "archived" });
+    assert.deepEqual(result, {
+        status: "processed",
+        archiveStatus: "archived",
+        totalEvents: 0,
+        insertedEvents: 0,
+        alreadyPresentEvents: 0,
+    });
     assert.deepEqual(reader.requests, [createJob()]);
     assert.equal(verifier.inputs.length, 1);
     assert.equal(archive.inputs.length, 1);
@@ -156,7 +190,13 @@ test("accepts an already archived batch with the same digest", async () => {
         }),
     ).execute(createJob());
 
-    assert.deepEqual(result, { status: "already_archived" });
+    assert.deepEqual(result, {
+        status: "processed",
+        archiveStatus: "already_archived",
+        totalEvents: 0,
+        insertedEvents: 0,
+        alreadyPresentEvents: 0,
+    });
 });
 
 test("quarantines a batch that fails worker-side HMAC verification", async () => {

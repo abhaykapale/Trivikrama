@@ -36,7 +36,8 @@ export type CollectorBatchQuarantineReason =
     | "EMPTY_FILE"
     | CollectorVerificationErrorCode
     | "BATCH_DIGEST_MISMATCH"
-    | "BATCH_ID_COLLISION";
+    | "BATCH_ID_COLLISION"
+    | "EVENT_ID_COLLISION";
 
 export interface ClaimedCollectorBatchFile {
     readonly collectorId: string;
@@ -56,6 +57,16 @@ export interface QuarantinedCollectorBatchFile extends ClaimedCollectorBatchFile
     readonly quarantineReason: CollectorBatchQuarantineReason;
     readonly quarantinedAt: string;
 }
+
+export type CompleteCollectorProcessingJobResult =
+    | {
+          readonly status: "completed";
+          readonly processedPath: string;
+      }
+    | {
+          readonly status: "already_completed";
+          readonly processedPath: string;
+      };
 
 export interface CollectorFileIntakeReport {
     readonly claimed: readonly ClaimedCollectorBatchFile[];
@@ -90,6 +101,18 @@ export interface ICollectorFileIntake {
         job: CollectorProcessingJob,
         reason: CollectorBatchQuarantineReason,
     ): Promise<QuarantinedCollectorBatchFile>;
+}
+
+/** Worker-owned terminal filesystem actions after a job decision. */
+export interface ICollectorProcessingFileLifecycle {
+    quarantineProcessingJob(
+        job: CollectorProcessingJob,
+        reason: CollectorBatchQuarantineReason,
+    ): Promise<QuarantinedCollectorBatchFile>;
+
+    completeProcessingJob(
+        job: CollectorProcessingJob,
+    ): Promise<CompleteCollectorProcessingJobResult>;
 }
 
 

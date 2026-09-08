@@ -61,7 +61,10 @@
     , "ingestion:worker": "tsx src/scripts/run-collector-processing-worker.ts",
     "test:ingestion:be-ing-01d:unit": "node --import tsx tests/unit/ingestion/be-ing-01d-archive-verified-collector-batch.test.ts && node --import tsx tests/unit/ingestion/be-ing-01d-process-collector-processing-job.test.ts && node --import tsx tests/unit/ingestion/be-ing-01d-quarantine-processing-job.test.ts && node --import tsx tests/unit/ingestion/be-ing-01d-handle-collector-processing-job.test.ts",
     "test:ingestion:be-ing-01d:integration": "node --import tsx tests/integration/ingestion/be-ing-01d-bullmq-worker.integration.test.ts",
-    "test:ingestion:be-ing-01d": "npm run test:ingestion:be-ing-01d:unit && npm run test:ingestion:be-ing-01d:integration"
+    "test:ingestion:be-ing-01d": "npm run test:ingestion:be-ing-01d:unit && npm run test:ingestion:be-ing-01d:integration",
+    "test:ingestion:be-ing-01e:unit": "node --import tsx tests/unit/ingestion/be-ing-01e-ocsf-normalizer.test.ts && node --import tsx tests/unit/ingestion/be-ing-01e-normalized-persistence.test.ts && node --import tsx tests/unit/ingestion/be-ing-01e-file-completion.test.ts && node --import tsx tests/unit/ingestion/be-ing-01d-process-collector-processing-job.test.ts && node --import tsx tests/unit/ingestion/be-ing-01d-handle-collector-processing-job.test.ts",
+    "test:ingestion:be-ing-01e:integration": "node --import tsx tests/integration/ingestion/be-ing-01e-normalized-persistence.integration.test.ts",
+    "test:ingestion:be-ing-01e": "npm run test:ingestion:be-ing-01e:unit && npm run test:ingestion:be-ing-01e:integration"
   },
   "keywords": [],
   "author": "",

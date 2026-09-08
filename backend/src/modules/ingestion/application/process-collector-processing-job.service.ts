@@ -1,17 +1,20 @@
-import { CollectorBatchQuarantineReason } from "../domain/collector-file-intake.contracts";
+import type { CollectorBatchQuarantineReason } from "../domain/collector-file-intake.contracts.js";
 import type { CreateRawEventArchiveInput } from "../../../database/repositories/mongodb/raw-event-archive.repository.js";
 import type { IClaimedCollectorBatchReader } from "../domain/claimed-collector-batch-reader.contracts.js";
 import type { ICollectorMessageVerifier } from "../domain/collector-verification.contracts.js";
 import { isCollectorVerificationError } from "../domain/collector-verification.errors.js";
 import type { CollectorProcessingJob } from "../domain/processing-queue.contracts.js";
 import type { ArchiveVerifiedCollectorBatchService } from "./archive-verified-collector-batch.service.js";
+import type { ICollectorEventNormalizer } from "../domain/collector-event-normalization.contracts.js";
+import type { PersistNormalizedCollectorEventsService } from "./persist-normalized-collector-events.service.js";
 
 export type ProcessCollectorProcessingJobResult =
     | {
-          readonly status: "archived";
-      }
-    | {
-          readonly status: "already_archived";
+          readonly status: "processed";
+          readonly archiveStatus: "archived" | "already_archived";
+          readonly totalEvents: number;
+          readonly insertedEvents: number;
+          readonly alreadyPresentEvents: number;
       }
     | {
           readonly status: "quarantine";
@@ -23,6 +26,9 @@ export interface ProcessCollectorProcessingJobDependencies {
     readonly reader: IClaimedCollectorBatchReader;
     readonly verifier: ICollectorMessageVerifier;
     readonly rawBatchArchive: Pick<ArchiveVerifiedCollectorBatchService, "execute">;
+    readonly normalizer: ICollectorEventNormalizer;
+    readonly normalizedEventPersistence: Pick<PersistNormalizedCollectorEventsService, "execute">;
+    readonly now: () => Date;
 }
 
 /**
@@ -83,6 +89,7 @@ export class ProcessCollectorProcessingJobService {
             };
         }
 
+        const processedAt = this.dependencies.now();
         const archiveInput: CreateRawEventArchiveInput = {
             batch_id: message.batch_id,
             collector_id: message.collector_id,
@@ -95,22 +102,39 @@ export class ProcessCollectorProcessingJobService {
                 (event) => ({ ...event }) as unknown as Record<string, unknown>,
             ),
             file_size_bytes: job.byteLength,
-            archived_at: new Date(),
+            archived_at: processedAt,
         };
 
         const archiveResult = await this.dependencies.rawBatchArchive.execute(archiveInput);
 
-        if (archiveResult.status === "archived") {
-            return { status: "archived" };
+        if (archiveResult.status === "batch_id_collision") {
+            return {
+                status: "quarantine",
+                reason: "BATCH_ID_COLLISION",
+            };
         }
 
-        if (archiveResult.status === "already_archived") {
-            return { status: "already_archived" };
+        const normalized = this.dependencies.normalizer.normalize(
+            message,
+            processedAt,
+        );
+        const persistenceResult = await this.dependencies.normalizedEventPersistence.execute(
+            normalized.events,
+        );
+
+        if (persistenceResult.status === "event_id_collision") {
+            return {
+                status: "quarantine",
+                reason: "EVENT_ID_COLLISION",
+            };
         }
 
         return {
-            status: "quarantine",
-            reason: "BATCH_ID_COLLISION",
+            status: "processed",
+            archiveStatus: archiveResult.status,
+            totalEvents: normalized.stats.totalEvents,
+            insertedEvents: persistenceResult.insertedCount,
+            alreadyPresentEvents: persistenceResult.alreadyPresentCount,
         };
     }
 }

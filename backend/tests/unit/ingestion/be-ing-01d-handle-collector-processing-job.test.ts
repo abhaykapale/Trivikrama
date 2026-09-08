@@ -23,8 +23,14 @@ const JOB: CollectorProcessingJob = {
     enqueuedAt: "2026-09-07T00:00:00.000Z",
 };
 
-test("completes an archived job without quarantining its file", async () => {
-    const processor = new FakeProcessor({ status: "archived" });
+test("finalizes a successfully processed job without quarantining its file", async () => {
+    const processor = new FakeProcessor({
+        status: "processed",
+        archiveStatus: "archived",
+        totalEvents: 1,
+        insertedEvents: 1,
+        alreadyPresentEvents: 0,
+    });
     const fileIntake = new FakeFileIntake();
 
     const service = new HandleCollectorProcessingJobService({
@@ -34,9 +40,16 @@ test("completes an archived job without quarantining its file", async () => {
 
     const result = await service.execute(JOB);
 
-    assert.deepEqual(result, { status: "archived" });
+    assert.deepEqual(result, {
+        status: "processed",
+        archiveStatus: "archived",
+        totalEvents: 1,
+        insertedEvents: 1,
+        alreadyPresentEvents: 0,
+    });
     assert.deepEqual(processor.jobs, [JOB]);
     assert.deepEqual(fileIntake.calls, []);
+    assert.deepEqual(fileIntake.completedJobs, [JOB]);
 });
 
 test("quarantines the file when the processor reports an integrity failure", async () => {
@@ -81,6 +94,23 @@ test("rethrows an infrastructure failure so BullMQ can retry the job", async () 
     assert.deepEqual(fileIntake.calls, []);
 });
 
+test("rethrows a completion failure so BullMQ can retry after persistence", async () => {
+    const processor = new FakeProcessor({
+        status: "processed",
+        archiveStatus: "archived",
+        totalEvents: 1,
+        insertedEvents: 1,
+        alreadyPresentEvents: 0,
+    });
+    const expectedError = new Error("processed directory is temporarily unavailable");
+    const fileIntake = new FakeFileIntake(expectedError);
+    const service = new HandleCollectorProcessingJobService({ processor, fileIntake });
+
+    await assert.rejects(service.execute(JOB), expectedError);
+    assert.deepEqual(fileIntake.calls, []);
+    assert.deepEqual(fileIntake.completedJobs, [JOB]);
+});
+
 class FakeProcessor {
     public readonly jobs: CollectorProcessingJob[] = [];
 
@@ -104,6 +134,9 @@ class FakeFileIntake {
         readonly job: CollectorProcessingJob;
         readonly reason: CollectorBatchQuarantineReason;
     }> = [];
+    public readonly completedJobs: CollectorProcessingJob[] = [];
+
+    public constructor(private readonly completionError?: Error) {}
 
     public async quarantineProcessingJob(
         job: CollectorProcessingJob,
@@ -124,6 +157,19 @@ class FakeFileIntake {
             quarantinePath: `/quarantine/${job.processingFileName}`,
             quarantineReason: reason,
             quarantinedAt: "2026-09-07T00:00:00.000Z",
+        };
+    }
+
+    public async completeProcessingJob(job: CollectorProcessingJob) {
+        this.completedJobs.push(job);
+
+        if (this.completionError !== undefined) {
+            throw this.completionError;
+        }
+
+        return {
+            status: "completed" as const,
+            processedPath: `/processed/${job.processingFileName}`,
         };
     }
 }

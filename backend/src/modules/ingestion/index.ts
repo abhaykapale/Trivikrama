@@ -103,14 +103,22 @@ export { MAX_COLLECTOR_BATCH_BYTES } from "./domain/collector-file-intake.contra
 export type {
     ClaimedCollectorBatchFile,
     CollectorBatchQuarantineReason,
+    CompleteCollectorProcessingJobResult,
     CollectorFileIntakeConfiguration,
     CollectorFileIntakeReport,
     CollectorFileRecoveryReport,
     CollectorIntakeIgnoredFileReason,
     ICollectorFileIntake,
+    ICollectorProcessingFileLifecycle,
     IgnoredCollectorFile,
     QuarantinedCollectorBatchFile,
 } from "./domain/collector-file-intake.contracts.js";
+
+export type {
+    CollectorEventNormalizationStats,
+    ICollectorEventNormalizer,
+    NormalizedCollectorBatch,
+} from "./domain/collector-event-normalization.contracts.js";
 
 export {
     COLLECTOR_FILE_INTAKE_ERROR_CODES,
@@ -125,6 +133,15 @@ export type {
 } from "./domain/collector-file-intake.errors.js";
 
 export { CollectorFileIntakeService } from "./infrastructure/collector-file-intake.service.js";
+
+export { OcsfCollectorEventNormalizer } from "./infrastructure/ocsf-collector-event.normalizer.js";
+
+export { PersistNormalizedCollectorEventsService } from "./application/persist-normalized-collector-events.service.js";
+
+export type {
+    PersistNormalizedCollectorEventsDependencies,
+    PersistNormalizedCollectorEventsResult,
+} from "./application/persist-normalized-collector-events.service.js";
 
 export type {
     CollectorProcessingJob,

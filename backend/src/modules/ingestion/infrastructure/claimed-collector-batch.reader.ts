@@ -20,10 +20,12 @@ export interface ClaimedCollectorBatchReaderConfiguration {
 
 export class ClaimedCollectorBatchReader implements IClaimedCollectorBatchReader {
     private readonly processingDirectory: string;
+    private readonly processedDirectory: string;
     private readonly maxBatchBytes: number;
 
     public constructor(configuration: ClaimedCollectorBatchReaderConfiguration) {
         this.processingDirectory = join(resolve(configuration.handoffRoot), "processing");
+        this.processedDirectory = join(resolve(configuration.handoffRoot), "processed");
         this.maxBatchBytes = configuration.maxBatchBytes ?? MAX_COLLECTOR_BATCH_BYTES;
 
         if (
@@ -40,7 +42,7 @@ export class ClaimedCollectorBatchReader implements IClaimedCollectorBatchReader
     }
 
     public async read(request: ClaimedCollectorBatchReadRequest): Promise<Uint8Array> {
-        const processingPath = this.resolveSafeProcessingPath(request);
+        const processingFileName = this.validateSafeProcessingFileName(request);
 
         if (
             !Number.isSafeInteger(request.byteLength) ||
@@ -58,18 +60,20 @@ export class ClaimedCollectorBatchReader implements IClaimedCollectorBatchReader
             );
         }
 
-        let stats;
+        const processingPath = join(this.processingDirectory, processingFileName);
+        const processedPath = join(this.processedDirectory, processingFileName);
+        const readablePath = await this.resolveReadablePath(processingPath, processedPath);
 
-        try {
-            stats = await lstat(processingPath);
-        } catch {
+        if (readablePath === undefined) {
             throw new CollectorFileIntakeError(
                 "CLAIMED_FILE_MISSING",
                 "read",
-                "The claimed batch file no longer exists in the processing directory.",
+                "The claimed batch file does not exist in the processing or processed directory.",
                 { processingFileName: request.processingFileName },
             );
         }
+
+        const stats = await lstat(readablePath);
 
         if (stats.isSymbolicLink() || !stats.isFile()) {
             throw new CollectorFileIntakeError(
@@ -95,7 +99,7 @@ export class ClaimedCollectorBatchReader implements IClaimedCollectorBatchReader
         let contents: Uint8Array;
 
         try {
-            contents = new Uint8Array(await readFile(processingPath));
+            contents = new Uint8Array(await readFile(readablePath));
         } catch {
             throw new CollectorFileIntakeError(
                 "FILESYSTEM_OPERATION_FAILED",
@@ -120,7 +124,7 @@ export class ClaimedCollectorBatchReader implements IClaimedCollectorBatchReader
         return contents;
     }
 
-    private resolveSafeProcessingPath(request: ClaimedCollectorBatchReadRequest): string {
+    private validateSafeProcessingFileName(request: ClaimedCollectorBatchReadRequest): string {
         if (basename(request.processingFileName) !== request.processingFileName) {
             throw new CollectorFileIntakeError(
                 "CLAIMED_FILE_UNSAFE_PATH",
@@ -162,7 +166,32 @@ export class ClaimedCollectorBatchReader implements IClaimedCollectorBatchReader
             );
         }
 
-        return join(this.processingDirectory, request.processingFileName);
+        return request.processingFileName;
+    }
+
+    private async resolveReadablePath(
+        processingPath: string,
+        processedPath: string,
+    ): Promise<string | undefined> {
+        try {
+            await lstat(processingPath);
+            return processingPath;
+        } catch (error) {
+            if (!hasCode(error, "ENOENT")) {
+                throw error;
+            }
+        }
+
+        try {
+            await lstat(processedPath);
+            return processedPath;
+        } catch (error) {
+            if (hasCode(error, "ENOENT")) {
+                return undefined;
+            }
+
+            throw error;
+        }
     }
 }
 
@@ -177,3 +206,7 @@ export class ClaimedCollectorBatchReader implements IClaimedCollectorBatchReader
             return undefined;
         }
     }
+
+function hasCode(error: unknown, code: string): boolean {
+    return typeof error === "object" && error !== null && "code" in error && error.code === code;
+}

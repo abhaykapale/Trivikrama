@@ -70,6 +70,12 @@ export interface NormalizedEventDocument {
 
 export type CreateNormalizedEventInput = NormalizedEventDocument;
 
+export interface CreateNormalizedEventsIfAbsentResult {
+  readonly insertedCount: number;
+  readonly existingCount: number;
+  readonly documents: readonly NormalizedEventDocument[];
+}
+
 export interface NormalizedEventListFilters extends MongoPaginationOptions {
   readonly orgId?: string;
   readonly classUid?: number;
@@ -89,6 +95,9 @@ export interface NormalizedEventListFilters extends MongoPaginationOptions {
 export interface INormalizedEventRepository {
   create(input: CreateNormalizedEventInput): Promise<NormalizedEventDocument>;
   createMany(inputs: readonly CreateNormalizedEventInput[]): Promise<number>;
+  createManyIfAbsent(
+    inputs: readonly CreateNormalizedEventInput[],
+  ): Promise<CreateNormalizedEventsIfAbsentResult>;
   findByEventId(eventId: string): Promise<NormalizedEventDocument | null>;
   findByDedupHash(dedupHash: string): Promise<NormalizedEventDocument | null>;
   list(filters?: NormalizedEventListFilters): Promise<MongoPageResult<NormalizedEventDocument>>;
