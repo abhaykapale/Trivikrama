@@ -3,6 +3,8 @@ import config, { type AppConfig } from "./config/index.js";
 import {
   createAuthRouter,
   type CreateAuthRouterDependencies,
+  createCollectorMonitoringRouter,
+  type CreateCollectorMonitoringRouterDependencies,
   createUsersRouter,
   type CreateUsersRouterDependencies,
 } from "./index.js";
@@ -15,6 +17,7 @@ export interface AppDependencies {
   readonly healthService: HealthService;
   readonly auth?: CreateAuthRouterDependencies;
   readonly appConfig?: AppConfig;
+  readonly collectorMonitoring?: CreateCollectorMonitoringRouterDependencies;
   readonly users?: CreateUsersRouterDependencies;
 }
 
@@ -22,6 +25,7 @@ export function createApp({
   healthService,
   auth,
   appConfig = config,
+  collectorMonitoring,
   users,
 }: AppDependencies): Express {
   const app = express();
@@ -32,6 +36,13 @@ export function createApp({
 
   if (auth !== undefined) {
     app.use(`${appConfig.server.apiPrefix}/auth`, createAuthRouter(auth));
+  }
+
+  if (collectorMonitoring !== undefined) {
+    app.use(
+      `${appConfig.server.apiPrefix}/collector`,
+      createCollectorMonitoringRouter(collectorMonitoring),
+    );
   }
 
   if(users !== undefined){

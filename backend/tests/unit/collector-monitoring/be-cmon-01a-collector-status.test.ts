@@ -1,0 +1,142 @@
+import assert from "node:assert/strict";
+import test from "node:test";
+
+import type {
+  CollectorStatusRecord,
+  ICollectorStatusRepository,
+} from "../../../src/database/index.js";
+import { GetCollectorStatusUseCase } from "../../../src/modules/collector-monitoring/application/get-collector-status.use-case.js";
+import type { ICollectorMonitoringRepository } from "../../../src/modules/collector-monitoring/domain/collector-monitoring.contracts.js";
+import { CollectorMonitoringRepositoryAdapter } from "../../../src/modules/collector-monitoring/infrastructure/collector-monitoring.repository.adapter.js";
+
+test("maps only dashboard-safe Collector status fields", async () => {
+  const repository: ICollectorMonitoringRepository = {
+    async listByOrgId(orgId) {
+      assert.equal(orgId, "org-alpha");
+      return [createRecord()];
+    },
+  };
+  const useCase = new GetCollectorStatusUseCase(repository);
+
+  const result = await useCase.execute({ orgId: " org-alpha " });
+
+  assert.deepEqual(result, {
+    collectors: [
+      {
+        collectorId: "collector-alpha",
+        status: "degraded",
+        lastHeartbeatAt: "2026-09-10T12:00:00.000Z",
+        filesProcessed: 42,
+        eventsCollected: 900,
+        eventsDropped: 4,
+        errorsCount: 2,
+        cpuPercent: 17.5,
+        memoryMb: 256,
+        diskAvailableBytes: 4096,
+        lastBatchId: "batch-42",
+        firstSeenAt: "2026-09-01T00:00:00.000Z",
+      },
+    ],
+  });
+
+  const serialized = JSON.stringify(result);
+  assert.equal(serialized.includes("canonical_unsigned_sha256"), false);
+  assert.equal(serialized.includes("signature-must-not-leak"), false);
+  assert.equal(serialized.includes("org-alpha"), false);
+});
+
+test("returns null for unavailable optional heartbeat metrics", async () => {
+  const repository: ICollectorMonitoringRepository = {
+    async listByOrgId() {
+      return [
+        {
+          ...createRecord(),
+          lastHeartbeatAt: null,
+          heartbeatData: { metrics: { disk_available_bytes: -1, last_batch_id: " " } },
+        },
+      ];
+    },
+  };
+
+  const result = await new GetCollectorStatusUseCase(repository).execute({
+    orgId: "org-alpha",
+  });
+
+  assert.equal(result.collectors[0]?.lastHeartbeatAt, null);
+  assert.equal(result.collectors[0]?.diskAvailableBytes, null);
+  assert.equal(result.collectors[0]?.lastBatchId, null);
+});
+
+test("rejects a blank organization boundary", async () => {
+  const repository: ICollectorMonitoringRepository = {
+    async listByOrgId() {
+      throw new Error("Repository must not be called.");
+    },
+  };
+
+  await assert.rejects(
+    new GetCollectorStatusUseCase(repository).execute({ orgId: "   " }),
+    /orgId must not be blank/u,
+  );
+});
+
+test("repository adapter retrieves every organization-scoped page", async () => {
+  const calls: Array<{ orgId?: string; limit?: number; offset?: number }> = [];
+  const first = createDatabaseRecord("collector-1");
+  const second = createDatabaseRecord("collector-2");
+  const repository: Pick<ICollectorStatusRepository, "list"> = {
+    async list(filters = {}) {
+      calls.push(filters);
+
+      return filters.offset === 0
+        ? { items: [first], limit: 100, offset: 0, hasMore: true }
+        : { items: [second], limit: 100, offset: 1, hasMore: false };
+    },
+  };
+
+  const result = await new CollectorMonitoringRepositoryAdapter(
+    repository,
+  ).listByOrgId("org-alpha");
+
+  assert.deepEqual(
+    result.map((collector) => collector.collectorId),
+    ["collector-1", "collector-2"],
+  );
+  assert.deepEqual(calls, [
+    { orgId: "org-alpha", limit: 100, offset: 0 },
+    { orgId: "org-alpha", limit: 100, offset: 1 },
+  ]);
+});
+
+function createRecord() {
+  return {
+    collectorId: "collector-alpha",
+    status: "degraded" as const,
+    lastHeartbeatAt: new Date("2026-09-10T12:00:00.000Z"),
+    heartbeatData: {
+      canonical_unsigned_sha256: "signature-must-not-leak",
+      metrics: {
+        disk_available_bytes: 4096,
+        last_batch_id: "batch-42",
+      },
+    },
+    filesProcessed: 42,
+    eventsCollected: 900,
+    eventsDropped: 4,
+    errorsCount: 2,
+    cpuPercent: 17.5,
+    memoryMb: 256,
+    firstSeenAt: new Date("2026-09-01T00:00:00.000Z"),
+  };
+}
+
+function createDatabaseRecord(collectorId: string): CollectorStatusRecord {
+  return {
+    id: `${collectorId}-id`,
+    ...createRecord(),
+    collectorId,
+    updatedAt: new Date("2026-09-10T12:00:00.000Z"),
+    orgId: "org-alpha",
+  };
+}
+

@@ -68,7 +68,10 @@
     "ingestion:heartbeat": "tsx src/scripts/run-collector-heartbeat-monitor.ts",
     "test:ingestion:be-ing-01f:unit": "node --import tsx tests/unit/ingestion/be-ing-01f-heartbeat-reader.test.ts && node --import tsx tests/unit/ingestion/be-ing-01f-heartbeat-consumer.test.ts",
     "test:ingestion:be-ing-01f:integration": "node --import tsx tests/integration/ingestion/be-ing-01f-heartbeat-persistence.integration.test.ts",
-    "test:ingestion:be-ing-01f": "npm run test:ingestion:be-ing-01f:unit && npm run test:ingestion:be-ing-01f:integration"
+    "test:ingestion:be-ing-01f": "npm run test:ingestion:be-ing-01f:unit && npm run test:ingestion:be-ing-01f:integration",
+    "test:collector-monitoring:be-cmon-01a:unit": "node --import tsx tests/unit/collector-monitoring/be-cmon-01a-collector-status.test.ts && node --import tsx tests/unit/collector-monitoring/be-cmon-01a-http.test.ts",
+    "test:collector-monitoring:be-cmon-01a:integration": "node --import dotenv/config --import tsx tests/integration/collector-monitoring/be-cmon-01a-http.integration.test.ts",
+    "test:collector-monitoring:be-cmon-01a": "npm run test:collector-monitoring:be-cmon-01a:unit && npm run test:collector-monitoring:be-cmon-01a:integration"
   },
   "keywords": [],
   "author": "",

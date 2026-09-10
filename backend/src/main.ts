@@ -11,6 +11,7 @@ import {
   type DatabaseClients,
 } from "./database/index.js";
 import { createAuthApplicationDependencies } from "./modules/auth/composition/index.js";
+import { createCollectorMonitoringDependencies } from "./modules/collector-monitoring/index.js";
 import HealthService from "./modules/health/health.service.js";
 import { createUserManagementDependencies } from "./modules/users/composition/index.js";
 import { ShutdownCoordinator } from "./runtime/shutdown-coordinator.js";
@@ -104,6 +105,10 @@ const bootstrap = async (): Promise<void> => {
       passwordHasher: authApplicationDependencies.passwordService,
       unitOfWork,
     });
+    const collectorMonitoringDependencies =
+      createCollectorMonitoringDependencies({
+        collectorStatusRepository: repositories.collectorStatus,
+      });
 
     const authenticationDependencies = {
       jwtService: authApplicationDependencies.jwtService,
@@ -136,6 +141,11 @@ const bootstrap = async (): Promise<void> => {
         updateUserUseCase: userManagementDependencies.updateUserUseCase,
         resetUserPasswordUseCase:
           userManagementDependencies.resetUserPasswordUseCase,
+      },
+      collectorMonitoring: {
+        authentication: authenticationDependencies,
+        getCollectorStatusUseCase:
+          collectorMonitoringDependencies.getCollectorStatusUseCase,
       },
     });
 
