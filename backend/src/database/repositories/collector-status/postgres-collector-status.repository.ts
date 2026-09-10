@@ -89,11 +89,12 @@ export class PostgresCollectorStatusRepository implements ICollectorStatusReposi
     validateOptionalNonNegative(input.memoryMb ?? null, "memoryMb");
     validateOptionalCpu(input.cpuPercent ?? null);
 
+    const lastHeartbeatAt = input.lastHeartbeatAt ?? new Date();
     const insertable = {
       ...(input.id ? { id: input.id } : {}),
       collector_id: ensureNonBlank(input.collectorId, "collectorId"),
       status: input.status,
-      last_heartbeat_at: input.lastHeartbeatAt ?? new Date(),
+      last_heartbeat_at: lastHeartbeatAt,
       heartbeat_data: toJsonb(input.heartbeatData ?? {}),
       files_processed: input.filesProcessed ?? 0,
       events_collected: input.eventsCollected ?? 0,
@@ -104,24 +105,53 @@ export class PostgresCollectorStatusRepository implements ICollectorStatusReposi
       org_id: input.orgId ? ensureNonBlank(input.orgId, "orgId") : DEFAULT_ORG_ID,
     };
 
+    const updates = {
+      status: insertable.status,
+      last_heartbeat_at: insertable.last_heartbeat_at,
+      ...(input.heartbeatData !== undefined
+        ? { heartbeat_data: insertable.heartbeat_data }
+        : {}),
+      ...(input.filesProcessed !== undefined
+        ? { files_processed: insertable.files_processed }
+        : {}),
+      ...(input.eventsCollected !== undefined
+        ? { events_collected: insertable.events_collected }
+        : {}),
+      ...(input.eventsDropped !== undefined
+        ? { events_dropped: insertable.events_dropped }
+        : {}),
+      ...(input.errorsCount !== undefined
+        ? { errors_count: insertable.errors_count }
+        : {}),
+      ...(input.cpuPercent !== undefined
+        ? { cpu_percent: insertable.cpu_percent }
+        : {}),
+      ...(input.memoryMb !== undefined
+        ? { memory_mb: insertable.memory_mb }
+        : {}),
+      ...(input.orgId !== undefined ? { org_id: insertable.org_id } : {}),
+    };
+
     const [row] = await this.db<CollectorStatusRow>(COLLECTOR_STATUS_TABLE)
       .insert(insertable)
       .onConflict("collector_id")
-      .merge({
-        status: insertable.status,
-        last_heartbeat_at: insertable.last_heartbeat_at,
-        heartbeat_data: insertable.heartbeat_data,
-        files_processed: insertable.files_processed,
-        events_collected: insertable.events_collected,
-        events_dropped: insertable.events_dropped,
-        errors_count: insertable.errors_count,
-        cpu_percent: insertable.cpu_percent,
-        memory_mb: insertable.memory_mb,
-        org_id: insertable.org_id,
-      })
+      .merge(updates)
+      .whereRaw(
+        '"collector_status"."last_heartbeat_at" IS NULL OR EXCLUDED."last_heartbeat_at" >= "collector_status"."last_heartbeat_at"',
+      )
       .returning("*");
 
-    return mapCollectorStatusRow(row);
+    if (row !== undefined) {
+      return mapCollectorStatusRow(row);
+    }
+
+    const existing = await this.findByCollectorId(insertable.collector_id);
+
+    if (existing === null) {
+      throw new Error("Collector heartbeat upsert completed without returning a record.");
+    }
+
+    return existing;
   }
 
   public async markOffline(collectorId: string): Promise<CollectorStatusRecord | null> {
@@ -131,6 +161,25 @@ export class PostgresCollectorStatusRepository implements ICollectorStatusReposi
       .returning("*");
 
     return row ? mapCollectorStatusRow(row) : null;
+  }
+
+  public async markStaleOffline(staleBefore: Date, orgId?: string): Promise<number> {
+    if (!Number.isFinite(staleBefore.getTime())) {
+      throw new Error("staleBefore must be a valid date.");
+    }
+
+    const query = this.db<CollectorStatusRow>(COLLECTOR_STATUS_TABLE)
+      .whereIn("status", ["online", "degraded"])
+      .whereNotNull("last_heartbeat_at")
+      .where("last_heartbeat_at", "<", staleBefore);
+
+    if (orgId !== undefined) {
+      query.where("org_id", ensureNonBlank(orgId, "orgId"));
+    }
+
+    const updated = await query.update({ status: "offline" });
+
+    return Number(updated);
   }
 
   private baseQuery() {

@@ -64,7 +64,11 @@
     "test:ingestion:be-ing-01d": "npm run test:ingestion:be-ing-01d:unit && npm run test:ingestion:be-ing-01d:integration",
     "test:ingestion:be-ing-01e:unit": "node --import tsx tests/unit/ingestion/be-ing-01e-ocsf-normalizer.test.ts && node --import tsx tests/unit/ingestion/be-ing-01e-normalized-persistence.test.ts && node --import tsx tests/unit/ingestion/be-ing-01e-file-completion.test.ts && node --import tsx tests/unit/ingestion/be-ing-01d-process-collector-processing-job.test.ts && node --import tsx tests/unit/ingestion/be-ing-01d-handle-collector-processing-job.test.ts",
     "test:ingestion:be-ing-01e:integration": "node --import tsx tests/integration/ingestion/be-ing-01e-normalized-persistence.integration.test.ts",
-    "test:ingestion:be-ing-01e": "npm run test:ingestion:be-ing-01e:unit && npm run test:ingestion:be-ing-01e:integration"
+    "test:ingestion:be-ing-01e": "npm run test:ingestion:be-ing-01e:unit && npm run test:ingestion:be-ing-01e:integration",
+    "ingestion:heartbeat": "tsx src/scripts/run-collector-heartbeat-monitor.ts",
+    "test:ingestion:be-ing-01f:unit": "node --import tsx tests/unit/ingestion/be-ing-01f-heartbeat-reader.test.ts && node --import tsx tests/unit/ingestion/be-ing-01f-heartbeat-consumer.test.ts",
+    "test:ingestion:be-ing-01f:integration": "node --import tsx tests/integration/ingestion/be-ing-01f-heartbeat-persistence.integration.test.ts",
+    "test:ingestion:be-ing-01f": "npm run test:ingestion:be-ing-01f:unit && npm run test:ingestion:be-ing-01f:integration"
   },
   "keywords": [],
   "author": "",

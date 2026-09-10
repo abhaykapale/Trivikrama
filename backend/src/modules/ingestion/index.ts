@@ -176,3 +176,51 @@ export type {
     ConfiguredCollectorProcessingWorker,
 } from "./composition/configured-collector-processing-worker.dependencies.js";
 
+// -----------------------------------------------------------------------------
+// Signed heartbeat consumption and Collector monitoring (BE-ING-01F)
+// -----------------------------------------------------------------------------
+
+export { MAX_COLLECTOR_HEARTBEAT_BYTES } from "./domain/collector-heartbeat.contracts.js";
+
+export type {
+    CollectorHeartbeatSnapshot,
+    ICollectorHeartbeatFileReader,
+} from "./domain/collector-heartbeat.contracts.js";
+
+export {
+    COLLECTOR_HEARTBEAT_ERROR_CODES,
+    CollectorHeartbeatError,
+    isCollectorHeartbeatError,
+} from "./domain/collector-heartbeat.errors.js";
+
+export type {
+    CollectorHeartbeatErrorCode,
+} from "./domain/collector-heartbeat.errors.js";
+
+export { CollectorHeartbeatFileReader } from "./infrastructure/collector-heartbeat-file.reader.js";
+
+export type {
+    CollectorHeartbeatFileReaderConfiguration,
+} from "./infrastructure/collector-heartbeat-file.reader.js";
+
+export { ConsumeCollectorHeartbeatService } from "./application/consume-collector-heartbeat.service.js";
+
+export type {
+    ConsumeCollectorHeartbeatDependencies,
+    ConsumeCollectorHeartbeatResult,
+} from "./application/consume-collector-heartbeat.service.js";
+
+export { MarkStaleCollectorsOfflineService } from "./application/mark-stale-collectors-offline.service.js";
+
+export type {
+    MarkStaleCollectorsOfflineDependencies,
+    MarkStaleCollectorsOfflineResult,
+} from "./application/mark-stale-collectors-offline.service.js";
+
+export { createConfiguredCollectorHeartbeatMonitor } from "./composition/configured-collector-heartbeat-monitor.dependencies.js";
+
+export type {
+    CollectorHeartbeatMonitorRuntimeConfiguration,
+    ConfiguredCollectorHeartbeatMonitor,
+} from "./composition/configured-collector-heartbeat-monitor.dependencies.js";
+

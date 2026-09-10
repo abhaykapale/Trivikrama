@@ -234,6 +234,28 @@ export class CollectorMessageSemanticValidator implements ICollectorMessageSeman
             );
         }
 
+        const heartbeatAt = Date.parse(message.timestamp);
+        const startedAt = Date.parse(message.started_at);
+
+        if (
+            !Number.isFinite(heartbeatAt) ||
+            !Number.isFinite(startedAt) ||
+            new Date(heartbeatAt).toISOString() !== message.timestamp ||
+            new Date(startedAt).toISOString() !== message.started_at
+        ) {
+            this.fail(
+                COLLECTOR_VERIFICATION_ERROR_CODES.INVALID_HEARTBEAT,
+                "Heartbeat contains a timestamp that is not a real calendar time.",
+            );
+        }
+
+        if (startedAt > heartbeatAt) {
+            this.fail(
+                COLLECTOR_VERIFICATION_ERROR_CODES.INVALID_HEARTBEAT,
+                "Heartbeat start time must not be later than its observation time.",
+            );
+        }
+
         if (
             message.status !== "online" &&
             message.status !== "degraded" &&
