@@ -48,4 +48,5 @@ export interface ICollectorStatusRepository {
   list(filters?: CollectorStatusListFilters): Promise<PageResult<CollectorStatusRecord>>;
   upsertHeartbeat(input: UpsertCollectorStatusInput): Promise<CollectorStatusRecord>;
   markOffline(collectorId: string): Promise<CollectorStatusRecord | null>;
+  markStaleOffline(staleBefore: Date, orgId?: string): Promise<number>;
 }

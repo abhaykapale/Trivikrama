@@ -8,6 +8,7 @@ The database layer is the infrastructure boundary that owns client lifecycle, re
 - Expose repository factories for relational and Mongo collections.
 - Provide a PostgreSQL `IUnitOfWork` implementation for multi-step operations.
 - Support maintenance, verification, and bootstrap scripts for operational readiness.
+- Persist ordered Collector heartbeat state and atomically expire stale Collectors.
 
 ## Boundary Map
 
@@ -115,6 +116,10 @@ flowchart TD
 - MongoDB is used for event-style or document-oriented storage.
 - Redis is used for rate limiting, queueing, and cache-like short-lived data.
 - Higher-level modules depend on repository abstractions and the unit-of-work contract instead of directly constructing raw database clients.
+
+## Collector Heartbeat Persistence
+
+`PostgresCollectorStatusRepository.upsertHeartbeat()` prevents an older `last_heartbeat_at` from overwriting newer state at the database conflict boundary. Fields omitted by a heartbeat, such as `files_processed`, retain their existing values. `markStaleOffline()` atomically changes only stale `online` and `degraded` rows to `offline`, with optional organization scoping, so concurrent fresh writes remain protected by their timestamps.
 
 ## Important Components
 

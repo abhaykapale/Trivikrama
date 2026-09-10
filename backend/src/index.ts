@@ -35,3 +35,14 @@ export type {
     ICollectorMessageVerifier,
     VerifiedCollectorMessage,
 } from "./modules/ingestion/index.js";
+
+export {
+    createConfiguredCollectorHeartbeatMonitor,
+    CollectorHeartbeatError,
+    isCollectorHeartbeatError,
+} from "./modules/ingestion/index.js";
+
+export type {
+    CollectorHeartbeatMonitorRuntimeConfiguration,
+    ConfiguredCollectorHeartbeatMonitor,
+} from "./modules/ingestion/index.js";
