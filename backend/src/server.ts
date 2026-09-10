@@ -5,12 +5,14 @@ import config, { type AppConfig } from "./config/index.js";
 import logger from "./shared/logger";
 
 import type { CreateAuthRouterDependencies } from "./index.js";
+import type { CreateCollectorMonitoringRouterDependencies } from "./index.js";
 import type HealthService from "./modules/health/health.service.js";
 import type { CreateUsersRouterDependencies } from "./index.js";
 
 export interface StartServerDependencies {
   readonly healthService: HealthService;
   readonly auth?: CreateAuthRouterDependencies;
+  readonly collectorMonitoring?: CreateCollectorMonitoringRouterDependencies;
   readonly users?: CreateUsersRouterDependencies;
   readonly appConfig?: AppConfig;
 }
@@ -18,12 +20,14 @@ export interface StartServerDependencies {
 const startServer = ({
   healthService,
   auth,
+  collectorMonitoring,
   users,
   appConfig = config,
 }: StartServerDependencies): Server => {
   const app = createApp({
     healthService,
     auth,
+    collectorMonitoring,
     users,
     appConfig,
   });

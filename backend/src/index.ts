@@ -46,3 +46,22 @@ export type {
     CollectorHeartbeatMonitorRuntimeConfiguration,
     ConfiguredCollectorHeartbeatMonitor,
 } from "./modules/ingestion/index.js";
+
+export {
+  CollectorMonitoringRepositoryAdapter,
+  GetCollectorStatusUseCase,
+  createCollectorMonitoringDependencies,
+  createCollectorMonitoringRouter,
+} from "./modules/collector-monitoring/index.js";
+
+export type {
+  CollectorMonitoringDependencies,
+  CollectorStatusView,
+  CreateCollectorMonitoringDependenciesInput,
+  CreateCollectorMonitoringRouterDependencies,
+  GetCollectorStatusInput,
+  GetCollectorStatusResult,
+  ICollectorMonitoringRepository,
+  MonitoredCollectorRecord,
+  MonitoredCollectorStatus,
+} from "./modules/collector-monitoring/index.js";
