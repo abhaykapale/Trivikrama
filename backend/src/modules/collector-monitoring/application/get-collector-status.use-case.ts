@@ -1,7 +1,11 @@
 import type {
   ICollectorMonitoringRepository,
+  IProcessingQueueMonitor,
+  IQuarantineMonitor,
   MonitoredCollectorRecord,
   MonitoredCollectorStatus,
+  ProcessingQueueStatusSnapshot,
+  QuarantineStatusSnapshot,
 } from "../domain/collector-monitoring.contracts.js";
 
 export interface GetCollectorStatusInput {
@@ -25,11 +29,20 @@ export interface CollectorStatusView {
 
 export interface GetCollectorStatusResult {
   readonly collectors: readonly CollectorStatusView[];
+  readonly queue: QueueStatusView;
+  readonly quarantine: QuarantineStatusSnapshot;
+}
+
+export interface QueueStatusView extends ProcessingQueueStatusSnapshot {
+  /** Permanent ingestion failures stored in the filesystem quarantine. */
+  readonly deadLettered: number;
 }
 
 export class GetCollectorStatusUseCase {
   public constructor(
     private readonly repository: ICollectorMonitoringRepository,
+    private readonly queueMonitor: IProcessingQueueMonitor,
+    private readonly quarantineMonitor: IQuarantineMonitor,
   ) {}
 
   public async execute(
@@ -41,10 +54,19 @@ export class GetCollectorStatusUseCase {
       throw new Error("orgId must not be blank.");
     }
 
-    const records = await this.repository.listByOrgId(orgId);
+    const [records, queue, quarantine] = await Promise.all([
+      this.repository.listByOrgId(orgId),
+      this.queueMonitor.getStatus(),
+      this.quarantineMonitor.getStatus(),
+    ]);
 
     return {
       collectors: records.map(toCollectorStatusView),
+      queue: {
+        ...queue,
+        deadLettered: quarantine.count,
+      },
+      quarantine,
     };
   }
 }
@@ -109,4 +131,3 @@ function readNonBlankString(
     ? candidate
     : null;
 }
-

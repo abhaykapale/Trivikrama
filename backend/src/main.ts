@@ -12,6 +12,7 @@ import {
 } from "./database/index.js";
 import { createAuthApplicationDependencies } from "./modules/auth/composition/index.js";
 import { createCollectorMonitoringDependencies } from "./modules/collector-monitoring/index.js";
+import type { CollectorMonitoringDependencies } from "./modules/collector-monitoring/index.js";
 import HealthService from "./modules/health/health.service.js";
 import { createUserManagementDependencies } from "./modules/users/composition/index.js";
 import { ShutdownCoordinator } from "./runtime/shutdown-coordinator.js";
@@ -61,6 +62,7 @@ const gracefulShutdown = async (
 const bootstrap = async (): Promise<void> => {
   let databaseClients: DatabaseClients | null = null;
   let server: Server | null = null;
+  let collectorMonitoringDependencies: CollectorMonitoringDependencies | null = null;
 
   try {
     logger.info("Initializing databases...");
@@ -105,9 +107,11 @@ const bootstrap = async (): Promise<void> => {
       passwordHasher: authApplicationDependencies.passwordService,
       unitOfWork,
     });
-    const collectorMonitoringDependencies =
+    collectorMonitoringDependencies =
       createCollectorMonitoringDependencies({
         collectorStatusRepository: repositories.collectorStatus,
+        redisUrl: env.database.REDIS_URL,
+        collectorHandoffRoot: env.collector.directory,
       });
 
     const authenticationDependencies = {
@@ -156,6 +160,10 @@ const bootstrap = async (): Promise<void> => {
           close: () => closeHttpServer(server!),
         },
         {
+          name: "collector-queue-monitor",
+          close: () => collectorMonitoringDependencies!.close(),
+        },
+        {
           name: "databases",
           close: async () => {
             const result = await closeDatabases(databaseClients!);
@@ -180,6 +188,17 @@ const bootstrap = async (): Promise<void> => {
           error: closeError,
         });
       });
+    }
+
+    if (collectorMonitoringDependencies !== null) {
+      await collectorMonitoringDependencies.close().catch(
+        (closeError: unknown) => {
+          logger.error(
+            "Failed to close Collector queue monitor after bootstrap failure",
+            { error: closeError },
+          );
+        },
+      );
     }
 
     if (databaseClients !== null) {

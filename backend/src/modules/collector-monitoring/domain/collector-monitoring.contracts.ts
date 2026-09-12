@@ -18,3 +18,24 @@ export interface ICollectorMonitoringRepository {
   listByOrgId(orgId: string): Promise<readonly MonitoredCollectorRecord[]>;
 }
 
+export interface ProcessingQueueStatusSnapshot {
+  readonly name: string;
+  readonly waiting: number;
+  readonly active: number;
+  readonly completed: number;
+  readonly failed: number;
+  readonly delayed: number;
+  readonly isPaused: boolean;
+}
+
+export interface QuarantineStatusSnapshot {
+  readonly count: number;
+}
+
+export interface IProcessingQueueMonitor {
+  getStatus(): Promise<ProcessingQueueStatusSnapshot>;
+}
+
+export interface IQuarantineMonitor {
+  getStatus(): Promise<QuarantineStatusSnapshot>;
+}

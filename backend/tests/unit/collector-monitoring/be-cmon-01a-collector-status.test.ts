@@ -16,7 +16,7 @@ test("maps only dashboard-safe Collector status fields", async () => {
       return [createRecord()];
     },
   };
-  const useCase = new GetCollectorStatusUseCase(repository);
+  const useCase = createUseCase(repository);
 
   const result = await useCase.execute({ orgId: " org-alpha " });
 
@@ -37,6 +37,8 @@ test("maps only dashboard-safe Collector status fields", async () => {
         firstSeenAt: "2026-09-01T00:00:00.000Z",
       },
     ],
+    queue: { ...QUEUE_STATUS, deadLettered: 3 },
+    quarantine: { count: 3 },
   });
 
   const serialized = JSON.stringify(result);
@@ -58,7 +60,7 @@ test("returns null for unavailable optional heartbeat metrics", async () => {
     },
   };
 
-  const result = await new GetCollectorStatusUseCase(repository).execute({
+  const result = await createUseCase(repository).execute({
     orgId: "org-alpha",
   });
 
@@ -75,7 +77,7 @@ test("rejects a blank organization boundary", async () => {
   };
 
   await assert.rejects(
-    new GetCollectorStatusUseCase(repository).execute({ orgId: "   " }),
+    createUseCase(repository).execute({ orgId: "   " }),
     /orgId must not be blank/u,
   );
 });
@@ -108,6 +110,24 @@ test("repository adapter retrieves every organization-scoped page", async () => 
   ]);
 });
 
+const QUEUE_STATUS = {
+  name: "collector-processing",
+  waiting: 2,
+  active: 1,
+  completed: 40,
+  failed: 2,
+  delayed: 1,
+  isPaused: false,
+} as const;
+
+function createUseCase(repository: ICollectorMonitoringRepository) {
+  return new GetCollectorStatusUseCase(
+    repository,
+    { async getStatus() { return QUEUE_STATUS; } },
+    { async getStatus() { return { count: 3 }; } },
+  );
+}
+
 function createRecord() {
   return {
     collectorId: "collector-alpha",
@@ -139,4 +159,3 @@ function createDatabaseRecord(collectorId: string): CollectorStatusRecord {
     orgId: "org-alpha",
   };
 }
-

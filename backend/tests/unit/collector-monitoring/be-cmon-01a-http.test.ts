@@ -55,7 +55,11 @@ for (const role of ["admin", "security_engineer", "soc_analyst"] as const) {
       const response = await requestJson(baseUrl, `${role}-token`);
 
       assert.equal(response.status, 200);
-      assert.deepEqual(response.body, { collectors: [] });
+      assert.deepEqual(response.body, {
+        collectors: [],
+        queue: EMPTY_QUEUE_STATUS,
+        quarantine: { count: 0 },
+      });
       assert.deepEqual(harness.receivedOrgIds, [`org-${role}`]);
     });
   });
@@ -105,7 +109,11 @@ function createHarness(fail = false): Harness {
             throw new Error("PostgreSQL connection details must stay private.");
           }
 
-          return { collectors: [] };
+          return {
+            collectors: [],
+            queue: EMPTY_QUEUE_STATUS,
+            quarantine: { count: 0 },
+          };
         },
       },
     }),
@@ -249,6 +257,17 @@ function close(server: Server): Promise<void> {
     server.close((error) => (error ? reject(error) : resolve()));
   });
 }
+
+const EMPTY_QUEUE_STATUS = {
+  name: "collector-processing",
+  waiting: 0,
+  active: 0,
+  completed: 0,
+  failed: 0,
+  delayed: 0,
+  deadLettered: 0,
+  isPaused: false,
+} as const;
 
 const TEST_CONFIG: AppConfig = {
   server: { port: 3000, nodeEnv: "test", apiPrefix: "/api/v1" },

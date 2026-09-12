@@ -71,7 +71,10 @@
     "test:ingestion:be-ing-01f": "npm run test:ingestion:be-ing-01f:unit && npm run test:ingestion:be-ing-01f:integration",
     "test:collector-monitoring:be-cmon-01a:unit": "node --import tsx tests/unit/collector-monitoring/be-cmon-01a-collector-status.test.ts && node --import tsx tests/unit/collector-monitoring/be-cmon-01a-http.test.ts",
     "test:collector-monitoring:be-cmon-01a:integration": "node --import dotenv/config --import tsx tests/integration/collector-monitoring/be-cmon-01a-http.integration.test.ts",
-    "test:collector-monitoring:be-cmon-01a": "npm run test:collector-monitoring:be-cmon-01a:unit && npm run test:collector-monitoring:be-cmon-01a:integration"
+    "test:collector-monitoring:be-cmon-01a": "npm run test:collector-monitoring:be-cmon-01a:unit && npm run test:collector-monitoring:be-cmon-01a:integration",
+    "test:collector-monitoring:be-cmon-01b:unit": "node --import tsx tests/unit/collector-monitoring/be-cmon-01a-collector-status.test.ts && node --import tsx tests/unit/collector-monitoring/be-cmon-01a-http.test.ts && node --import tsx tests/unit/collector-monitoring/be-cmon-01b-queue-quarantine.test.ts",
+    "test:collector-monitoring:be-cmon-01b:integration": "node --import dotenv/config --import tsx tests/integration/collector-monitoring/be-cmon-01a-http.integration.test.ts && node --import dotenv/config --import tsx tests/integration/collector-monitoring/be-cmon-01b-queue-quarantine.integration.test.ts",
+    "test:collector-monitoring:be-cmon-01b": "npm run test:collector-monitoring:be-cmon-01b:unit && npm run test:collector-monitoring:be-cmon-01b:integration"
   },
   "keywords": [],
   "author": "",

@@ -48,20 +48,29 @@ export type {
 } from "./modules/ingestion/index.js";
 
 export {
+  BullMqProcessingQueueMonitor,
   CollectorMonitoringRepositoryAdapter,
+  FilesystemQuarantineMonitor,
   GetCollectorStatusUseCase,
   createCollectorMonitoringDependencies,
   createCollectorMonitoringRouter,
 } from "./modules/collector-monitoring/index.js";
 
 export type {
+  BullMqProcessingQueueMonitorConfiguration,
   CollectorMonitoringDependencies,
   CollectorStatusView,
   CreateCollectorMonitoringDependenciesInput,
   CreateCollectorMonitoringRouterDependencies,
   GetCollectorStatusInput,
   GetCollectorStatusResult,
+  FilesystemQuarantineMonitorConfiguration,
   ICollectorMonitoringRepository,
+  IProcessingQueueMonitor,
+  IQuarantineMonitor,
   MonitoredCollectorRecord,
   MonitoredCollectorStatus,
+  ProcessingQueueStatusSnapshot,
+  QueueStatusView,
+  QuarantineStatusSnapshot,
 } from "./modules/collector-monitoring/index.js";

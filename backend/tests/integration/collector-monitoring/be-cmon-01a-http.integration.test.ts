@@ -24,6 +24,7 @@ import type {
   UserRecord,
 } from "../../../src/modules/auth/domain/index.js";
 import { createCollectorMonitoringDependencies } from "../../../src/modules/collector-monitoring/composition/collector-monitoring.dependencies.js";
+import type { CollectorMonitoringDependencies } from "../../../src/modules/collector-monitoring/composition/collector-monitoring.dependencies.js";
 import { createCollectorMonitoringRouter } from "../../../src/modules/collector-monitoring/http/collector-monitoring.routes.js";
 
 test("GET /collector/status returns only the authenticated organization", async () => {
@@ -46,6 +47,7 @@ test("GET /collector/status returns only the authenticated organization", async 
     acquireConnectionTimeoutMs: 5_000,
   });
   let server: Server | null = null;
+  let monitoring: CollectorMonitoringDependencies | null = null;
 
   try {
     await pingPostgres(postgres);
@@ -77,8 +79,11 @@ test("GET /collector/status returns only the authenticated organization", async 
       orgId: hiddenOrgId,
     });
 
-    const monitoring = createCollectorMonitoringDependencies({
+    monitoring = createCollectorMonitoringDependencies({
       collectorStatusRepository: collectorStatuses,
+      redisUrl: process.env.REDIS_URL ?? "redis://localhost:6379",
+      collectorHandoffRoot: process.env.COLLECTOR_DIR ?? "./collector",
+      queueName: `be-cmon-01a-${suffix}`,
     });
     const jwtService = new IntegrationJwtService();
     const jwtId = `be-cmon-jwt-${suffix}`;
@@ -133,6 +138,8 @@ test("GET /collector/status returns only the authenticated organization", async 
     );
     const body = (await response.json()) as {
       collectors: Array<Record<string, unknown>>;
+      queue: { name: string };
+      quarantine: { count: number };
     };
 
     assert.equal(response.status, 200);
@@ -145,9 +152,15 @@ test("GET /collector/status returns only the authenticated organization", async 
     assert.equal("orgId" in body.collectors[0]!, false);
     assert.equal(JSON.stringify(body).includes(hiddenCollectorId), false);
     assert.equal(JSON.stringify(body).includes("canonical_unsigned_sha256"), false);
+    assert.equal(body.queue.name, `be-cmon-01a-${suffix}`);
+    assert.equal(Number.isSafeInteger(body.quarantine.count), true);
   } finally {
     if (server !== null) {
       await close(server).catch(() => undefined);
+    }
+
+    if (monitoring !== null) {
+      await monitoring.close().catch(() => undefined);
     }
 
     await postgres("monitor.collector_status")
