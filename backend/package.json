@@ -77,7 +77,10 @@
     "test:collector-monitoring:be-cmon-01b": "npm run test:collector-monitoring:be-cmon-01b:unit && npm run test:collector-monitoring:be-cmon-01b:integration",
     "test:collector-monitoring:be-cmon-01c:unit": "node --import tsx tests/unit/collector-monitoring/be-cmon-01a-collector-status.test.ts && node --import tsx tests/unit/collector-monitoring/be-cmon-01a-http.test.ts && node --import tsx tests/unit/collector-monitoring/be-cmon-01b-queue-quarantine.test.ts && node --import tsx tests/unit/collector-monitoring/be-cmon-01c-ai-engine-health.test.ts",
     "test:collector-monitoring:be-cmon-01c:integration": "node --import dotenv/config --import tsx tests/integration/collector-monitoring/be-cmon-01a-http.integration.test.ts && node --import dotenv/config --import tsx tests/integration/collector-monitoring/be-cmon-01b-queue-quarantine.integration.test.ts && node --import tsx tests/integration/collector-monitoring/be-cmon-01c-ai-engine-health.integration.test.ts",
-    "test:collector-monitoring:be-cmon-01c": "npm run test:collector-monitoring:be-cmon-01c:unit && npm run test:collector-monitoring:be-cmon-01c:integration"
+    "test:collector-monitoring:be-cmon-01c": "npm run test:collector-monitoring:be-cmon-01c:unit && npm run test:collector-monitoring:be-cmon-01c:integration",
+    "test:collector-monitoring:be-cmon-01d:unit": "npm run test:collector-monitoring:be-cmon-01c:unit && node --import tsx tests/unit/collector-monitoring/be-cmon-01d-quarantine-listing.test.ts && node --import tsx tests/unit/collector-monitoring/be-cmon-01d-http.test.ts",
+    "test:collector-monitoring:be-cmon-01d:integration": "node --import tsx tests/integration/collector-monitoring/be-cmon-01d-quarantine-listing.integration.test.ts",
+    "test:collector-monitoring:be-cmon-01d": "npm run test:collector-monitoring:be-cmon-01d:unit && npm run test:collector-monitoring:be-cmon-01d:integration"
   },
   "keywords": [],
   "author": "",

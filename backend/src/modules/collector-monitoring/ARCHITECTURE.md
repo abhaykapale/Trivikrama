@@ -1,6 +1,6 @@
 # Collector Monitoring Module Architecture
 
-BE-CMON-01A through BE-CMON-01C expose Collector health, live processing-queue state, the current quarantine count, and AI Engine health. The module is read-only. PostgreSQL remains the source for Collector heartbeat state, BullMQ is queried for live queue state, the configured Collector handoff root is inspected for quarantined files, and the AI Engine is checked through its internal health endpoint.
+BE-CMON-01A through BE-CMON-01D expose Collector health, live processing-queue state, quarantine monitoring and listing, and AI Engine health. The module remains read-only. PostgreSQL remains the source for Collector heartbeat state, BullMQ is queried for live queue state, the configured Collector handoff root is inspected for quarantined files, and the AI Engine is checked through its internal health endpoint.
 
 ## Request Flow
 
@@ -34,6 +34,8 @@ The response exposes only dashboard-safe operational fields. Stored heartbeat JS
 Queue counts are read from BullMQ without mutating jobs. Paused jobs are included in `waiting`, while `isPaused` reports the queue control state. Because permanent ingestion failures currently terminate in filesystem quarantine rather than a separate BullMQ queue, the API's documented `queue.deadLettered` value mirrors `quarantine.count`.
 
 The quarantine monitor resolves only the configured handoff root, refuses symbolic-link directories, and counts regular JSON files without following links. A handoff layout that has not yet been initialized reports zero.
+
+BE-CMON-01D adds the role-protected `GET /collector/quarantine` endpoint. Its filesystem catalog lists only regular files whose names match the backend-generated quarantine contract. It never follows links, skips oversized files, reads at most the ingestion contract's eight-mebibyte limit, and exposes metadata rather than raw events or integrity material. Results are newest-first and paginated with a maximum page size of 100. Because the current quarantine handoff is filesystem-based, `quarantinedAt` is taken from the file metadata change time and the original incoming path is reconstructed from the trusted collector and batch identities embedded in the filename.
 
 The AI health adapter uses the configured `AI_ENGINE_URL` and `AI_TIMEOUT`. It validates the health response before projecting dashboard fields, caches results for 30 seconds, and coalesces concurrent refreshes. A healthy loaded model maps to `online`; a reachable unhealthy or contract-invalid response maps to `degraded`; a timeout or transport failure maps to `offline`. AI Engine error strings and internal paths are never returned.
 

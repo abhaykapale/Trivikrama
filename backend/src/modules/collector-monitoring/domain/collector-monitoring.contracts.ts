@@ -40,6 +40,32 @@ export interface IQuarantineMonitor {
   getStatus(): Promise<QuarantineStatusSnapshot>;
 }
 
+export interface QuarantinedFileRecord {
+  readonly fileName: string;
+  readonly collectorId: string;
+  readonly batchId: string;
+  readonly reason: string;
+  readonly quarantinedAt: Date;
+  readonly fileSizeBytes: number;
+  readonly eventCount: number;
+}
+
+export interface ListQuarantinedFileRecordsInput {
+  readonly offset: number;
+  readonly limit: number;
+}
+
+export interface QuarantinedFileRecordPage {
+  readonly items: readonly QuarantinedFileRecord[];
+  readonly total: number;
+}
+
+export interface IQuarantineFileCatalog {
+  list(
+    input: ListQuarantinedFileRecordsInput,
+  ): Promise<QuarantinedFileRecordPage>;
+}
+
 export type AiEngineStatus = "online" | "degraded" | "offline";
 
 export interface AiEngineHealthSnapshot {

@@ -1,8 +1,10 @@
 import type { ICollectorStatusRepository } from "../../../database/index.js";
 import { GetCollectorStatusUseCase } from "../application/get-collector-status.use-case.js";
+import { ListQuarantinedFilesUseCase } from "../application/list-quarantined-files.use-case.js";
 import { BullMqProcessingQueueMonitor } from "../infrastructure/bullmq-processing-queue.monitor.js";
 import { CollectorMonitoringRepositoryAdapter } from "../infrastructure/collector-monitoring.repository.adapter.js";
 import { FilesystemQuarantineMonitor } from "../infrastructure/filesystem-quarantine.monitor.js";
+import { FilesystemQuarantineFileCatalog } from "../infrastructure/filesystem-quarantine-file.catalog.js";
 import { HttpAiEngineHealthMonitor } from "../infrastructure/http-ai-engine-health.monitor.js";
 
 export interface CreateCollectorMonitoringDependenciesInput {
@@ -21,6 +23,7 @@ export interface CreateCollectorMonitoringDependenciesInput {
 
 export interface CollectorMonitoringDependencies {
   readonly getCollectorStatusUseCase: GetCollectorStatusUseCase;
+  readonly listQuarantinedFilesUseCase: ListQuarantinedFilesUseCase;
   close(): Promise<void>;
 }
 
@@ -38,6 +41,9 @@ export function createCollectorMonitoringDependencies(
   const quarantineMonitor = new FilesystemQuarantineMonitor({
     handoffRoot: input.collectorHandoffRoot,
   });
+  const quarantineFileCatalog = new FilesystemQuarantineFileCatalog({
+    handoffRoot: input.collectorHandoffRoot,
+  });
   const aiEngineHealthMonitor = new HttpAiEngineHealthMonitor({
     baseUrl: input.aiEngineUrl,
     timeoutMs: input.aiTimeoutMs,
@@ -50,6 +56,9 @@ export function createCollectorMonitoringDependencies(
       queueMonitor,
       quarantineMonitor,
       aiEngineHealthMonitor,
+    ),
+    listQuarantinedFilesUseCase: new ListQuarantinedFilesUseCase(
+      quarantineFileCatalog,
     ),
     async close(): Promise<void> {
       await Promise.all([
