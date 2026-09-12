@@ -59,6 +59,7 @@ for (const role of ["admin", "security_engineer", "soc_analyst"] as const) {
         collectors: [],
         queue: EMPTY_QUEUE_STATUS,
         quarantine: { count: 0 },
+        aiEngine: OFFLINE_AI_ENGINE_STATUS,
       });
       assert.deepEqual(harness.receivedOrgIds, [`org-${role}`]);
     });
@@ -113,6 +114,7 @@ function createHarness(fail = false): Harness {
             collectors: [],
             queue: EMPTY_QUEUE_STATUS,
             quarantine: { count: 0 },
+            aiEngine: OFFLINE_AI_ENGINE_STATUS,
           };
         },
       },
@@ -267,6 +269,15 @@ const EMPTY_QUEUE_STATUS = {
   delayed: 0,
   deadLettered: 0,
   isPaused: false,
+} as const;
+
+const OFFLINE_AI_ENGINE_STATUS = {
+  status: "offline",
+  modelVersion: null,
+  uptimeSeconds: null,
+  totalPredictions: null,
+  avgLatencyMs: null,
+  p99LatencyMs: null,
 } as const;
 
 const TEST_CONFIG: AppConfig = {

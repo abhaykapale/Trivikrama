@@ -52,11 +52,14 @@ export {
   CollectorMonitoringRepositoryAdapter,
   FilesystemQuarantineMonitor,
   GetCollectorStatusUseCase,
+  HttpAiEngineHealthMonitor,
   createCollectorMonitoringDependencies,
   createCollectorMonitoringRouter,
 } from "./modules/collector-monitoring/index.js";
 
 export type {
+  AiEngineHealthSnapshot,
+  AiEngineStatus,
   BullMqProcessingQueueMonitorConfiguration,
   CollectorMonitoringDependencies,
   CollectorStatusView,
@@ -64,6 +67,9 @@ export type {
   CreateCollectorMonitoringRouterDependencies,
   GetCollectorStatusInput,
   GetCollectorStatusResult,
+  HttpAiEngineHealthMonitorConfiguration,
+  HttpAiEngineHealthMonitorDependencies,
+  IAiEngineHealthMonitor,
   FilesystemQuarantineMonitorConfiguration,
   ICollectorMonitoringRepository,
   IProcessingQueueMonitor,

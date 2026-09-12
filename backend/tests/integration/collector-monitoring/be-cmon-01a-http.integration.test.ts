@@ -84,6 +84,8 @@ test("GET /collector/status returns only the authenticated organization", async 
       redisUrl: process.env.REDIS_URL ?? "redis://localhost:6379",
       collectorHandoffRoot: process.env.COLLECTOR_DIR ?? "./collector",
       queueName: `be-cmon-01a-${suffix}`,
+      aiEngineUrl: "http://127.0.0.1:1",
+      aiTimeoutMs: 100,
     });
     const jwtService = new IntegrationJwtService();
     const jwtId = `be-cmon-jwt-${suffix}`;
@@ -140,6 +142,7 @@ test("GET /collector/status returns only the authenticated organization", async 
       collectors: Array<Record<string, unknown>>;
       queue: { name: string };
       quarantine: { count: number };
+      aiEngine: { status: string };
     };
 
     assert.equal(response.status, 200);
@@ -154,6 +157,7 @@ test("GET /collector/status returns only the authenticated organization", async 
     assert.equal(JSON.stringify(body).includes("canonical_unsigned_sha256"), false);
     assert.equal(body.queue.name, `be-cmon-01a-${suffix}`);
     assert.equal(Number.isSafeInteger(body.quarantine.count), true);
+    assert.equal(body.aiEngine.status, "offline");
   } finally {
     if (server !== null) {
       await close(server).catch(() => undefined);

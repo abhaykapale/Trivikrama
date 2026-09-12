@@ -1,4 +1,6 @@
 import type {
+  AiEngineHealthSnapshot,
+  IAiEngineHealthMonitor,
   ICollectorMonitoringRepository,
   IProcessingQueueMonitor,
   IQuarantineMonitor,
@@ -31,6 +33,7 @@ export interface GetCollectorStatusResult {
   readonly collectors: readonly CollectorStatusView[];
   readonly queue: QueueStatusView;
   readonly quarantine: QuarantineStatusSnapshot;
+  readonly aiEngine: AiEngineHealthSnapshot;
 }
 
 export interface QueueStatusView extends ProcessingQueueStatusSnapshot {
@@ -43,6 +46,7 @@ export class GetCollectorStatusUseCase {
     private readonly repository: ICollectorMonitoringRepository,
     private readonly queueMonitor: IProcessingQueueMonitor,
     private readonly quarantineMonitor: IQuarantineMonitor,
+    private readonly aiEngineHealthMonitor: IAiEngineHealthMonitor,
   ) {}
 
   public async execute(
@@ -54,10 +58,11 @@ export class GetCollectorStatusUseCase {
       throw new Error("orgId must not be blank.");
     }
 
-    const [records, queue, quarantine] = await Promise.all([
+    const [records, queue, quarantine, aiEngine] = await Promise.all([
       this.repository.listByOrgId(orgId),
       this.queueMonitor.getStatus(),
       this.quarantineMonitor.getStatus(),
+      this.aiEngineHealthMonitor.getStatus(),
     ]);
 
     return {
@@ -67,6 +72,7 @@ export class GetCollectorStatusUseCase {
         deadLettered: quarantine.count,
       },
       quarantine,
+      aiEngine,
     };
   }
 }

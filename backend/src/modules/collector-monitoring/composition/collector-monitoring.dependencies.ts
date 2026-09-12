@@ -3,6 +3,7 @@ import { GetCollectorStatusUseCase } from "../application/get-collector-status.u
 import { BullMqProcessingQueueMonitor } from "../infrastructure/bullmq-processing-queue.monitor.js";
 import { CollectorMonitoringRepositoryAdapter } from "../infrastructure/collector-monitoring.repository.adapter.js";
 import { FilesystemQuarantineMonitor } from "../infrastructure/filesystem-quarantine.monitor.js";
+import { HttpAiEngineHealthMonitor } from "../infrastructure/http-ai-engine-health.monitor.js";
 
 export interface CreateCollectorMonitoringDependenciesInput {
   readonly collectorStatusRepository: Pick<
@@ -13,6 +14,9 @@ export interface CreateCollectorMonitoringDependenciesInput {
   readonly collectorHandoffRoot: string;
   readonly queueName?: string;
   readonly queuePrefix?: string;
+  readonly aiEngineUrl: string;
+  readonly aiTimeoutMs: number;
+  readonly aiHealthRefreshIntervalMs?: number;
 }
 
 export interface CollectorMonitoringDependencies {
@@ -34,13 +38,24 @@ export function createCollectorMonitoringDependencies(
   const quarantineMonitor = new FilesystemQuarantineMonitor({
     handoffRoot: input.collectorHandoffRoot,
   });
+  const aiEngineHealthMonitor = new HttpAiEngineHealthMonitor({
+    baseUrl: input.aiEngineUrl,
+    timeoutMs: input.aiTimeoutMs,
+    refreshIntervalMs: input.aiHealthRefreshIntervalMs,
+  });
 
   return {
     getCollectorStatusUseCase: new GetCollectorStatusUseCase(
       repository,
       queueMonitor,
       quarantineMonitor,
+      aiEngineHealthMonitor,
     ),
-    close: () => queueMonitor.close(),
+    async close(): Promise<void> {
+      await Promise.all([
+        queueMonitor.close(),
+        aiEngineHealthMonitor.close(),
+      ]);
+    },
   };
 }

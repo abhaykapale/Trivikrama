@@ -1,4 +1,7 @@
 export type {
+  AiEngineHealthSnapshot,
+  AiEngineStatus,
+  IAiEngineHealthMonitor,
   ICollectorMonitoringRepository,
   IProcessingQueueMonitor,
   IQuarantineMonitor,
@@ -21,6 +24,11 @@ export { BullMqProcessingQueueMonitor } from "./infrastructure/bullmq-processing
 export type { BullMqProcessingQueueMonitorConfiguration } from "./infrastructure/bullmq-processing-queue.monitor.js";
 export { FilesystemQuarantineMonitor } from "./infrastructure/filesystem-quarantine.monitor.js";
 export type { FilesystemQuarantineMonitorConfiguration } from "./infrastructure/filesystem-quarantine.monitor.js";
+export { HttpAiEngineHealthMonitor } from "./infrastructure/http-ai-engine-health.monitor.js";
+export type {
+  HttpAiEngineHealthMonitorConfiguration,
+  HttpAiEngineHealthMonitorDependencies,
+} from "./infrastructure/http-ai-engine-health.monitor.js";
 
 export { createCollectorMonitoringDependencies } from "./composition/collector-monitoring.dependencies.js";
 export type {

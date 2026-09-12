@@ -112,6 +112,8 @@ const bootstrap = async (): Promise<void> => {
         collectorStatusRepository: repositories.collectorStatus,
         redisUrl: env.database.REDIS_URL,
         collectorHandoffRoot: env.collector.directory,
+        aiEngineUrl: env.ai.engineUrl,
+        aiTimeoutMs: env.ai.timeoutMs,
       });
 
     const authenticationDependencies = {

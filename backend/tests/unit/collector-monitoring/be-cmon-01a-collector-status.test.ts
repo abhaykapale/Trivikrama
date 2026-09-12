@@ -39,6 +39,7 @@ test("maps only dashboard-safe Collector status fields", async () => {
     ],
     queue: { ...QUEUE_STATUS, deadLettered: 3 },
     quarantine: { count: 3 },
+    aiEngine: AI_ENGINE_STATUS,
   });
 
   const serialized = JSON.stringify(result);
@@ -125,8 +126,18 @@ function createUseCase(repository: ICollectorMonitoringRepository) {
     repository,
     { async getStatus() { return QUEUE_STATUS; } },
     { async getStatus() { return { count: 3 }; } },
+    { async getStatus() { return AI_ENGINE_STATUS; } },
   );
 }
+
+const AI_ENGINE_STATUS = {
+  status: "online",
+  modelVersion: "v20260912_120000",
+  uptimeSeconds: 3600,
+  totalPredictions: 250,
+  avgLatencyMs: 18.5,
+  p99LatencyMs: 52,
+} as const;
 
 function createRecord() {
   return {

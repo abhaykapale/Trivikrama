@@ -39,3 +39,18 @@ export interface IProcessingQueueMonitor {
 export interface IQuarantineMonitor {
   getStatus(): Promise<QuarantineStatusSnapshot>;
 }
+
+export type AiEngineStatus = "online" | "degraded" | "offline";
+
+export interface AiEngineHealthSnapshot {
+  readonly status: AiEngineStatus;
+  readonly modelVersion: string | null;
+  readonly uptimeSeconds: number | null;
+  readonly totalPredictions: number | null;
+  readonly avgLatencyMs: number | null;
+  readonly p99LatencyMs: number | null;
+}
+
+export interface IAiEngineHealthMonitor {
+  getStatus(): Promise<AiEngineHealthSnapshot>;
+}
