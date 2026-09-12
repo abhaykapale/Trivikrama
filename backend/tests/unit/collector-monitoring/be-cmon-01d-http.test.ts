@@ -14,6 +14,7 @@ import type {
   UserRecord,
 } from "../../../src/modules/auth/domain/index.js";
 import { createCollectorMonitoringRouter } from "../../../src/modules/collector-monitoring/http/collector-monitoring.routes.js";
+import { QuarantineRetryError } from "../../../src/modules/collector-monitoring/domain/quarantine-retry.errors.js";
 
 const USER_ID = "550e8400-e29b-41d4-a716-446655440001";
 
@@ -70,15 +71,67 @@ test("GET /collector/quarantine rejects invalid pagination", async () => {
   assert.equal(harness.inputs.length, 0);
 });
 
+test("POST /collector/quarantine/:filename/retry requires authentication", async () => {
+  const harness = createHarness();
+  const response = await callRetry(harness.app);
+
+  assert.equal(response.status, 401);
+  assert.equal(response.body.error.code, "UNAUTHORIZED");
+  assert.equal(harness.retryFilenames.length, 0);
+});
+
+test("POST /collector/quarantine/:filename/retry rejects a SOC analyst", async () => {
+  const harness = createHarness();
+  harness.addToken("analyst", "soc_analyst");
+  const response = await callRetry(harness.app, "analyst");
+
+  assert.equal(response.status, 403);
+  assert.equal(response.body.error.code, "FORBIDDEN");
+  assert.equal(harness.retryFilenames.length, 0);
+});
+
+for (const role of ["admin", "security_engineer"] as const) {
+  test(`POST /collector/quarantine/:filename/retry allows ${role}`, async () => {
+    const harness = createHarness();
+    harness.addToken(role, role);
+    const response = await callRetry(harness.app, role);
+
+    assert.equal(response.status, 200);
+    assert.deepEqual(harness.retryFilenames, [RETRY_FILENAME]);
+    assert.deepEqual(response.body, {
+      filename: RETRY_FILENAME,
+      status: "requeued",
+      message: "File moved from quarantine back to processing queue",
+    });
+  });
+}
+
+for (const [code, status] of [
+  ["INVALID_FILENAME", 400],
+  ["QUARANTINE_FILE_NOT_FOUND", 404],
+  ["REQUEUE_DESTINATION_EXISTS", 409],
+] as const) {
+  test(`POST /collector/quarantine/:filename/retry maps ${code}`, async () => {
+    const harness = createHarness(new QuarantineRetryError(code, "Safe message."));
+    harness.addToken("admin", "admin");
+    const response = await callRetry(harness.app, "admin");
+
+    assert.equal(response.status, status);
+    assert.equal(response.body.error.code, code);
+  });
+}
+
 interface Harness {
   readonly app: Express;
   readonly inputs: Array<{ readonly page: number; readonly limit: number }>;
+  readonly retryFilenames: string[];
   addToken(token: string, role: AuthRole): void;
 }
 
-function createHarness(): Harness {
+function createHarness(retryError?: QuarantineRetryError): Harness {
   const roles = new Map<string, AuthRole>();
   const inputs: Array<{ readonly page: number; readonly limit: number }> = [];
+  const retryFilenames: string[] = [];
   const jwtService: IJwtService = {
     async sign(claims: JwtClaims) {
       return claims.jti;
@@ -140,17 +193,58 @@ function createHarness(): Harness {
           };
         },
       },
+      retryQuarantinedFileUseCase: {
+        async execute({ filename }) {
+          retryFilenames.push(filename);
+
+          if (retryError !== undefined) {
+            throw retryError;
+          }
+
+          return {
+            filename,
+            status: "requeued" as const,
+            message: "File moved from quarantine back to processing queue",
+          };
+        },
+      },
     }),
   );
 
   return {
     app,
     inputs,
+    retryFilenames,
     addToken(token, role) {
       roles.clear();
       roles.set(token, role);
     },
   };
+}
+
+async function callRetry(app: Express, token?: string) {
+  const server = await listen(app);
+  const address = server.address() as AddressInfo;
+
+  try {
+    const response = await fetch(
+      `http://127.0.0.1:${address.port}/api/v1/collector/quarantine/${RETRY_FILENAME}/retry`,
+      {
+        method: "POST",
+        headers:
+          token === undefined ? {} : { authorization: `Bearer ${token}` },
+      },
+    );
+
+    return {
+      status: response.status,
+      body: (await response.json()) as Record<string, any>,
+    };
+  } finally {
+    await new Promise<void>((resolve, reject) => {
+      server.close((error) => (error ? reject(error) : resolve()));
+    });
+  }
 }
 
 function createSession(jwtId: string): SessionRecord {
@@ -221,3 +315,6 @@ const TEST_CONFIG = {
     },
   },
 } as AppConfig;
+
+const RETRY_FILENAME =
+  "batch_77d8092b-6bd8-4acd-ab16-bd56707a1377__collector_Y29sbGVjdG9yLWRldi0wMQ__claim_f694a7a4-91da-4aa2-9bfd-86e3b6ca1a1d__empty_file__d132b4ba-760b-4ecc-8b33-f11b4d15eeca.json";

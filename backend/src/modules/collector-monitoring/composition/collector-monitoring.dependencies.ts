@@ -1,10 +1,12 @@
 import type { ICollectorStatusRepository } from "../../../database/index.js";
 import { GetCollectorStatusUseCase } from "../application/get-collector-status.use-case.js";
 import { ListQuarantinedFilesUseCase } from "../application/list-quarantined-files.use-case.js";
+import { RetryQuarantinedFileUseCase } from "../application/retry-quarantined-file.use-case.js";
 import { BullMqProcessingQueueMonitor } from "../infrastructure/bullmq-processing-queue.monitor.js";
 import { CollectorMonitoringRepositoryAdapter } from "../infrastructure/collector-monitoring.repository.adapter.js";
 import { FilesystemQuarantineMonitor } from "../infrastructure/filesystem-quarantine.monitor.js";
 import { FilesystemQuarantineFileCatalog } from "../infrastructure/filesystem-quarantine-file.catalog.js";
+import { FilesystemQuarantineFileRequeuer } from "../infrastructure/filesystem-quarantine-file.requeuer.js";
 import { HttpAiEngineHealthMonitor } from "../infrastructure/http-ai-engine-health.monitor.js";
 
 export interface CreateCollectorMonitoringDependenciesInput {
@@ -24,6 +26,7 @@ export interface CreateCollectorMonitoringDependenciesInput {
 export interface CollectorMonitoringDependencies {
   readonly getCollectorStatusUseCase: GetCollectorStatusUseCase;
   readonly listQuarantinedFilesUseCase: ListQuarantinedFilesUseCase;
+  readonly retryQuarantinedFileUseCase: RetryQuarantinedFileUseCase;
   close(): Promise<void>;
 }
 
@@ -44,6 +47,9 @@ export function createCollectorMonitoringDependencies(
   const quarantineFileCatalog = new FilesystemQuarantineFileCatalog({
     handoffRoot: input.collectorHandoffRoot,
   });
+  const quarantineFileRequeuer = new FilesystemQuarantineFileRequeuer({
+    handoffRoot: input.collectorHandoffRoot,
+  });
   const aiEngineHealthMonitor = new HttpAiEngineHealthMonitor({
     baseUrl: input.aiEngineUrl,
     timeoutMs: input.aiTimeoutMs,
@@ -59,6 +65,9 @@ export function createCollectorMonitoringDependencies(
     ),
     listQuarantinedFilesUseCase: new ListQuarantinedFilesUseCase(
       quarantineFileCatalog,
+    ),
+    retryQuarantinedFileUseCase: new RetryQuarantinedFileUseCase(
+      quarantineFileRequeuer,
     ),
     async close(): Promise<void> {
       await Promise.all([

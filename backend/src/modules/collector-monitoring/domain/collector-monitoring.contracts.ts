@@ -66,6 +66,15 @@ export interface IQuarantineFileCatalog {
   ): Promise<QuarantinedFileRecordPage>;
 }
 
+export interface RequeueQuarantinedFileResult {
+  readonly filename: string;
+  readonly incomingRelativePath: string;
+}
+
+export interface IQuarantineFileRequeuer {
+  requeue(filename: string): Promise<RequeueQuarantinedFileResult>;
+}
+
 export type AiEngineStatus = "online" | "degraded" | "offline";
 
 export interface AiEngineHealthSnapshot {
