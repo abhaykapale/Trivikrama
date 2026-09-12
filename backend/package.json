@@ -80,7 +80,10 @@
     "test:collector-monitoring:be-cmon-01c": "npm run test:collector-monitoring:be-cmon-01c:unit && npm run test:collector-monitoring:be-cmon-01c:integration",
     "test:collector-monitoring:be-cmon-01d:unit": "npm run test:collector-monitoring:be-cmon-01c:unit && node --import tsx tests/unit/collector-monitoring/be-cmon-01d-quarantine-listing.test.ts && node --import tsx tests/unit/collector-monitoring/be-cmon-01d-http.test.ts",
     "test:collector-monitoring:be-cmon-01d:integration": "node --import tsx tests/integration/collector-monitoring/be-cmon-01d-quarantine-listing.integration.test.ts",
-    "test:collector-monitoring:be-cmon-01d": "npm run test:collector-monitoring:be-cmon-01d:unit && npm run test:collector-monitoring:be-cmon-01d:integration"
+    "test:collector-monitoring:be-cmon-01d": "npm run test:collector-monitoring:be-cmon-01d:unit && npm run test:collector-monitoring:be-cmon-01d:integration",
+    "test:collector-monitoring:be-cmon-01e:unit": "npm run test:collector-monitoring:be-cmon-01d:unit && node --import tsx tests/unit/collector-monitoring/be-cmon-01e-quarantine-retry.test.ts",
+    "test:collector-monitoring:be-cmon-01e:integration": "node --import tsx tests/integration/collector-monitoring/be-cmon-01e-quarantine-retry.integration.test.ts",
+    "test:collector-monitoring:be-cmon-01e": "npm run test:collector-monitoring:be-cmon-01e:unit && npm run test:collector-monitoring:be-cmon-01e:integration"
   },
   "keywords": [],
   "author": "",

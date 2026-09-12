@@ -5,6 +5,7 @@ export type {
   ICollectorMonitoringRepository,
   IProcessingQueueMonitor,
   IQuarantineFileCatalog,
+  IQuarantineFileRequeuer,
   IQuarantineMonitor,
   ListQuarantinedFileRecordsInput,
   MonitoredCollectorRecord,
@@ -12,8 +13,14 @@ export type {
   ProcessingQueueStatusSnapshot,
   QuarantinedFileRecord,
   QuarantinedFileRecordPage,
+  RequeueQuarantinedFileResult,
   QuarantineStatusSnapshot,
 } from "./domain/collector-monitoring.contracts.js";
+export {
+  isQuarantineRetryError,
+  QuarantineRetryError,
+} from "./domain/quarantine-retry.errors.js";
+export type { QuarantineRetryErrorCode } from "./domain/quarantine-retry.errors.js";
 
 export { GetCollectorStatusUseCase } from "./application/get-collector-status.use-case.js";
 export type {
@@ -29,6 +36,11 @@ export type {
   QuarantinedFileView,
   QuarantinePaginationView,
 } from "./application/list-quarantined-files.use-case.js";
+export { RetryQuarantinedFileUseCase } from "./application/retry-quarantined-file.use-case.js";
+export type {
+  RetryQuarantinedFileInput,
+  RetryQuarantinedFileResult,
+} from "./application/retry-quarantined-file.use-case.js";
 
 export { CollectorMonitoringRepositoryAdapter } from "./infrastructure/collector-monitoring.repository.adapter.js";
 export { BullMqProcessingQueueMonitor } from "./infrastructure/bullmq-processing-queue.monitor.js";
@@ -37,6 +49,8 @@ export { FilesystemQuarantineMonitor } from "./infrastructure/filesystem-quarant
 export type { FilesystemQuarantineMonitorConfiguration } from "./infrastructure/filesystem-quarantine.monitor.js";
 export { FilesystemQuarantineFileCatalog } from "./infrastructure/filesystem-quarantine-file.catalog.js";
 export type { FilesystemQuarantineFileCatalogConfiguration } from "./infrastructure/filesystem-quarantine-file.catalog.js";
+export { FilesystemQuarantineFileRequeuer } from "./infrastructure/filesystem-quarantine-file.requeuer.js";
+export type { FilesystemQuarantineFileRequeuerConfiguration } from "./infrastructure/filesystem-quarantine-file.requeuer.js";
 export { HttpAiEngineHealthMonitor } from "./infrastructure/http-ai-engine-health.monitor.js";
 export type {
   HttpAiEngineHealthMonitorConfiguration,

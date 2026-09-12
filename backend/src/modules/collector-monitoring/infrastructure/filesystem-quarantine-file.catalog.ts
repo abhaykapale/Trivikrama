@@ -8,14 +8,7 @@ import type {
   QuarantinedFileRecord,
   QuarantinedFileRecordPage,
 } from "../domain/collector-monitoring.contracts.js";
-
-const COLLECTOR_ID_PATTERN = /^[a-z0-9](?:[a-z0-9._-]{0,62}[a-z0-9])?$/u;
-const UUID_V4_SOURCE =
-  "[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}";
-const QUARANTINE_FILE_PATTERN = new RegExp(
-  `^batch_(${UUID_V4_SOURCE})__collector_([A-Za-z0-9_-]+)__claim_${UUID_V4_SOURCE}__([a-z0-9_]+)__${UUID_V4_SOURCE}\\.json$`,
-  "u",
-);
+import { parseQuarantineFileName } from "./quarantine-file-name.js";
 
 export interface FilesystemQuarantineFileCatalogConfiguration {
   readonly handoffRoot: string;
@@ -105,47 +98,6 @@ export class FilesystemQuarantineFileCatalog
       items: records.slice(input.offset, input.offset + input.limit),
       total: records.length,
     };
-  }
-}
-
-interface QuarantineFileIdentity {
-  readonly collectorId: string;
-  readonly batchId: string;
-  readonly reason: string;
-}
-
-function parseQuarantineFileName(
-  fileName: string,
-): QuarantineFileIdentity | undefined {
-  const match = QUARANTINE_FILE_PATTERN.exec(fileName);
-
-  if (match === null) {
-    return undefined;
-  }
-
-  const collectorId = decodeCollectorId(match[2]);
-
-  if (collectorId === undefined) {
-    return undefined;
-  }
-
-  return {
-    batchId: match[1],
-    collectorId,
-    reason: match[3].toUpperCase(),
-  };
-}
-
-function decodeCollectorId(encoded: string): string | undefined {
-  try {
-    const decoded = Buffer.from(encoded, "base64url").toString("utf8");
-    const canonical = Buffer.from(decoded, "utf8").toString("base64url");
-
-    return canonical === encoded && COLLECTOR_ID_PATTERN.test(decoded)
-      ? decoded
-      : undefined;
-  } catch {
-    return undefined;
   }
 }
 

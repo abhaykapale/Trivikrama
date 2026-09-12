@@ -154,6 +154,8 @@ const bootstrap = async (): Promise<void> => {
           collectorMonitoringDependencies.getCollectorStatusUseCase,
         listQuarantinedFilesUseCase:
           collectorMonitoringDependencies.listQuarantinedFilesUseCase,
+        retryQuarantinedFileUseCase:
+          collectorMonitoringDependencies.retryQuarantinedFileUseCase,
       },
     });
 

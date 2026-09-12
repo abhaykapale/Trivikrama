@@ -8,6 +8,11 @@ import {
 } from "../../auth/http/index.js";
 import type { GetCollectorStatusUseCase } from "../application/get-collector-status.use-case.js";
 import type { ListQuarantinedFilesUseCase } from "../application/list-quarantined-files.use-case.js";
+import type { RetryQuarantinedFileUseCase } from "../application/retry-quarantined-file.use-case.js";
+import {
+  isQuarantineRetryError,
+  type QuarantineRetryError,
+} from "../domain/quarantine-retry.errors.js";
 import { z, ZodError } from "zod";
 import { sendError } from "../../auth/http/auth-http.errors.js";
 
@@ -22,6 +27,11 @@ export interface CreateCollectorMonitoringRouterDependencies {
   /** Optional only for compatibility with earlier isolated router tests. */
   readonly listQuarantinedFilesUseCase?: Pick<
     ListQuarantinedFilesUseCase,
+    "execute"
+  >;
+  /** Optional only for compatibility with earlier isolated router tests. */
+  readonly retryQuarantinedFileUseCase?: Pick<
+    RetryQuarantinedFileUseCase,
     "execute"
   >;
 }
@@ -39,6 +49,15 @@ export function createCollectorMonitoringRouter(
     },
   );
 
+  router.post(
+    "/quarantine/:filename/retry",
+    authenticateRequest(dependencies.authentication),
+    requireRole("admin", "security_engineer"),
+    async (request, response, next) => {
+      await handleRetryQuarantinedFile(request, response, next, dependencies);
+    },
+  );
+
   router.get(
     "/quarantine",
     authenticateRequest(dependencies.authentication),
@@ -49,6 +68,72 @@ export function createCollectorMonitoringRouter(
   );
 
   return router;
+}
+
+async function handleRetryQuarantinedFile(
+  request: Request,
+  response: Response,
+  next: NextFunction,
+  dependencies: CreateCollectorMonitoringRouterDependencies,
+): Promise<void> {
+  try {
+    if (dependencies.retryQuarantinedFileUseCase === undefined) {
+      throw new Error("Quarantine-retry dependency is not configured.");
+    }
+
+    const filename = z.string().trim().min(1).max(512).parse(
+      request.params.filename,
+    );
+    const result = await dependencies.retryQuarantinedFileUseCase.execute({
+      filename,
+    });
+
+    response.status(200).json(result);
+  } catch (error: unknown) {
+    if (error instanceof ZodError) {
+      sendError(response, 400, "VALIDATION_ERROR", "Invalid filename.");
+      return;
+    }
+
+    if (isQuarantineRetryError(error)) {
+      sendQuarantineRetryError(response, error);
+      return;
+    }
+
+    next(error);
+  }
+}
+
+function sendQuarantineRetryError(
+  response: Response,
+  error: QuarantineRetryError,
+): void {
+  switch (error.code) {
+    case "INVALID_FILENAME":
+      sendError(response, 400, error.code, error.message);
+      return;
+    case "QUARANTINE_FILE_NOT_FOUND":
+      sendError(response, 404, error.code, error.message);
+      return;
+    case "REQUEUE_DESTINATION_EXISTS":
+      sendError(response, 409, error.code, error.message);
+      return;
+    case "UNSAFE_HANDOFF_PATH":
+      sendError(
+        response,
+        409,
+        error.code,
+        "The quarantine file cannot be retried safely.",
+      );
+      return;
+    case "REQUEUE_FAILED":
+      sendError(
+        response,
+        500,
+        "INTERNAL_SERVER_ERROR",
+        "Something went wrong.",
+      );
+  }
 }
 
 async function handleListQuarantinedFiles(
