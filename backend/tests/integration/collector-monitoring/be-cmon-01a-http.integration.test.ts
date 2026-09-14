@@ -39,7 +39,6 @@ test("GET /collector/status returns only the authenticated organization", async 
   const hiddenOrgId = `be-cmon-01a-other-${suffix}`;
   const postgres = createPostgresClient({
     connectionString:
-      process.env.TEST_DATABASE_URL ??
       process.env.DATABASE_URL ??
       "postgresql://trivikrama_app:trivikrama_app_password@localhost:5432/trivikrama",
     poolMin: 0,

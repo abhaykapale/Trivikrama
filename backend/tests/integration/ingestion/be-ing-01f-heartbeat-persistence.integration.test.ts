@@ -18,9 +18,8 @@ test("PostgreSQL applies newer heartbeats and marks stale Collectors offline", a
     const collectorId = `be-ing-01f-${randomUUID()}`;
     const postgres = createPostgresClient({
         connectionString:
-            process.env.TEST_DATABASE_URL ??
             process.env.DATABASE_URL ??
-            "postgresql://trivikrama_app:trivikrama_app_password@localhost:5432/trivikrama",
+            "postgresql://trivikrama_app:Abhay@287@localhost:5432/trivikrama",
         poolMin: 0,
         poolMax: 2,
         acquireConnectionTimeoutMs: 5_000,
