@@ -87,7 +87,10 @@
     "test:detection:be-det-01a": "node --import tsx tests/unit/detection/be-det-01a-stateless-rule-engine.test.ts",
     "test:detection:be-det-01b:unit": "npm run test:detection:be-det-01a && node --import tsx tests/unit/detection/be-det-01b-rule-loading-cache.test.ts",
     "test:detection:be-det-01b:integration": "node --import dotenv/config --import tsx tests/integration/detection/be-det-01b-postgres-rule-loading.integration.test.ts",
-    "test:detection:be-det-01b": "npm run test:detection:be-det-01b:unit && npm run test:detection:be-det-01b:integration"
+    "test:detection:be-det-01b": "npm run test:detection:be-det-01b:unit && npm run test:detection:be-det-01b:integration",
+    "test:detection:be-det-01c:unit": "npm run test:detection:be-det-01b:unit && node --import tsx tests/unit/detection/be-det-01c-count-rule.test.ts",
+    "test:detection:be-det-01c:integration": "node --import dotenv/config --import tsx tests/integration/detection/be-det-01c-redis-count-rule.integration.test.ts",
+    "test:detection:be-det-01c": "npm run test:detection:be-det-01c:unit && npm run test:detection:be-det-01c:integration"
   },
   "keywords": [],
   "author": "",
