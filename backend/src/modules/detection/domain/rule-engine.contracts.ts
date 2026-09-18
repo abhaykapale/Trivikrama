@@ -29,6 +29,7 @@ export interface CompiledSigmaMatchRule {
   readonly logsource: RuleLogsource;
   readonly tags: readonly string[];
   readonly condition: string;
+  readonly cooldownSeconds: number;
   readonly compiledHash: string;
   readonly matches: (event: DetectionEvent) => boolean;
 }

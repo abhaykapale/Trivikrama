@@ -11,9 +11,10 @@ const BATCH_ID = "77d8092b-6bd8-4acd-ab16-bd56707a1377";
 const COLLECTOR_ID = "collector-dev-01";
 const EVENT_ID = "sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
 const INGESTED_AT = new Date("2026-09-08T00:00:00.000Z");
+const ORG_ID = "organization-blue";
 
 test("maps a verified baseline OCSF event without losing source identity", () => {
-    const result = new OcsfCollectorEventNormalizer().normalize(createBatch(), INGESTED_AT);
+    const result = new OcsfCollectorEventNormalizer(ORG_ID).normalize(createBatch(), INGESTED_AT);
 
     assert.deepEqual(result.stats, {
         totalEvents: 1,
@@ -35,10 +36,11 @@ test("maps a verified baseline OCSF event without losing source identity", () =>
     assert.equal(normalized.schema_valid, true);
     assert.deepEqual(normalized.validation_errors, []);
     assert.equal(normalized.raw_event?.event_id, EVENT_ID);
+    assert.equal(normalized.org_id, ORG_ID);
 });
 
 test("uses a deterministic non-unique similarity hash while preserving stable event IDs", () => {
-    const normalizer = new OcsfCollectorEventNormalizer();
+    const normalizer = new OcsfCollectorEventNormalizer(ORG_ID);
     const first = createEvent();
     const second = {
         ...createEvent(),

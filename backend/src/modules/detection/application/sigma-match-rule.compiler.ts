@@ -55,6 +55,8 @@ const OPERATORS = new Set<FieldOperator>([
 const MAX_SELECTIONS = 64;
 const MAX_FIELDS_PER_SELECTION = 64;
 const MAX_REGEX_LENGTH = 128;
+const TIME_WINDOW_PATTERN = /^(\d+)([smh])$/u;
+const MAX_COOLDOWN_SECONDS = 86_400;
 
 export function compileSigmaMatchRule(
   document: unknown,
@@ -90,6 +92,7 @@ export function compileSigmaMatchRule(
       ? undefined
       : requireInteger(logsource.category_uid, "logsource.category_uid", 0);
   const detection = requireObject(root.detection, "detection", "must be a mapping");
+  const cooldownSeconds = compileCooldown(root.alert);
 
   if (detection.count !== undefined || detection.sequence !== undefined) {
     fail("detection", "BE-DET-01A supports stateless match rules only");
@@ -137,6 +140,7 @@ export function compileSigmaMatchRule(
     }),
     tags: Object.freeze(tags),
     condition,
+    cooldownSeconds,
     compiledHash: createHash("sha256").update(sourceForHash, "utf8").digest("hex"),
     matches: (event: DetectionEvent): boolean => {
       if (
@@ -155,6 +159,44 @@ export function compileSigmaMatchRule(
       return evaluateConditionExpression(expression, results);
     },
   });
+}
+
+function compileCooldown(value: unknown): number {
+  if (value === undefined) return 0;
+
+  const alert = requireObject(value, "alert", "must be a mapping");
+  const unknownKeys = Object.keys(alert).filter((key) => key !== "cooldown");
+  if (unknownKeys.length > 0) {
+    fail(`alert.${unknownKeys[0]}`, "is not supported");
+  }
+  if (alert.cooldown === undefined) return 0;
+
+  const cooldown = requireString(
+    alert.cooldown,
+    "alert.cooldown",
+    2,
+    16,
+  );
+  const match = TIME_WINDOW_PATTERN.exec(cooldown);
+  if (match === null) {
+    fail("alert.cooldown", "must use the format <positive integer><s|m|h>");
+  }
+
+  const amount = Number(match[1]);
+  const multiplier = match[2] === "s" ? 1 : match[2] === "m" ? 60 : 3_600;
+  const seconds = amount * multiplier;
+  if (
+    !Number.isSafeInteger(seconds) ||
+    seconds < 1 ||
+    seconds > MAX_COOLDOWN_SECONDS
+  ) {
+    fail(
+      "alert.cooldown",
+      `must resolve to 1-${MAX_COOLDOWN_SECONDS} seconds`,
+    );
+  }
+
+  return seconds;
 }
 
 function compileSelection(value: unknown, path: string): EventPredicate {

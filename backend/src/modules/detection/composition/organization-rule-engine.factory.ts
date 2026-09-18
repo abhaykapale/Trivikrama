@@ -4,12 +4,14 @@ import { ReloadableOrganizationSigmaRuleEngine } from "../application/reloadable
 import { PostgresActiveMatchRuleSource } from "../infrastructure/postgres-active-match-rule.source.js";
 import { PostgresActiveCountRuleSource } from "../infrastructure/postgres-active-count-rule.source.js";
 import { RedisCountWindowStore } from "../infrastructure/redis-count-window.store.js";
+import { RedisAlertCooldownStore } from "../infrastructure/redis-alert-cooldown.store.js";
 
 export interface CreateOrganizationRuleEngineOptions {
   readonly organizationId: string;
   readonly ruleRepository: Pick<IRuleRepository, "list">;
   readonly redisClient?: RedisClient;
   readonly countWindowKeyPrefix?: string;
+  readonly alertCooldownKeyPrefix?: string;
 }
 
 export async function createOrganizationRuleEngine(
@@ -24,6 +26,9 @@ export async function createOrganizationRuleEngine(
           countSource: new PostgresActiveCountRuleSource(options.ruleRepository),
           countWindowStore: new RedisCountWindowStore(options.redisClient, {
             keyPrefix: options.countWindowKeyPrefix,
+          }),
+          cooldownStore: new RedisAlertCooldownStore(options.redisClient, {
+            keyPrefix: options.alertCooldownKeyPrefix,
           }),
         }),
   });

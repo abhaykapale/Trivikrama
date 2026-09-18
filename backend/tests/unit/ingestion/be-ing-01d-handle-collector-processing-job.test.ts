@@ -30,6 +30,9 @@ test("finalizes a successfully processed job without quarantining its file", asy
         totalEvents: 1,
         insertedEvents: 1,
         alreadyPresentEvents: 0,
+        generatedAlerts: 0,
+        insertedAlerts: 0,
+        alreadyPresentAlerts: 0,
     });
     const fileIntake = new FakeFileIntake();
 
@@ -46,6 +49,9 @@ test("finalizes a successfully processed job without quarantining its file", asy
         totalEvents: 1,
         insertedEvents: 1,
         alreadyPresentEvents: 0,
+        generatedAlerts: 0,
+        insertedAlerts: 0,
+        alreadyPresentAlerts: 0,
     });
     assert.deepEqual(processor.jobs, [JOB]);
     assert.deepEqual(fileIntake.calls, []);
@@ -101,6 +107,9 @@ test("rethrows a completion failure so BullMQ can retry after persistence", asyn
         totalEvents: 1,
         insertedEvents: 1,
         alreadyPresentEvents: 0,
+        generatedAlerts: 0,
+        insertedAlerts: 0,
+        alreadyPresentAlerts: 0,
     });
     const expectedError = new Error("processed directory is temporarily unavailable");
     const fileIntake = new FakeFileIntake(expectedError);

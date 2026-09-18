@@ -1,14 +1,15 @@
-import { randomUUID } from "node:crypto";
 import { performance } from "node:perf_hooks";
 
 import type { OrganizationCompiledCountRule } from "../domain/active-count-rule-source.contracts.js";
 import type { ICountWindowStore } from "../domain/count-window-store.contracts.js";
+import type { IAlertCooldownStore } from "../domain/alert-cooldown-store.contracts.js";
 import type {
   DetectionEvent,
   RuleAlert,
   RuleEvaluationResult,
 } from "../domain/rule-engine.contracts.js";
 import { resolveOwnEventField } from "./event-field-accessor.js";
+import { createDeterministicRuleAlertId } from "./rule-alert-id.js";
 
 export interface CountRuleEvaluatorDependencies {
   readonly windowStore: ICountWindowStore;
@@ -18,16 +19,17 @@ export interface CountRuleEvaluatorDependencies {
   readonly now?: () => Date;
   readonly generateAlertId?: () => string;
   readonly monotonicNow?: () => number;
+  readonly cooldownStore?: IAlertCooldownStore;
 }
 
 export class CountRuleEvaluator {
   private readonly now: () => Date;
-  private readonly generateAlertId: () => string;
+  private readonly generateAlertId?: () => string;
   private readonly monotonicNow: () => number;
 
   public constructor(private readonly dependencies: CountRuleEvaluatorDependencies) {
     this.now = dependencies.now ?? (() => new Date());
-    this.generateAlertId = dependencies.generateAlertId ?? randomUUID;
+    this.generateAlertId = dependencies.generateAlertId;
     this.monotonicNow = dependencies.monotonicNow ?? (() => performance.now());
   }
 
@@ -73,14 +75,41 @@ export class CountRuleEvaluator {
           windowSeconds: rule.count.timeWindowSeconds,
         });
 
-        // One event moves an atomic window by at most one. Alerting exactly at
-        // the crossing prevents every event above the threshold from flooding.
-        if (!snapshot.inserted || snapshot.count !== rule.count.threshold) {
+        // An exact retry is allowed to reconstruct the same deterministic
+        // alert while the window still represents the threshold crossing.
+        if (snapshot.count !== rule.count.threshold) {
+          continue;
+        }
+
+        const alertId =
+          this.generateAlertId?.() ??
+          createDeterministicRuleAlertId({
+            organizationId: rule.organizationId,
+            ruleId: rule.id,
+            ruleStateVersion: rule.compiledHash,
+            matchedEventIds: snapshot.eventIds,
+          });
+
+        if (
+          rule.cooldownSeconds > 0 &&
+          (this.dependencies.cooldownStore === undefined ||
+            !(await this.dependencies.cooldownStore.tryAcquire({
+              organizationId: rule.organizationId,
+              ruleId: rule.id,
+              ruleStateVersion: rule.compiledHash,
+              entityKey,
+              alertId,
+              cooldownSeconds: rule.cooldownSeconds,
+            })))
+        ) {
+          if (this.dependencies.cooldownStore === undefined) {
+            throw new Error("A Redis cooldown store is required by this count rule.");
+          }
           continue;
         }
 
         alerts.push({
-          alertId: this.generateAlertId(),
+          alertId,
           ruleId: rule.id,
           ruleName: rule.title,
           ruleDescription: rule.description,
@@ -100,6 +129,7 @@ export class CountRuleEvaluator {
             count: snapshot.count,
             threshold: rule.count.threshold,
             timeWindowSeconds: rule.count.timeWindowSeconds,
+            ruleStateVersion: rule.compiledHash,
           },
         });
       }

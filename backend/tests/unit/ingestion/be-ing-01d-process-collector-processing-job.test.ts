@@ -17,6 +17,7 @@ import { CollectorVerificationError } from "../../../src/modules/ingestion/domai
 import type { CollectorProcessingJob } from "../../../src/modules/ingestion/domain/processing-queue.contracts.js";
 import type { ICollectorEventNormalizer } from "../../../src/modules/ingestion/domain/collector-event-normalization.contracts.js";
 import type { PersistNormalizedCollectorEventsResult } from "../../../src/modules/ingestion/application/persist-normalized-collector-events.service.js";
+import { DeterministicFeatureExtractor } from "../../../src/modules/feature-extraction/index.js";
 
 const BATCH_ID = "77d8092b-6bd8-4acd-ab16-bd56707a1377";
 const COLLECTOR_ID = "collector-dev-01";
@@ -91,6 +92,22 @@ class FakeNormalizedEventPersistence {
     }
 }
 
+class FakeDetection {
+    public async execute() {
+        return {
+            evaluation: {
+                rulesEvaluated: 0,
+                rulesMatched: 0,
+                alertsGenerated: 0,
+                evaluationDurationMs: 0,
+                eventsEvaluated: 0,
+            },
+            insertedAlerts: 0,
+            alreadyPresentAlerts: 0,
+        };
+    }
+}
+
 function createJob(): CollectorProcessingJob {
     return {
         batchId: BATCH_ID,
@@ -151,6 +168,8 @@ function createService(
         rawBatchArchive: archive,
         normalizer: new FakeNormalizer(),
         normalizedEventPersistence: new FakeNormalizedEventPersistence(),
+        featureExtractor: new DeterministicFeatureExtractor(),
+        detection: new FakeDetection(),
         now: () => new Date("2026-09-07T00:00:00.000Z"),
     });
 }
@@ -171,6 +190,9 @@ test("archives a safely reread and reverified queued batch", async () => {
         totalEvents: 0,
         insertedEvents: 0,
         alreadyPresentEvents: 0,
+        generatedAlerts: 0,
+        insertedAlerts: 0,
+        alreadyPresentAlerts: 0,
     });
     assert.deepEqual(reader.requests, [createJob()]);
     assert.equal(verifier.inputs.length, 1);
@@ -196,6 +218,9 @@ test("accepts an already archived batch with the same digest", async () => {
         totalEvents: 0,
         insertedEvents: 0,
         alreadyPresentEvents: 0,
+        generatedAlerts: 0,
+        insertedAlerts: 0,
+        alreadyPresentAlerts: 0,
     });
 });
 

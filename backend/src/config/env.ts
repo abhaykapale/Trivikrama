@@ -81,6 +81,8 @@ const envSchema = z.object({
 
     COLLECTOR_ID: collectorIdEnvironmentSchema,
 
+    COLLECTOR_ORG_ID: z.string().trim().min(1).max(100).default("default"),
+
     COLLECTOR_HMAC_KEY_ID: collectorKeyIdEnvironmentSchema,
 
     COLLECTOR_HMAC_SECRET: collectorHmacSecretEnvironmentSchema,
@@ -209,12 +211,21 @@ export function loadEnvironmentConfig(
 
       collector: {
           directory: env.COLLECTOR_DIR,
+          organizationId: env.COLLECTOR_ORG_ID,
 
           trust: {
               collectorId: env.COLLECTOR_ID,
               keyId: env.COLLECTOR_HMAC_KEY_ID,
               secretBase64Url: env.COLLECTOR_HMAC_SECRET,
           },
+      } as {
+          readonly directory: string;
+          readonly organizationId?: string;
+          readonly trust: {
+              readonly collectorId: string;
+              readonly keyId: string;
+              readonly secretBase64Url: string;
+          };
       },
 
       ai: {

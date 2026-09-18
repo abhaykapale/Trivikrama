@@ -16,6 +16,16 @@ import type {
  * semantic verification must have completed before it is called.
  */
 export class OcsfCollectorEventNormalizer implements ICollectorEventNormalizer {
+    private readonly organizationId: string;
+
+    public constructor(organizationId = "default") {
+        const normalized = organizationId.trim();
+        if (normalized.length === 0 || normalized.length > 100) {
+            throw new Error("Collector organization ID must contain 1 to 100 characters");
+        }
+        this.organizationId = normalized;
+    }
+
     public normalize(batch: CollectorEventBatch, ingestedAt: Date): NormalizedCollectorBatch {
         assertValidIngestionTime(ingestedAt);
 
@@ -81,6 +91,7 @@ export class OcsfCollectorEventNormalizer implements ICollectorEventNormalizer {
                 ingested_at: new Date(ingestedAt),
             },
             raw_event: structuredClone(event) as unknown as Record<string, unknown>,
+            org_id: this.organizationId,
         };
     }
 }

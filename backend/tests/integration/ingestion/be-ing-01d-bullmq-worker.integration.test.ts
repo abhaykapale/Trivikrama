@@ -84,6 +84,9 @@ class RecordingJobHandler {
             totalEvents: 1,
             insertedEvents: 1,
             alreadyPresentEvents: 0,
+            generatedAlerts: 0,
+            insertedAlerts: 0,
+            alreadyPresentAlerts: 0,
         };
     }
 }

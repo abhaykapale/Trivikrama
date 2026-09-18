@@ -8,6 +8,8 @@ import type {
   RuleEngineStats,
   RuleEvaluationResult,
 } from "../domain/rule-engine.contracts.js";
+import type { IAlertCooldownStore } from "../domain/alert-cooldown-store.contracts.js";
+import { createDeterministicRuleAlertId } from "./rule-alert-id.js";
 
 export interface StatelessSigmaRuleEngineDependencies {
   readonly now?: () => Date;
@@ -16,6 +18,8 @@ export interface StatelessSigmaRuleEngineDependencies {
   readonly selectRules?: (
     event: DetectionEvent,
   ) => readonly CompiledSigmaMatchRule[];
+  readonly organizationId?: string;
+  readonly cooldownStore?: IAlertCooldownStore;
 }
 
 /**
@@ -28,20 +32,30 @@ export class StatelessSigmaRuleEngine {
   private rules: readonly CompiledSigmaMatchRule[] = [];
   private lastReloadAt: Date;
   private readonly now: () => Date;
-  private readonly generateAlertId: () => string;
+  private readonly generateAlertId?: () => string;
   private readonly monotonicNow: () => number;
   private readonly selectRules?: (
     event: DetectionEvent,
   ) => readonly CompiledSigmaMatchRule[];
+  private readonly organizationId?: string;
+  private readonly cooldownStore?: IAlertCooldownStore;
 
   public constructor(
     rules: readonly CompiledSigmaMatchRule[],
     dependencies: StatelessSigmaRuleEngineDependencies = {},
   ) {
     this.now = dependencies.now ?? (() => new Date());
-    this.generateAlertId = dependencies.generateAlertId ?? randomUUID;
+    this.generateAlertId = dependencies.generateAlertId;
     this.monotonicNow = dependencies.monotonicNow ?? (() => performance.now());
     this.selectRules = dependencies.selectRules;
+    this.organizationId = dependencies.organizationId;
+    this.cooldownStore = dependencies.cooldownStore;
+    if (
+      this.cooldownStore !== undefined &&
+      this.organizationId === undefined
+    ) {
+      throw new Error("Match-rule cooldown store requires an organization ID.");
+    }
     this.lastReloadAt = this.now();
     this.replaceRules(rules);
   }
@@ -82,7 +96,9 @@ export class StatelessSigmaRuleEngine {
         }
 
         matchedRuleIds.add(rule.id);
-        alerts.push(this.buildAlert(rule, event));
+        const alert = this.buildAlert(rule, event);
+        if (!(await this.mayEmit(rule, event, alert.alertId))) continue;
+        alerts.push(alert);
       }
     }
 
@@ -96,6 +112,26 @@ export class StatelessSigmaRuleEngine {
         eventsEvaluated: events.length,
       },
     };
+  }
+
+  private async mayEmit(
+    rule: CompiledSigmaMatchRule,
+    event: DetectionEvent,
+    alertId: string,
+  ): Promise<boolean> {
+    if (rule.cooldownSeconds === 0) return true;
+    if (this.cooldownStore === undefined || this.organizationId === undefined) {
+      throw new Error("A Redis cooldown store is required by this match rule.");
+    }
+
+    return this.cooldownStore.tryAcquire({
+      organizationId: this.organizationId,
+      ruleId: rule.id,
+      ruleStateVersion: rule.compiledHash,
+      entityKey: `event:${event.event_id}`,
+      alertId,
+      cooldownSeconds: rule.cooldownSeconds,
+    });
   }
 
   public getStats(): RuleEngineStats {
@@ -112,8 +148,19 @@ export class StatelessSigmaRuleEngine {
     rule: CompiledSigmaMatchRule,
     event: DetectionEvent,
   ): RuleAlert {
+    const alertId =
+      this.generateAlertId?.() ??
+      (this.organizationId === undefined
+        ? randomUUID()
+        : createDeterministicRuleAlertId({
+            organizationId: this.organizationId,
+            ruleId: rule.id,
+            ruleStateVersion: rule.compiledHash,
+            matchedEventIds: [event.event_id],
+          }));
+
     return {
-      alertId: this.generateAlertId(),
+      alertId,
       ruleId: rule.id,
       ruleName: rule.title,
       ruleDescription: rule.description,
@@ -128,6 +175,7 @@ export class StatelessSigmaRuleEngine {
         sigmaId: rule.sigmaId,
         classUid: event.class_uid,
         categoryUid: event.category_uid,
+        ruleStateVersion: rule.compiledHash,
       },
     };
   }

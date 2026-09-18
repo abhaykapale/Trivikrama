@@ -7,6 +7,8 @@ import type { CollectorProcessingJob } from "../domain/processing-queue.contract
 import type { ArchiveVerifiedCollectorBatchService } from "./archive-verified-collector-batch.service.js";
 import type { ICollectorEventNormalizer } from "../domain/collector-event-normalization.contracts.js";
 import type { PersistNormalizedCollectorEventsService } from "./persist-normalized-collector-events.service.js";
+import type { EvaluateAndPersistRuleAlertsService } from "../../detection/application/evaluate-and-persist-rule-alerts.service.js";
+import type { IFeatureExtractor } from "../../feature-extraction/domain/feature-extraction.contracts.js";
 
 export type ProcessCollectorProcessingJobResult =
     | {
@@ -15,6 +17,9 @@ export type ProcessCollectorProcessingJobResult =
           readonly totalEvents: number;
           readonly insertedEvents: number;
           readonly alreadyPresentEvents: number;
+          readonly generatedAlerts: number;
+          readonly insertedAlerts: number;
+          readonly alreadyPresentAlerts: number;
       }
     | {
           readonly status: "quarantine";
@@ -28,6 +33,8 @@ export interface ProcessCollectorProcessingJobDependencies {
     readonly rawBatchArchive: Pick<ArchiveVerifiedCollectorBatchService, "execute">;
     readonly normalizer: ICollectorEventNormalizer;
     readonly normalizedEventPersistence: Pick<PersistNormalizedCollectorEventsService, "execute">;
+    readonly featureExtractor: IFeatureExtractor;
+    readonly detection: Pick<EvaluateAndPersistRuleAlertsService, "execute">;
     readonly now: () => Date;
 }
 
@@ -118,8 +125,11 @@ export class ProcessCollectorProcessingJobService {
             message,
             processedAt,
         );
-        const persistenceResult = await this.dependencies.normalizedEventPersistence.execute(
+        const featureExtraction = await this.dependencies.featureExtractor.extract(
             normalized.events,
+        );
+        const persistenceResult = await this.dependencies.normalizedEventPersistence.execute(
+            featureExtraction.events,
         );
 
         if (persistenceResult.status === "event_id_collision") {
@@ -129,12 +139,23 @@ export class ProcessCollectorProcessingJobService {
             };
         }
 
+        // Evaluate every normalized event, including MongoDB replays. The rule
+        // engine and alert repository use stable event/alert identities, so a
+        // worker retry can finish alert persistence after an earlier partial
+        // execution without losing or duplicating an alert.
+        const detectionResult = await this.dependencies.detection.execute(
+            featureExtraction.events,
+        );
+
         return {
             status: "processed",
             archiveStatus: archiveResult.status,
             totalEvents: normalized.stats.totalEvents,
             insertedEvents: persistenceResult.insertedCount,
             alreadyPresentEvents: persistenceResult.alreadyPresentCount,
+            generatedAlerts: detectionResult.evaluation.alertsGenerated,
+            insertedAlerts: detectionResult.insertedAlerts,
+            alreadyPresentAlerts: detectionResult.alreadyPresentAlerts,
         };
     }
 }

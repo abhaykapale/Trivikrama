@@ -45,6 +45,12 @@ export interface CreateAlertInput {
   readonly orgId?: string;
 }
 
+export interface CreateAlertsIfAbsentResult {
+  readonly insertedCount: number;
+  readonly existingCount: number;
+  readonly records: readonly AlertRecord[];
+}
+
 export interface UpdateAlertInput {
   readonly incidentId?: string | null;
   readonly ruleId?: string | null;
@@ -76,6 +82,9 @@ export interface IAlertRepository {
   withTransaction(transaction: TransactionClient): IAlertRepository;
   create(input: CreateAlertInput): Promise<AlertRecord>;
   createMany(inputs: readonly CreateAlertInput[]): Promise<readonly AlertRecord[]>;
+  createManyIfAbsent(
+    inputs: readonly CreateAlertInput[],
+  ): Promise<CreateAlertsIfAbsentResult>;
   findById(id: string): Promise<AlertRecord | null>;
   list(filters?: AlertListFilters): Promise<PageResult<AlertRecord>>;
   listByIncident(incidentId: string, filters?: PaginationOptions): Promise<PageResult<AlertRecord>>;

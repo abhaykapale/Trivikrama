@@ -14,6 +14,7 @@ import type {
   AlertListFilters,
   AlertRecord,
   CreateAlertInput,
+  CreateAlertsIfAbsentResult,
   IAlertRepository,
   UpdateAlertInput,
 } from "./alert.repository.js";
@@ -64,6 +65,52 @@ export class PostgresAlertRepository implements IAlertRepository {
       .returning("*");
 
     return rows.map(mapAlertRow);
+  }
+
+  public async createManyIfAbsent(
+    inputs: readonly CreateAlertInput[],
+  ): Promise<CreateAlertsIfAbsentResult> {
+    if (inputs.length === 0) {
+      return { insertedCount: 0, existingCount: 0, records: [] };
+    }
+
+    const ids = inputs.map((input) => {
+      if (input.id === undefined) {
+        throw new Error("createManyIfAbsent requires an explicit alert ID");
+      }
+      return ensureNonBlank(input.id, "id");
+    });
+    if (new Set(ids).size !== ids.length) {
+      throw new Error("createManyIfAbsent requires unique alert IDs within one call");
+    }
+
+    const insertedRows = await this.db<AlertRow>(ALERTS_TABLE)
+      .insert(inputs.map(toInsertableAlert))
+      .onConflict("id")
+      .ignore()
+      .returning("id");
+    const rows = await this.db<AlertRow>(ALERTS_TABLE)
+      .select("*")
+      .whereIn("id", ids);
+    const recordsById = new Map(
+      rows.map((row) => {
+        const record = mapAlertRow(row);
+        return [record.id, record] as const;
+      }),
+    );
+    const records = ids.map((id) => {
+      const record = recordsById.get(id);
+      if (record === undefined) {
+        throw new Error("Idempotent alert persistence returned an incomplete result");
+      }
+      return record;
+    });
+
+    return {
+      insertedCount: insertedRows.length,
+      existingCount: inputs.length - insertedRows.length,
+      records,
+    };
   }
 
   public async findById(id: string): Promise<AlertRecord | null> {

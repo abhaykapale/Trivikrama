@@ -7,6 +7,7 @@ import type {
   OrganizationCompiledCountRule,
 } from "../domain/active-count-rule-source.contracts.js";
 import type { ICountWindowStore } from "../domain/count-window-store.contracts.js";
+import type { IAlertCooldownStore } from "../domain/alert-cooldown-store.contracts.js";
 import type {
   DetectionEvent,
   IRuleEngine,
@@ -26,6 +27,7 @@ export interface ReloadableOrganizationSigmaRuleEngineDependencies {
   readonly source: IActiveMatchRuleSource;
   readonly countSource?: IActiveCountRuleSource;
   readonly countWindowStore?: ICountWindowStore;
+  readonly cooldownStore?: IAlertCooldownStore;
   readonly now?: () => Date;
   readonly generateAlertId?: () => string;
   readonly monotonicNow?: () => number;
@@ -58,6 +60,8 @@ export class ReloadableOrganizationSigmaRuleEngine implements IRuleEngine {
       generateAlertId: dependencies.generateAlertId,
       monotonicNow: dependencies.monotonicNow,
       selectRules: (event) => this.cache.getByClass(event.class_uid),
+      organizationId: dependencies.organizationId,
+      cooldownStore: dependencies.cooldownStore,
     });
 
     if (
@@ -86,6 +90,7 @@ export class ReloadableOrganizationSigmaRuleEngine implements IRuleEngine {
         now: dependencies.now,
         generateAlertId: dependencies.generateAlertId,
         monotonicNow: dependencies.monotonicNow,
+        cooldownStore: dependencies.cooldownStore,
       });
     }
   }

@@ -4,12 +4,22 @@ import logger from "../shared/logger/logger.js";
 
 async function main(): Promise<void> {
     const configuredWorker = await createConfiguredCollectorProcessingWorker({
+        organizationId: env.collector.organizationId ?? "default",
         handoffRoot: env.collector.directory,
         redisUrl: env.database.REDIS_URL,
+        redisKeyPrefix: env.database.redis.keyPrefix,
         mongo: {
             uri: env.database.MONGODB_URI,
             maxPoolSize: env.database.mongodb.poolSize,
             serverSelectionTimeoutMs: env.database.mongodb.serverSelectionTimeoutMs,
+        },
+        postgres: {
+            connectionString: env.database.DATABASE_URL,
+            poolMin: env.database.postgres.poolMin,
+            poolMax: env.database.postgres.poolMax,
+            acquireConnectionTimeoutMs: env.database.postgres.connectionTimeoutMs,
+            statementTimeoutMs: env.database.postgres.queryTimeoutMs,
+            applicationName: "trivikrama-collector-processing-worker",
         },
         collectorTrust: env.collector.trust,
     });

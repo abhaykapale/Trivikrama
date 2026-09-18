@@ -4,7 +4,29 @@ import {
     createMongoDbClient,
     type MongoDbClientOptions,
 } from "../../../database/mongodb/client.js";
+import {
+    closePostgres,
+    createPostgresClient,
+    pingPostgres,
+    type PostgresClientOptions,
+} from "../../../database/postgres/client.js";
+import {
+    closeRedis,
+    connectRedis,
+    createRedisClient,
+} from "../../../database/redis/client.js";
+import { createPostgresRepositories } from "../../../database/repositories/postgres-repository.factory.js";
 import { createMongoRepositories } from "../../../database/repositories/mongodb/mongo-repository.factory.js";
+import {
+    createOrganizationRuleEngine,
+    EvaluateAndPersistRuleAlertsService,
+    PersistRuleAlertsService,
+} from "../../detection/index.js";
+import {
+    DeterministicFeatureExtractor,
+    RedisBackedFeatureExtractor,
+    RedisTemporalFrequencyFeatureStore,
+} from "../../feature-extraction/index.js";
 import { ArchiveVerifiedCollectorBatchService } from "../application/archive-verified-collector-batch.service.js";
 import { HandleCollectorProcessingJobService } from "../application/handle-collector-processing-job.service.js";
 import { ProcessCollectorProcessingJobService } from "../application/process-collector-processing-job.service.js";
@@ -17,9 +39,12 @@ import type { CollectorVerificationRuntimeConfiguration } from "./configured-ing
 import { createConfiguredCollectorMessageVerifier } from "./configured-ingestion-verification.dependencies.js";
 
 export interface CollectorProcessingWorkerRuntimeConfiguration {
+    readonly organizationId: string;
     readonly handoffRoot: string;
     readonly redisUrl: string;
+    readonly redisKeyPrefix?: string;
     readonly mongo: MongoDbClientOptions;
+    readonly postgres: PostgresClientOptions;
     readonly collectorTrust: CollectorVerificationRuntimeConfiguration;
 }
 
@@ -35,12 +60,22 @@ export async function createConfiguredCollectorProcessingWorker(
     configuration: CollectorProcessingWorkerRuntimeConfiguration,
 ): Promise<ConfiguredCollectorProcessingWorker> {
     const mongoClient = createMongoDbClient();
+    const postgresClient = createPostgresClient(configuration.postgres);
+    const redisClient = createRedisClient({
+        url: configuration.redisUrl,
+        keyPrefix: configuration.redisKeyPrefix,
+    });
     let worker: BullMqCollectorProcessingWorker | undefined;
 
     try {
         await connectMongoDb(mongoClient, configuration.mongo);
+        await Promise.all([
+            pingPostgres(postgresClient),
+            connectRedis(redisClient),
+        ]);
 
-        const repositories = createMongoRepositories(mongoClient);
+        const mongoRepositories = createMongoRepositories(mongoClient);
+        const postgresRepositories = createPostgresRepositories(postgresClient);
 
         const fileIntake = new CollectorFileIntakeService({
             handoffRoot: configuration.handoffRoot,
@@ -53,12 +88,30 @@ export async function createConfiguredCollectorProcessingWorker(
         const verifier = createConfiguredCollectorMessageVerifier(configuration.collectorTrust);
 
         const rawBatchArchive = new ArchiveVerifiedCollectorBatchService({
-            rawEventArchive: repositories.rawEventArchive,
+            rawEventArchive: mongoRepositories.rawEventArchive,
         });
 
-        const normalizer = new OcsfCollectorEventNormalizer();
+        const normalizer = new OcsfCollectorEventNormalizer(configuration.organizationId);
         const normalizedEventPersistence = new PersistNormalizedCollectorEventsService({
-            normalizedEvents: repositories.normalizedEvents,
+            normalizedEvents: mongoRepositories.normalizedEvents,
+        });
+        const featureExtractor = new RedisBackedFeatureExtractor({
+            deterministic: new DeterministicFeatureExtractor(),
+            history: new RedisTemporalFrequencyFeatureStore(redisClient),
+        });
+        const ruleEngine = await createOrganizationRuleEngine({
+            organizationId: configuration.organizationId,
+            ruleRepository: postgresRepositories.rules,
+            redisClient,
+            countWindowKeyPrefix: "detection:count:v1",
+            alertCooldownKeyPrefix: "detection:cooldown:v1",
+        });
+        const detection = new EvaluateAndPersistRuleAlertsService({
+            organizationId: configuration.organizationId,
+            ruleEngine,
+            alertPersistence: new PersistRuleAlertsService({
+                alerts: postgresRepositories.alerts,
+            }),
         });
 
         const processor = new ProcessCollectorProcessingJobService({
@@ -67,6 +120,8 @@ export async function createConfiguredCollectorProcessingWorker(
             rawBatchArchive,
             normalizer,
             normalizedEventPersistence,
+            featureExtractor,
+            detection,
             now: () => new Date(),
         });
 
@@ -94,7 +149,11 @@ export async function createConfiguredCollectorProcessingWorker(
                 try {
                     await startedWorker.close();
                 } finally {
-                    await closeMongoDb(mongoClient);
+                    await Promise.allSettled([
+                        closeMongoDb(mongoClient),
+                        closePostgres(postgresClient),
+                        closeRedis(redisClient),
+                    ]);
                 }
             },
         };
@@ -102,6 +161,8 @@ export async function createConfiguredCollectorProcessingWorker(
         await Promise.allSettled([
             worker === undefined ? Promise.resolve() : worker.close(),
             closeMongoDb(mongoClient),
+            closePostgres(postgresClient),
+            closeRedis(redisClient),
         ]);
 
         throw error;
