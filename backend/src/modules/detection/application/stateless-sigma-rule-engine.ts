@@ -104,7 +104,7 @@ export class StatelessSigmaRuleEngine {
       activeRules: this.rules.length,
       disabledRules: 0,
       lastReloadAt: new Date(this.lastReloadAt),
-      rulesByType: { match: this.rules.length },
+      rulesByType: { match: this.rules.length, count: 0 },
     };
   }
 

@@ -10,6 +10,10 @@ import type {
   RuleSeverity,
 } from "../domain/rule-engine.contracts.js";
 import { RuleValidationError } from "../domain/rule-validation.error.js";
+import {
+  compileEventFieldPath,
+  resolveOwnEventField,
+} from "./event-field-accessor.js";
 
 type EventPredicate = (event: DetectionEvent) => boolean;
 type FieldOperator =
@@ -28,8 +32,6 @@ type FieldOperator =
 
 const RULE_ID_PATTERN = /^[a-z0-9][a-z0-9._-]{2,127}$/u;
 const SELECTION_NAME_PATTERN = /^[A-Za-z_][A-Za-z0-9_-]{0,63}$/u;
-const FIELD_SEGMENT_PATTERN = /^[A-Za-z_][A-Za-z0-9_]*$/u;
-const BLOCKED_FIELD_SEGMENTS = new Set(["__proto__", "prototype", "constructor"]);
 const SEVERITIES = new Set<RuleSeverity>([
   "critical",
   "high",
@@ -121,6 +123,7 @@ export function compileSigmaMatchRule(
   );
 
   return Object.freeze({
+    type: "match",
     id,
     sigmaId: id,
     title,
@@ -197,14 +200,14 @@ function compileFieldCondition(
 
   const fieldPath = parts[0];
   const operator = (parts[1] ?? "exact") as FieldOperator;
-  const fieldSegments = validateFieldPath(fieldPath, path);
+  const fieldSegments = compileEventFieldPath(fieldPath, path);
 
   if (operator !== "exact" && !OPERATORS.has(operator)) {
     fail(path, `uses unsupported operator '${operator}'`);
   }
 
   const compare = compileComparison(operator, target, path);
-  return (event) => compare(resolveField(event, fieldSegments));
+  return (event) => compare(resolveOwnEventField(event, fieldSegments));
 }
 
 function compileComparison(
@@ -308,38 +311,6 @@ function compileGuardedRegex(pattern: string, path: string): RegExp {
   } catch {
     fail(path, "contains invalid regex syntax");
   }
-}
-
-function validateFieldPath(fieldPath: string, errorPath: string): readonly string[] {
-  const segments = fieldPath.split(".");
-
-  if (
-    fieldPath.length === 0 ||
-    fieldPath.length > 256 ||
-    segments.length > 16 ||
-    segments.some(
-      (segment) =>
-        !FIELD_SEGMENT_PATTERN.test(segment) || BLOCKED_FIELD_SEGMENTS.has(segment),
-    )
-  ) {
-    fail(errorPath, "contains an invalid or unsafe dot-notation field path");
-  }
-
-  return segments;
-}
-
-function resolveField(value: unknown, segments: readonly string[]): unknown {
-  let current: unknown = value;
-
-  for (const segment of segments) {
-    if (!isObject(current) || !Object.prototype.hasOwnProperty.call(current, segment)) {
-      return undefined;
-    }
-
-    current = current[segment];
-  }
-
-  return current;
 }
 
 function requireObject(

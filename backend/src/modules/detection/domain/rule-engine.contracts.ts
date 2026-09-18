@@ -18,6 +18,7 @@ export interface RuleLogsource {
 }
 
 export interface CompiledSigmaMatchRule {
+  readonly type: "match";
   readonly id: string;
   readonly sigmaId: string;
   readonly title: string;
@@ -30,6 +31,19 @@ export interface CompiledSigmaMatchRule {
   readonly condition: string;
   readonly compiledHash: string;
   readonly matches: (event: DetectionEvent) => boolean;
+}
+
+export interface CountRuleConfiguration {
+  readonly field: string;
+  readonly fieldSegments: readonly string[];
+  readonly threshold: number;
+  readonly timeWindowSeconds: number;
+}
+
+export interface CompiledSigmaCountRule
+  extends Omit<CompiledSigmaMatchRule, "type"> {
+  readonly type: "count";
+  readonly count: CountRuleConfiguration;
 }
 
 export interface RuleAlert {
@@ -64,7 +78,7 @@ export interface RuleEngineStats {
   readonly activeRules: number;
   readonly disabledRules: number;
   readonly lastReloadAt: Date;
-  readonly rulesByType: Readonly<Record<"match", number>>;
+  readonly rulesByType: Readonly<Record<"match" | "count", number>>;
 }
 
 export interface IRuleEngine {

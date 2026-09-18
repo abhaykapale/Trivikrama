@@ -1,8 +1,12 @@
 export * from "./domain/rule-engine.contracts.js";
 export * from "./domain/active-match-rule-source.contracts.js";
+export * from "./domain/active-count-rule-source.contracts.js";
+export * from "./domain/count-window-store.contracts.js";
 export * from "./domain/rule-validation.error.js";
 export { compileSigmaMatchRuleYaml } from "./application/compile-sigma-match-rule.js";
+export { compileSigmaCountRuleYaml } from "./application/compile-sigma-count-rule.js";
 export { compileSigmaMatchRule } from "./application/sigma-match-rule.compiler.js";
+export { compileSigmaCountRule } from "./application/sigma-count-rule.compiler.js";
 export { StatelessSigmaRuleEngine } from "./application/stateless-sigma-rule-engine.js";
 export type { StatelessSigmaRuleEngineDependencies } from "./application/stateless-sigma-rule-engine.js";
 export { OrganizationRuleCache } from "./application/organization-rule-cache.js";
@@ -11,5 +15,12 @@ export type { OrganizationRuleLoaderDependencies, OrganizationRuleLoadCandidate 
 export { ReloadableOrganizationSigmaRuleEngine } from "./application/reloadable-organization-sigma-rule-engine.js";
 export type { ReloadableOrganizationSigmaRuleEngineDependencies } from "./application/reloadable-organization-sigma-rule-engine.js";
 export { PostgresActiveMatchRuleSource } from "./infrastructure/postgres-active-match-rule.source.js";
+export { PostgresActiveCountRuleSource } from "./infrastructure/postgres-active-count-rule.source.js";
+export { RedisCountWindowStore } from "./infrastructure/redis-count-window.store.js";
+export type { RedisCountWindowStoreOptions } from "./infrastructure/redis-count-window.store.js";
+export { CountRuleEvaluator } from "./application/count-rule-evaluator.js";
+export type { CountRuleEvaluatorDependencies } from "./application/count-rule-evaluator.js";
+export { OrganizationCountRuleLoader } from "./application/organization-count-rule-loader.js";
+export type { OrganizationCountRuleLoaderDependencies, OrganizationCountRuleLoadCandidate } from "./application/organization-count-rule-loader.js";
 export { createOrganizationRuleEngine } from "./composition/organization-rule-engine.factory.js";
 export type { CreateOrganizationRuleEngineOptions } from "./composition/organization-rule-engine.factory.js";

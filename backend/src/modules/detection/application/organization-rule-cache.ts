@@ -1,23 +1,32 @@
 import type { OrganizationCompiledMatchRule } from "../domain/active-match-rule-source.contracts.js";
+import type { OrganizationCompiledCountRule } from "../domain/active-count-rule-source.contracts.js";
 
-interface RuleCacheSnapshot {
-  readonly all: readonly OrganizationCompiledMatchRule[];
-  readonly byClass: ReadonlyMap<number, readonly OrganizationCompiledMatchRule[]>;
-  readonly byDatabaseId: ReadonlyMap<string, OrganizationCompiledMatchRule>;
+type OrganizationCompiledRule =
+  | OrganizationCompiledMatchRule
+  | OrganizationCompiledCountRule;
+
+interface RuleCacheSnapshot<TRule extends OrganizationCompiledRule> {
+  readonly all: readonly TRule[];
+  readonly byClass: ReadonlyMap<number, readonly TRule[]>;
+  readonly byDatabaseId: ReadonlyMap<string, TRule>;
 }
 
-const EMPTY_SNAPSHOT: RuleCacheSnapshot = {
-  all: Object.freeze([]),
-  byClass: new Map(),
-  byDatabaseId: new Map(),
-};
+function emptySnapshot<TRule extends OrganizationCompiledRule>(): RuleCacheSnapshot<TRule> {
+  return {
+    all: Object.freeze([]) as readonly TRule[],
+    byClass: new Map(),
+    byDatabaseId: new Map(),
+  };
+}
 
 /**
  * One cache belongs to one organization. replace() builds every index before
  * publishing the new snapshot, so evaluators never observe a half-built cache.
  */
-export class OrganizationRuleCache {
-  private snapshot: RuleCacheSnapshot = EMPTY_SNAPSHOT;
+export class OrganizationRuleCache<
+  TRule extends OrganizationCompiledRule = OrganizationCompiledMatchRule,
+> {
+  private snapshot: RuleCacheSnapshot<TRule> = emptySnapshot<TRule>();
   public readonly organizationId: string;
 
   public constructor(organizationId: string) {
@@ -30,12 +39,12 @@ export class OrganizationRuleCache {
     this.organizationId = normalizedOrganizationId;
   }
 
-  public replace(rules: readonly OrganizationCompiledMatchRule[]): void {
+  public replace(rules: readonly TRule[]): void {
     const sorted = [...rules].sort(
       (left, right) => right.priority - left.priority || left.id.localeCompare(right.id),
     );
-    const byClass = new Map<number, OrganizationCompiledMatchRule[]>();
-    const byDatabaseId = new Map<string, OrganizationCompiledMatchRule>();
+    const byClass = new Map<number, TRule[]>();
+    const byDatabaseId = new Map<string, TRule>();
 
     for (const rule of sorted) {
       if (rule.organizationId !== this.organizationId) {
@@ -64,17 +73,17 @@ export class OrganizationRuleCache {
     });
   }
 
-  public getAll(): readonly OrganizationCompiledMatchRule[] {
+  public getAll(): readonly TRule[] {
     return this.snapshot.all;
   }
 
-  public getByClass(classUid: number): readonly OrganizationCompiledMatchRule[] {
+  public getByClass(classUid: number): readonly TRule[] {
     return this.snapshot.byClass.get(classUid) ?? [];
   }
 
   public getByDatabaseId(
     databaseId: string,
-  ): OrganizationCompiledMatchRule | undefined {
+  ): TRule | undefined {
     return this.snapshot.byDatabaseId.get(databaseId);
   }
 }
