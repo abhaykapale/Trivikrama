@@ -23,8 +23,18 @@ import {
     PersistRuleAlertsService,
 } from "../../detection/index.js";
 import {
+    BatchEntropyVolumeFeatureExtractor,
     DeterministicFeatureExtractor,
+    FeatureExtractorPluginAdapter,
+    PassthroughFeatureExtractor,
+    PluginFeatureExtractor,
     RedisBackedFeatureExtractor,
+    RedisBackedAuthenticationFeatureExtractor,
+    RedisBackedProcessFeatureExtractor,
+    RedisBackedNetworkFeatureExtractor,
+    RedisAuthenticationFeatureStore,
+    RedisProcessFeatureStore,
+    RedisNetworkFeatureStore,
     RedisTemporalFrequencyFeatureStore,
 } from "../../feature-extraction/index.js";
 import { ArchiveVerifiedCollectorBatchService } from "../application/archive-verified-collector-batch.service.js";
@@ -95,9 +105,46 @@ export async function createConfiguredCollectorProcessingWorker(
         const normalizedEventPersistence = new PersistNormalizedCollectorEventsService({
             normalizedEvents: mongoRepositories.normalizedEvents,
         });
-        const featureExtractor = new RedisBackedFeatureExtractor({
-            deterministic: new DeterministicFeatureExtractor(),
-            history: new RedisTemporalFrequencyFeatureStore(redisClient),
+        const passthrough = new PassthroughFeatureExtractor();
+        const featureExtractor = new PluginFeatureExtractor({
+            base: new DeterministicFeatureExtractor(),
+            plugins: [
+                new FeatureExtractorPluginAdapter({
+                    name: "temporal-frequency",
+                    extractor: new RedisBackedFeatureExtractor({
+                        deterministic: passthrough,
+                        history: new RedisTemporalFrequencyFeatureStore(redisClient),
+                    }),
+                }),
+                new FeatureExtractorPluginAdapter({
+                    name: "batch-entropy-volume",
+                    extractor: new BatchEntropyVolumeFeatureExtractor({ delegate: passthrough }),
+                }),
+                new FeatureExtractorPluginAdapter({
+                    name: "authentication",
+                    applicableClasses: [3002],
+                    extractor: new RedisBackedAuthenticationFeatureExtractor({
+                        delegate: passthrough,
+                        authenticationHistory: new RedisAuthenticationFeatureStore(redisClient),
+                    }),
+                }),
+                new FeatureExtractorPluginAdapter({
+                    name: "process",
+                    applicableClasses: [1007],
+                    extractor: new RedisBackedProcessFeatureExtractor({
+                        delegate: passthrough,
+                        processHistory: new RedisProcessFeatureStore(redisClient),
+                    }),
+                }),
+                new FeatureExtractorPluginAdapter({
+                    name: "network",
+                    applicableClasses: [4001, 4003],
+                    extractor: new RedisBackedNetworkFeatureExtractor({
+                        delegate: passthrough,
+                        networkHistory: new RedisNetworkFeatureStore(redisClient),
+                    }),
+                }),
+            ],
         });
         const ruleEngine = await createOrganizationRuleEngine({
             organizationId: configuration.organizationId,

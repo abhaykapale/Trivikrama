@@ -62,6 +62,7 @@ export class OcsfCollectorEventNormalizer implements ICollectorEventNormalizer {
             class_uid: ocsf.class_uid,
             category_uid: ocsf.category_uid,
             severity_id: ocsf.severity_id,
+            status_id: ocsf.status_id,
             time,
             message: ocsf.message,
             src_endpoint: {

@@ -47,6 +47,16 @@ export class DeterministicFeatureExtractor implements IFeatureExtractor {
             historyAppliedEvents: 0,
             historyFallbackEvents: 0,
             historyReplayHits: 0,
+            authenticationHistoryAppliedEvents: 0,
+            authenticationHistoryFallbackEvents: 0,
+            authenticationHistoryReplayHits: 0,
+            processHistoryAppliedEvents: 0,
+            processHistoryFallbackEvents: 0,
+            processHistoryReplayHits: 0,
+            networkHistoryAppliedEvents: 0,
+            networkHistoryFallbackEvents: 0,
+            networkHistoryReplayHits: 0,
+            pluginsExecuted: Object.freeze([]),
         });
     }
 
@@ -75,7 +85,9 @@ export class DeterministicFeatureExtractor implements IFeatureExtractor {
             frequency_deviation: 0,
             src_ip_entropy: shannonCharacterEntropy(event.src_endpoint?.ip),
             username_entropy: shannonCharacterEntropy(event.actor?.user?.name),
-            process_name_entropy: shannonCharacterEntropy(event.actor?.process?.name),
+            process_name_entropy: shannonCharacterEntropy(
+                event.process?.name ?? event.actor?.process?.name,
+            ),
             bytes_sent: 0,
             bytes_received: 0,
             bytes_ratio: 1,

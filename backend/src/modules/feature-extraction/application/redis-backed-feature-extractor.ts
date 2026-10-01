@@ -69,6 +69,25 @@ export class RedisBackedFeatureExtractor implements IFeatureExtractor {
             historyAppliedEvents: applied,
             historyFallbackEvents: fallback,
             historyReplayHits: replayHits,
+            authenticationHistoryAppliedEvents:
+                deterministic.authenticationHistoryAppliedEvents,
+            authenticationHistoryFallbackEvents:
+                deterministic.authenticationHistoryFallbackEvents,
+            authenticationHistoryReplayHits:
+                deterministic.authenticationHistoryReplayHits,
+            processHistoryAppliedEvents:
+                deterministic.processHistoryAppliedEvents,
+            processHistoryFallbackEvents:
+                deterministic.processHistoryFallbackEvents,
+            processHistoryReplayHits:
+                deterministic.processHistoryReplayHits,
+            networkHistoryAppliedEvents:
+                deterministic.networkHistoryAppliedEvents,
+            networkHistoryFallbackEvents:
+                deterministic.networkHistoryFallbackEvents,
+            networkHistoryReplayHits:
+                deterministic.networkHistoryReplayHits,
+            pluginsExecuted: deterministic.pluginsExecuted,
         });
     }
 }

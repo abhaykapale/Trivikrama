@@ -7,6 +7,13 @@ export interface OcsfEndpointDocument {
   readonly mac?: string;
 }
 
+export interface OcsfProcessDocument {
+  readonly name?: string;
+  readonly pid?: number;
+  readonly cmd_line?: string;
+  readonly path?: string;
+}
+
 export interface OcsfActorDocument {
   readonly user?: {
     readonly name?: string;
@@ -14,12 +21,7 @@ export interface OcsfActorDocument {
     readonly domain?: string;
     readonly type?: string;
   };
-  readonly process?: {
-    readonly name?: string;
-    readonly pid?: number;
-    readonly cmd_line?: string;
-    readonly path?: string;
-  };
+  readonly process?: OcsfProcessDocument;
   readonly session?: {
     readonly uid?: string;
     readonly type?: string;
@@ -42,11 +44,19 @@ export interface NormalizedEventDocument {
   readonly class_uid: number;
   readonly category_uid: number;
   readonly severity_id: number;
+  readonly status_id?: number;
+  /** OCSF network activity duration in milliseconds. */
+  readonly duration?: number;
   readonly time: Date;
   readonly message: string;
   readonly src_endpoint?: OcsfEndpointDocument;
   readonly dst_endpoint?: OcsfEndpointDocument;
   readonly actor?: OcsfActorDocument;
+  /** OCSF Process Activity target process; actor.process is its parent/actor. */
+  readonly process?: OcsfProcessDocument;
+  readonly query?: {
+    readonly hostname?: string;
+  };
   readonly device?: OcsfDeviceDocument;
   readonly metadata: {
     readonly version: string;

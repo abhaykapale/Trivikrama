@@ -30,6 +30,7 @@ test("maps a verified baseline OCSF event without losing source identity", () =>
     assert.equal(normalized.src_endpoint?.ip, "192.0.2.10");
     assert.equal(normalized.dst_endpoint?.hostname, "endpoint-01.example.local");
     assert.equal(normalized.actor?.user?.name, "alice");
+    assert.equal(normalized.status_id, 2);
     assert.equal(normalized.device?.hostname, "endpoint-01.example.local");
     assert.equal(normalized.ingestion.batch_id, BATCH_ID);
     assert.equal(normalized.ingestion.collector_id, COLLECTOR_ID);

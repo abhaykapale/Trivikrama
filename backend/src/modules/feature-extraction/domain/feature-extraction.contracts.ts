@@ -31,9 +31,35 @@ export const AI_FEATURE_NAMES = [
 export type AiFeatureName = (typeof AI_FEATURE_NAMES)[number];
 export type AiFeatureVector = Readonly<Record<AiFeatureName, number>>;
 
+/** Context persisted for rules/analysis but not sent to the v1 20-field model. */
+export const PROCESS_FEATURE_NAMES = [
+    "process_rarity_score",
+    "parent_child_anomaly",
+    "process_path_depth",
+    "command_line_length",
+] as const;
+
+export type ProcessFeatureName = (typeof PROCESS_FEATURE_NAMES)[number];
+export type ProcessFeatureVector = Readonly<Record<ProcessFeatureName, number>>;
+
+/** Network context persisted for rules/analysis but not sent to the v1 model. */
+export const NETWORK_FEATURE_NAMES = [
+    "is_internal_to_external",
+    "dst_port_rarity",
+    "connection_duration",
+    "dns_query_length",
+    "is_known_bad_port",
+] as const;
+
+export type NetworkFeatureName = (typeof NETWORK_FEATURE_NAMES)[number];
+export type NetworkFeatureVector = Readonly<Record<NetworkFeatureName, number>>;
+export type ExtractedFeatureVector = AiFeatureVector &
+    Partial<ProcessFeatureVector> &
+    Partial<NetworkFeatureVector>;
+
 export interface FeatureEnrichedEvent extends CreateNormalizedEventInput {
     readonly org_id: string;
-    readonly features: AiFeatureVector;
+    readonly features: ExtractedFeatureVector;
 }
 
 export interface FeatureExtractionResult {
@@ -42,8 +68,40 @@ export interface FeatureExtractionResult {
     readonly historyAppliedEvents: number;
     readonly historyFallbackEvents: number;
     readonly historyReplayHits: number;
+    readonly authenticationHistoryAppliedEvents: number;
+    readonly authenticationHistoryFallbackEvents: number;
+    readonly authenticationHistoryReplayHits: number;
+    readonly processHistoryAppliedEvents: number;
+    readonly processHistoryFallbackEvents: number;
+    readonly processHistoryReplayHits: number;
+    readonly networkHistoryAppliedEvents: number;
+    readonly networkHistoryFallbackEvents: number;
+    readonly networkHistoryReplayHits: number;
+    readonly pluginsExecuted: readonly string[];
 }
 
 export interface IFeatureExtractor {
     extract(events: readonly CreateNormalizedEventInput[]): Promise<FeatureExtractionResult>;
+}
+
+/** A named, class-aware extension executed by the feature orchestrator. */
+export interface IFeaturePlugin {
+    name(): string;
+    /** Empty means the plugin applies to every OCSF class. */
+    applicableClasses(): readonly number[];
+    extract(events: readonly FeatureEnrichedEvent[]): Promise<FeatureExtractionResult>;
+}
+
+/**
+ * Creates the exact v1 model payload and deliberately discards contextual
+ * features until a separately versioned model is trained for them.
+ */
+export function selectAiFeatureVector(
+    features: ExtractedFeatureVector,
+): AiFeatureVector {
+    return Object.freeze(
+        Object.fromEntries(
+            AI_FEATURE_NAMES.map((name) => [name, features[name]]),
+        ) as unknown as Record<AiFeatureName, number>,
+    );
 }

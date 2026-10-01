@@ -57,6 +57,16 @@ export const MONGO_COLLECTION_DEFINITIONS: readonly MongoCollectionDefinition[] 
                         description:
                             "OCSF severity (0=Unknown, 1=Info, 2=Low, 3=Medium, 4=High, 5=Critical, 6=Fatal)",
                     },
+                    status_id: {
+                        bsonType: "int",
+                        minimum: 0,
+                        description: "OCSF event outcome status identifier",
+                    },
+                    duration: {
+                        bsonType: ["int", "long", "double", "decimal"],
+                        minimum: 0,
+                        description: "OCSF network activity duration in milliseconds",
+                    },
                     time: {
                         bsonType: "date",
                         description: "Event timestamp normalized to UTC",
@@ -111,6 +121,23 @@ export const MONGO_COLLECTION_DEFINITIONS: readonly MongoCollectionDefinition[] 
                                     type: { bsonType: "string" },
                                 },
                             },
+                        },
+                    },
+                    process: {
+                        bsonType: "object",
+                        description: "Target process for OCSF Process Activity events",
+                        properties: {
+                            name: { bsonType: "string" },
+                            pid: { bsonType: "int" },
+                            cmd_line: { bsonType: "string" },
+                            path: { bsonType: "string" },
+                        },
+                    },
+                    query: {
+                        bsonType: "object",
+                        description: "OCSF DNS query object",
+                        properties: {
+                            hostname: { bsonType: "string" },
                         },
                     },
                     device: {
