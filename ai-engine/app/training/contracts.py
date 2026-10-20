@@ -89,6 +89,8 @@ class TrainingDatasetManifest(BaseModel):
 
     schema_version: Literal["ai-training-dataset-v1"] = DATASET_SCHEMA_VERSION
     feature_contract_version: Literal["v1"] = FEATURE_CONTRACT_VERSION
+    dataset_origin: Literal["mongodb_export", "simulated"] = "mongodb_export"
+    generator_version: str | None = None
     dataset_file: str = Field(min_length=1, max_length=255)
     org_id: str = Field(min_length=1, max_length=255)
     from_time: datetime
@@ -135,6 +137,10 @@ class TrainingDatasetManifest(BaseModel):
             raise ValueError("feature_count must match the v1 feature contract")
         if tuple(self.feature_names) != AI_FEATURE_NAMES:
             raise ValueError("feature_names must exactly match the ordered v1 contract")
+        if self.dataset_origin == "simulated" and not self.generator_version:
+            raise ValueError("simulated datasets must identify their generator version")
+        if self.dataset_origin == "mongodb_export" and self.generator_version is not None:
+            raise ValueError("MongoDB exports must not identify a simulated-data generator")
         return self
 
 

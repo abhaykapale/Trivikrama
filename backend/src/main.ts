@@ -5,6 +5,7 @@ import type { Server } from "node:http";
 import env from "./config/env.js";
 import {
   closeDatabases,
+  createMongoRepositories,
   createPostgresRepositories,
   createPostgresUnitOfWork,
   initializeDatabases,
@@ -14,6 +15,7 @@ import { createAuthApplicationDependencies } from "./modules/auth/composition/in
 import { createCollectorMonitoringDependencies } from "./modules/collector-monitoring/index.js";
 import type { CollectorMonitoringDependencies } from "./modules/collector-monitoring/index.js";
 import HealthService from "./modules/health/health.service.js";
+import { createIncidentQueryDependencies } from "./modules/incidents/index.js";
 import { createUserManagementDependencies } from "./modules/users/composition/index.js";
 import { ShutdownCoordinator } from "./runtime/shutdown-coordinator.js";
 import logger from "./shared/logger/index.js";
@@ -90,6 +92,7 @@ const bootstrap = async (): Promise<void> => {
 
     const healthService = new HealthService(databaseClients);
     const repositories = createPostgresRepositories(databaseClients.postgres);
+    const mongoRepositories = createMongoRepositories(databaseClients.mongodb);
     const unitOfWork = createPostgresUnitOfWork(databaseClients.postgres);
     const authApplicationDependencies = createAuthApplicationDependencies({
       knex: databaseClients.postgres,
@@ -107,6 +110,10 @@ const bootstrap = async (): Promise<void> => {
       passwordHasher: authApplicationDependencies.passwordService,
       unitOfWork,
     });
+    const incidentQueryDependencies = createIncidentQueryDependencies(
+      databaseClients.postgres,
+      mongoRepositories.normalizedEvents,
+    );
     collectorMonitoringDependencies =
       createCollectorMonitoringDependencies({
         collectorStatusRepository: repositories.collectorStatus,
@@ -147,6 +154,18 @@ const bootstrap = async (): Promise<void> => {
         updateUserUseCase: userManagementDependencies.updateUserUseCase,
         resetUserPasswordUseCase:
           userManagementDependencies.resetUserPasswordUseCase,
+      },
+      incidents: {
+        authentication: authenticationDependencies,
+        listIncidentsUseCase: incidentQueryDependencies.listIncidentsUseCase,
+        getIncidentDetailUseCase:
+          incidentQueryDependencies.getIncidentDetailUseCase,
+        getIncidentTimelineUseCase:
+          incidentQueryDependencies.getIncidentTimelineUseCase,
+        listIncidentAlertsUseCase:
+          incidentQueryDependencies.listIncidentAlertsUseCase,
+        listIncidentEventsUseCase:
+          incidentQueryDependencies.listIncidentEventsUseCase,
       },
       collectorMonitoring: {
         authentication: authenticationDependencies,

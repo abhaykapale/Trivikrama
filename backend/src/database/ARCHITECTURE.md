@@ -131,6 +131,19 @@ flowchart TD
 - [`transactions/`](./transactions): `PostgresUnitOfWork` and transaction primitives.
 - [`verification/`](./verification): database readiness checks used during startup.
 - [`maintenance/`](./maintenance): maintenance tasks for Postgres operations.
-- [`seeds/`](./seeds): baseline and development data seeding.
+- [`seeds/`](./seeds): baseline and development data seeding. Development
+  seeding commits the PostgreSQL transaction first and then idempotently
+  reconciles the matching MongoDB normalized events and AI results. A rerun
+  safely repairs a partial cross-store seed, and status reports whether all
+  deterministic MongoDB demo records are present.
 - [`health.ts`](./health.ts): aggregated health summary for database services.
+
+## Incident query indexes
+
+INC-02A adds concurrent PostgreSQL indexes that begin with `org_id` for each
+allowlisted incident-list sort, plus GIN trigram indexes for title,
+description, and primary-entity search. The incident query adapter always
+combines these paths with a trusted organization predicate. The migration is
+non-transactional only because PostgreSQL requires that for
+`CREATE INDEX CONCURRENTLY`.
 

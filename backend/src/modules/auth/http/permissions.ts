@@ -5,6 +5,7 @@ export type Permission =
   | "users.manage"
   | "rules.create"
   | "rules.delete"
+  | "incidents.view"
   | "incidents.assign";
 
 const ROLE_PERMISSIONS: Record<AuthRole, ReadonlySet<Permission>> = {
@@ -13,14 +14,16 @@ const ROLE_PERMISSIONS: Record<AuthRole, ReadonlySet<Permission>> = {
     "users.manage",
     "rules.create",
     "rules.delete",
+    "incidents.view",
     "incidents.assign",
   ]),
   security_engineer: new Set([
     "audit.view",
     "rules.create",
+    "incidents.view",
     "incidents.assign",
   ]),
-  soc_analyst: new Set([]),
+  soc_analyst: new Set(["incidents.view"]),
 };
 
 export function roleHasPermission(

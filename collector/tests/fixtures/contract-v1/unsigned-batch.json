@@ -1,0 +1,57 @@
+{
+  "batch_id": "123e4567-e89b-42d3-a456-426614174000",
+  "collector_id": "collector-test-01",
+  "contract_version": "1.0.0",
+  "created_at": "2026-08-29T12:44:43Z",
+  "event_count": 1,
+  "events": [
+    {
+      "content_type": "application/json",
+      "event_id": "simulated-host-01:auth:000001",
+      "event_time": "2026-08-29T12:44:40Z",
+      "ocsf": {
+        "category_uid": 3,
+        "class_uid": 3002,
+        "message": "Simulated failed login",
+        "metadata": {
+          "product": {
+            "name": "Trivikrama Collector"
+          },
+          "profiles": [
+            "trivikrama.simulated-auth"
+          ],
+          "version": "1.1.0"
+        },
+        "severity_id": 3,
+        "src_endpoint": {
+          "ip": "192.0.2.10"
+        },
+        "status_id": 2,
+        "time": 1788007480000,
+        "type_uid": 300202,
+        "user": {
+          "name": "test-user"
+        }
+      },
+      "raw_payload": "{\"endpoint_id\":\"simulated-host-01\",\"event_type\":\"login_failed\",\"source_ip\":\"192.0.2.10\",\"timestamp\":\"2026-08-29T12:44:40Z\",\"username\":\"test-user\"}",
+      "received_time": "2026-08-29T12:44:41Z",
+      "source": {
+        "adapter_type": "file_drop",
+        "original_endpoint_id": "simulated-host-01",
+        "position": {
+          "file": "simulated-auth.jsonl",
+          "offset": 0
+        },
+        "source_id": "simulated-auth-input",
+        "upstream_event_id": "auth:000001",
+        "upstream_sender_id": "simulator-01"
+      }
+    }
+  ],
+  "integrity": {
+    "algorithm": "HMAC-SHA256",
+    "key_id": "collector-test-key-01"
+  },
+  "message_type": "event_batch",
+  "ocsf_schema_version": "1.1.0"
+}

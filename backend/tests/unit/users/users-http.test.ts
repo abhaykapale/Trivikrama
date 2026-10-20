@@ -96,6 +96,9 @@ const TEST_CONFIG: AppConfig = {
     timeoutMs: 5000,
     batchSize: 100,
     threshold: 0.65,
+    circuitFailureThreshold: 5,
+    circuitCooldownMs: 60000,
+    circuitSuccessThreshold: 2,
   },
   frontend: {
     url: "http://localhost:3001",

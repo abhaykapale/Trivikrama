@@ -5,6 +5,8 @@ import {
   type CreateAuthRouterDependencies,
   createCollectorMonitoringRouter,
   type CreateCollectorMonitoringRouterDependencies,
+  createIncidentQueryRouter,
+  type CreateIncidentQueryRouterDependencies,
   createUsersRouter,
   type CreateUsersRouterDependencies,
 } from "./index.js";
@@ -18,6 +20,7 @@ export interface AppDependencies {
   readonly auth?: CreateAuthRouterDependencies;
   readonly appConfig?: AppConfig;
   readonly collectorMonitoring?: CreateCollectorMonitoringRouterDependencies;
+  readonly incidents?: CreateIncidentQueryRouterDependencies;
   readonly users?: CreateUsersRouterDependencies;
 }
 
@@ -26,6 +29,7 @@ export function createApp({
   auth,
   appConfig = config,
   collectorMonitoring,
+  incidents,
   users,
 }: AppDependencies): Express {
   const app = express();
@@ -42,6 +46,13 @@ export function createApp({
     app.use(
       `${appConfig.server.apiPrefix}/collector`,
       createCollectorMonitoringRouter(collectorMonitoring),
+    );
+  }
+
+  if (incidents !== undefined) {
+    app.use(
+      `${appConfig.server.apiPrefix}/incidents`,
+      createIncidentQueryRouter(incidents),
     );
   }
 

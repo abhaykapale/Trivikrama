@@ -68,6 +68,25 @@ test("ignores temporary, malformed, and symlink candidates without following the
     }
 });
 
+test("ignores heartbeat.json so only the heartbeat consumer handles it", async (context) => {
+    const fixture = await createFixture(context);
+    const heartbeatPath = join(fixture.incomingCollectorDirectory, "heartbeat.json");
+
+    await writeFile(heartbeatPath, '{"message_type":"heartbeat"}', "utf8");
+
+    const report = await fixture.intake.claimPublishedBatches();
+
+    assert.equal(report.claimed.length, 0);
+    assert.equal(report.quarantined.length, 0);
+    assert.deepEqual(report.ignored, [
+        {
+            relativePath: join("incoming", COLLECTOR_ID, "heartbeat.json"),
+            reason: "TEMPORARY_OR_UNRECOGNIZED_FILE",
+        },
+    ]);
+    assert.equal(await readFile(heartbeatPath, "utf8"), '{"message_type":"heartbeat"}');
+});
+
 test("quarantines an oversized batch before it is read or parsed", async (context) => {
     const fixture = await createFixture(context);
     const publishedPath = join(

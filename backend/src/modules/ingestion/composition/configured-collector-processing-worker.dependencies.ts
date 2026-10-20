@@ -1,3 +1,5 @@
+import { randomUUID } from "node:crypto";
+
 import {
     closeMongoDb,
     connectMongoDb,
@@ -16,6 +18,7 @@ import {
     createRedisClient,
 } from "../../../database/redis/client.js";
 import { createPostgresRepositories } from "../../../database/repositories/postgres-repository.factory.js";
+import { createPostgresUnitOfWork } from "../../../database/transactions/postgres-unit-of-work.js";
 import { createMongoRepositories } from "../../../database/repositories/mongodb/mongo-repository.factory.js";
 import {
     createOrganizationRuleEngine,
@@ -37,6 +40,18 @@ import {
     RedisNetworkFeatureStore,
     RedisTemporalFrequencyFeatureStore,
 } from "../../feature-extraction/index.js";
+import {
+    DetectAndPersistAiResultsService,
+    HttpAiClient,
+    type HttpAiClientConfiguration,
+} from "../../analysis/index.js";
+import {
+    IncidentNotificationDispatcher,
+    IncidentNotificationDispatcherRunner,
+    PostgresIncidentCorrelationUnitOfWork,
+    RedisIncidentNotificationPublisher,
+    TransactionalIncidentCorrelator,
+} from "../../incidents/index.js";
 import { ArchiveVerifiedCollectorBatchService } from "../application/archive-verified-collector-batch.service.js";
 import { HandleCollectorProcessingJobService } from "../application/handle-collector-processing-job.service.js";
 import { ProcessCollectorProcessingJobService } from "../application/process-collector-processing-job.service.js";
@@ -56,6 +71,7 @@ export interface CollectorProcessingWorkerRuntimeConfiguration {
     readonly mongo: MongoDbClientOptions;
     readonly postgres: PostgresClientOptions;
     readonly collectorTrust: CollectorVerificationRuntimeConfiguration;
+    readonly ai: HttpAiClientConfiguration;
 }
 
 export interface ConfiguredCollectorProcessingWorker {
@@ -76,6 +92,7 @@ export async function createConfiguredCollectorProcessingWorker(
         keyPrefix: configuration.redisKeyPrefix,
     });
     let worker: BullMqCollectorProcessingWorker | undefined;
+    let notificationRunner: IncidentNotificationDispatcherRunner | undefined;
 
     try {
         await connectMongoDb(mongoClient, configuration.mongo);
@@ -160,6 +177,25 @@ export async function createConfiguredCollectorProcessingWorker(
                 alerts: postgresRepositories.alerts,
             }),
         });
+        const aiDetection = new DetectAndPersistAiResultsService({
+            organizationId: configuration.organizationId,
+            client: new HttpAiClient(configuration.ai),
+            results: mongoRepositories.aiResults,
+            now: () => new Date(),
+        });
+        const incidentCorrelation = new TransactionalIncidentCorrelator({
+            unitOfWork: new PostgresIncidentCorrelationUnitOfWork(
+                createPostgresUnitOfWork(postgresClient),
+            ),
+        });
+        const notificationDispatcher = new IncidentNotificationDispatcher({
+            outbox: postgresRepositories.incidentNotificationOutbox,
+            publisher: new RedisIncidentNotificationPublisher(redisClient),
+            owner: `collector-processing-worker:${process.pid}:${randomUUID()}`,
+        });
+        notificationRunner = new IncidentNotificationDispatcherRunner(
+            notificationDispatcher,
+        );
 
         const processor = new ProcessCollectorProcessingJobService({
             reader,
@@ -169,6 +205,8 @@ export async function createConfiguredCollectorProcessingWorker(
             normalizedEventPersistence,
             featureExtractor,
             detection,
+            aiDetection,
+            incidentCorrelation,
             now: () => new Date(),
         });
 
@@ -187,26 +225,33 @@ export async function createConfiguredCollectorProcessingWorker(
         );
 
         await worker.waitUntilReady();
+        notificationRunner.start();
         const startedWorker = worker;
+        const startedNotificationRunner = notificationRunner;
 
         return {
             worker: startedWorker,
 
             async close(): Promise<void> {
-                try {
-                    await startedWorker.close();
-                } finally {
-                    await Promise.allSettled([
-                        closeMongoDb(mongoClient),
-                        closePostgres(postgresClient),
-                        closeRedis(redisClient),
-                    ]);
-                }
+                await Promise.allSettled([
+                    startedNotificationRunner.close(),
+                    startedWorker.close(),
+                ]);
+                await Promise.allSettled([
+                    closeMongoDb(mongoClient),
+                    closePostgres(postgresClient),
+                    closeRedis(redisClient),
+                ]);
             },
         };
     } catch (error) {
         await Promise.allSettled([
             worker === undefined ? Promise.resolve() : worker.close(),
+            notificationRunner === undefined
+                ? Promise.resolve()
+                : notificationRunner.close(),
+        ]);
+        await Promise.allSettled([
             closeMongoDb(mongoClient),
             closePostgres(postgresClient),
             closeRedis(redisClient),

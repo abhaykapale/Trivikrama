@@ -29,6 +29,11 @@ export interface AiResultDocument {
 
 export type CreateAiResultInput = AiResultDocument;
 
+export interface CreateAiResultsIfAbsentResult {
+  readonly insertedCount: number;
+  readonly existingCount: number;
+}
+
 export interface AiResultListFilters extends MongoPaginationOptions {
   readonly orgId?: string;
   readonly eventId?: string;
@@ -46,6 +51,9 @@ export interface AiResultListFilters extends MongoPaginationOptions {
 export interface IAiResultRepository {
   create(input: CreateAiResultInput): Promise<AiResultDocument>;
   createMany(inputs: readonly CreateAiResultInput[]): Promise<number>;
+  createManyIfAbsent(
+    inputs: readonly CreateAiResultInput[],
+  ): Promise<CreateAiResultsIfAbsentResult>;
   findLatestByEventId(eventId: string): Promise<AiResultDocument | null>;
   list(filters?: AiResultListFilters): Promise<MongoPageResult<AiResultDocument>>;
   listAnomalies(filters?: Omit<AiResultListFilters, "isAnomaly">): Promise<MongoPageResult<AiResultDocument>>;

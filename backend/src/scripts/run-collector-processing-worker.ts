@@ -22,6 +22,15 @@ async function main(): Promise<void> {
             applicationName: "trivikrama-collector-processing-worker",
         },
         collectorTrust: env.collector.trust,
+        ai: {
+            baseUrl: env.ai.engineUrl,
+            timeoutMs: env.ai.timeoutMs,
+            batchSize: env.ai.batchSize,
+            threshold: env.ai.threshold,
+            circuitFailureThreshold: env.ai.circuitFailureThreshold,
+            circuitCooldownMs: env.ai.circuitCooldownMs,
+            circuitSuccessThreshold: env.ai.circuitSuccessThreshold,
+        },
     });
 
     logger.info("Collector processing worker is ready and waiting for BullMQ jobs.");

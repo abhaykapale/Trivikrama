@@ -87,6 +87,11 @@ class RecordingJobHandler {
             generatedAlerts: 0,
             insertedAlerts: 0,
             alreadyPresentAlerts: 0,
+            aiEventsScored: 1,
+            aiAnomaliesDetected: 0,
+            insertedAiResults: 1,
+            alreadyPresentAiResults: 0,
+            aiUsedFallback: false,
         };
     }
 }

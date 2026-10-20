@@ -1,6 +1,7 @@
 import type { CreateNormalizedEventInput } from "../../../database/repositories/mongodb/normalized-event.repository.js";
 import type { DetectionEvent, IRuleEngine, RuleEvaluationStats } from "../domain/rule-engine.contracts.js";
 import type { PersistRuleAlertsService } from "./persist-rule-alerts.service.js";
+import type { AlertRecord } from "../../../database/repositories/alerts/alert.repository.js";
 
 export interface EvaluateAndPersistRuleAlertsDependencies {
   readonly organizationId: string;
@@ -12,6 +13,7 @@ export interface EvaluateAndPersistRuleAlertsResult {
   readonly evaluation: RuleEvaluationStats;
   readonly insertedAlerts: number;
   readonly alreadyPresentAlerts: number;
+  readonly records?: readonly AlertRecord[];
 }
 
 /**
@@ -43,6 +45,7 @@ export class EvaluateAndPersistRuleAlertsService {
       evaluation: evaluation.stats,
       insertedAlerts: persistence.insertedCount,
       alreadyPresentAlerts: persistence.alreadyPresentCount,
+      records: persistence.records,
     };
   }
 

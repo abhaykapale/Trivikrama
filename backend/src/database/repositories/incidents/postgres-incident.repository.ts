@@ -21,6 +21,12 @@ import type {
   IncidentStatusTransitionInput,
   UpdateIncidentInput,
 } from "./incident.repository.js";
+import {
+  normalizeIncidentEntities,
+  normalizeIncidentEntity,
+  prepareIncidentCorrelationCandidateInput,
+} from "../../../modules/incidents/domain/incident-entity.js";
+import type { IncidentCorrelationCandidateInput } from "../../../modules/incidents/domain/incident.contracts.js";
 
 interface IncidentRow {
   readonly id: string;
@@ -32,7 +38,7 @@ interface IncidentRow {
   readonly source: IncidentRecord["source"];
   readonly score_breakdown: unknown;
   readonly primary_entity: string | null;
-  readonly entity_type: string | null;
+  readonly entity_type: IncidentRecord["entityType"];
   readonly entities: unknown;
   readonly kill_chain_stages: unknown;
   readonly alert_count: number;
@@ -71,9 +77,11 @@ export class PostgresIncidentRepository implements IIncidentRepository {
       risk_score: input.riskScore ?? 0,
       source: input.source ?? "rule",
       score_breakdown: toJsonb(input.scoreBreakdown ?? {}),
-      primary_entity: input.primaryEntity ?? null,
-      entity_type: input.entityType ?? null,
-      entities: toJsonb(input.entities ?? []),
+      ...normalizeIncidentFields(
+        input.primaryEntity ?? null,
+        input.entityType ?? null,
+        input.entities ?? [],
+      ),
       kill_chain_stages: toJsonb(input.killChainStages ?? []),
       alert_count: input.alertCount ?? 0,
       event_count: input.eventCount ?? 0,
@@ -85,13 +93,66 @@ export class PostgresIncidentRepository implements IIncidentRepository {
       org_id: input.orgId ? ensureNonBlank(input.orgId, "orgId") : DEFAULT_ORG_ID,
     };
 
-    const [row] = await this.db<IncidentRow>(INCIDENTS_TABLE).insert(insertable).returning("*");
+    const [row] = await this.db<IncidentRow>(INCIDENTS_TABLE)
+      .insert(insertable)
+      .returning("*");
     return mapIncidentRow(row);
   }
 
   public async findById(id: string): Promise<IncidentRecord | null> {
-    const row = await this.baseQuery().where("id", ensureNonBlank(id, "id")).first<IncidentRow>();
+    const row = await this.baseQuery()
+      .where("id", ensureNonBlank(id, "id"))
+      .first<IncidentRow>();
     return row ? mapIncidentRow(row) : null;
+  }
+
+  public async findOpenCandidates(
+    input: IncidentCorrelationCandidateInput,
+  ): Promise<readonly IncidentRecord[]> {
+    const { orgId, entities, activeAfter, limit } =
+      prepareIncidentCorrelationCandidateInput(input);
+    if (entities.length === 0) {
+      return [];
+    }
+
+    const rows = await this.baseQuery()
+      .where("org_id", orgId)
+      .whereIn("status", ["open", "investigating"])
+      .whereNotNull("last_event_at")
+      .where("last_event_at", ">=", activeAfter)
+      .andWhere((builder) => {
+        for (const entity of entities) {
+          builder.orWhere((candidate) => {
+            candidate
+              .where("entity_type", entity.type)
+              .where("primary_entity", entity.value);
+          });
+        }
+      })
+      .orderBy("last_event_at", "desc")
+      .orderBy("risk_score", "desc")
+      .orderBy("created_at", "asc")
+      .orderBy("id", "asc")
+      .limit(limit);
+
+    return rows.map(mapIncidentRow);
+  }
+
+  public async findOpenCandidatesForUpdate(
+    input: IncidentCorrelationCandidateInput,
+  ): Promise<readonly IncidentRecord[]> {
+    const { orgId, entities, activeAfter, limit } =
+      prepareIncidentCorrelationCandidateInput(input);
+    if (entities.length === 0) return [];
+
+    const rows = await this.candidateQuery(orgId, entities, activeAfter)
+      .orderBy("last_event_at", "desc")
+      .orderBy("risk_score", "desc")
+      .orderBy("created_at", "asc")
+      .orderBy("id", "asc")
+      .limit(limit)
+      .forUpdate();
+    return rows.map(mapIncidentRow);
   }
 
   public async list(filters: IncidentListFilters = {}): Promise<PageResult<IncidentRecord>> {
@@ -163,10 +224,27 @@ export class PostgresIncidentRepository implements IIncidentRepository {
     }
     if (input.source !== undefined) updates.source = input.source;
     if (input.scoreBreakdown !== undefined) updates.score_breakdown = toJsonb(input.scoreBreakdown);
-    if (input.primaryEntity !== undefined) updates.primary_entity = input.primaryEntity;
-    if (input.entityType !== undefined) updates.entity_type = input.entityType;
-    if (input.entities !== undefined) updates.entities = toJsonb(input.entities);
-    if (input.killChainStages !== undefined) updates.kill_chain_stages = toJsonb(input.killChainStages);
+    if (
+      input.primaryEntity !== undefined ||
+      input.entityType !== undefined ||
+      input.entities !== undefined
+    ) {
+      const current = await this.findById(id);
+      if (current === null) return null;
+      Object.assign(
+        updates,
+        normalizeIncidentFields(
+          input.primaryEntity === undefined
+            ? current.primaryEntity
+            : input.primaryEntity,
+          input.entityType === undefined ? current.entityType : input.entityType,
+          input.entities === undefined ? current.entities : input.entities,
+        ),
+      );
+    }
+    if (input.killChainStages !== undefined) {
+      updates.kill_chain_stages = toJsonb(input.killChainStages);
+    }
     if (input.alertCount !== undefined) {
       validateNonNegativeInteger(input.alertCount, "alertCount");
       updates.alert_count = input.alertCount;
@@ -197,7 +275,10 @@ export class PostgresIncidentRepository implements IIncidentRepository {
     return this.update(id, { assignedTo });
   }
 
-  public async transitionStatus(id: string, input: IncidentStatusTransitionInput): Promise<IncidentRecord | null> {
+  public async transitionStatus(
+    id: string,
+    input: IncidentStatusTransitionInput,
+  ): Promise<IncidentRecord | null> {
     const now = new Date();
     const updates: UpdateIncidentInput = {
       status: input.status,
@@ -210,6 +291,27 @@ export class PostgresIncidentRepository implements IIncidentRepository {
 
   private baseQuery() {
     return this.db<IncidentRow>(INCIDENTS_TABLE).select("*");
+  }
+
+  private candidateQuery(
+    orgId: string,
+    entities: IncidentCorrelationCandidateInput["entities"],
+    activeAfter: Date,
+  ) {
+    return this.baseQuery()
+      .where("org_id", orgId)
+      .whereIn("status", ["open", "investigating"])
+      .whereNotNull("last_event_at")
+      .where("last_event_at", ">=", activeAfter)
+      .andWhere((builder) => {
+        for (const entity of entities) {
+          builder.orWhere((candidate) => {
+            candidate
+              .where("entity_type", entity.type)
+              .where("primary_entity", entity.value);
+          });
+        }
+      });
   }
 }
 
@@ -232,7 +334,11 @@ function applyScalarOrArrayFilter<TValue extends string>(
   query.where(column, value);
 }
 
-function resolveResolvedAt(status: IncidentStatus, explicitValue: Date | null | undefined, now: Date): Date | null {
+function resolveResolvedAt(
+  status: IncidentStatus,
+  explicitValue: Date | null | undefined,
+  now: Date,
+): Date | null {
   if (explicitValue !== undefined) {
     return explicitValue;
   }
@@ -240,7 +346,11 @@ function resolveResolvedAt(status: IncidentStatus, explicitValue: Date | null | 
   return status === "resolved" || status === "closed" ? now : null;
 }
 
-function resolveClosedAt(status: IncidentStatus, explicitValue: Date | null | undefined, now: Date): Date | null {
+function resolveClosedAt(
+  status: IncidentStatus,
+  explicitValue: Date | null | undefined,
+  now: Date,
+): Date | null {
   if (explicitValue !== undefined) {
     return explicitValue;
   }
@@ -260,6 +370,35 @@ function validateNonNegativeInteger(value: number, fieldName: string): void {
   }
 }
 
+function normalizeIncidentFields(
+  primaryEntity: string | null,
+  entityType: IncidentRecord["entityType"],
+  entities: IncidentRecord["entities"],
+): Record<string, unknown> {
+  if ((primaryEntity === null) !== (entityType === null)) {
+    throw new Error(
+      "primaryEntity and entityType must either both be set or both be null.",
+    );
+  }
+
+  const normalizedEntities = normalizeIncidentEntities(entities);
+  if (primaryEntity === null || entityType === null) {
+    return {
+      primary_entity: null,
+      entity_type: null,
+      entities: toJsonb(normalizedEntities),
+    };
+  }
+
+  const primary = normalizeIncidentEntity({ type: entityType, value: primaryEntity });
+  const completeEntities = normalizeIncidentEntities([primary, ...normalizedEntities]);
+  return {
+    primary_entity: primary.value,
+    entity_type: primary.type,
+    entities: toJsonb(completeEntities),
+  };
+}
+
 function mapIncidentRow(row: IncidentRow): IncidentRecord {
   return {
     id: row.id,
@@ -272,8 +411,12 @@ function mapIncidentRow(row: IncidentRow): IncidentRecord {
     scoreBreakdown: parseJsonObject(row.score_breakdown),
     primaryEntity: row.primary_entity,
     entityType: row.entity_type,
-    entities: parseJsonArray(row.entities),
-    killChainStages: parseJsonArray(row.kill_chain_stages),
+    entities: parseJsonArray(
+      row.entities,
+    ) as unknown as IncidentRecord["entities"],
+    killChainStages: parseJsonArray(
+      row.kill_chain_stages,
+    ) as unknown as IncidentRecord["killChainStages"],
     alertCount: Number(row.alert_count),
     eventCount: Number(row.event_count),
     assignedTo: row.assigned_to,

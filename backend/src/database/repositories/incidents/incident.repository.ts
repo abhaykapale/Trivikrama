@@ -1,8 +1,24 @@
 import type { PageResult, PaginationOptions, TransactionClient } from "../common/repository.types.js";
+import type {
+  IncidentCorrelationCandidateInput,
+  IncidentEntity,
+  IncidentEntityType,
+  IncidentKillChainStage,
+  IncidentScoreBreakdown,
+  IncidentSeverity,
+  IncidentSource,
+  IncidentStatus,
+} from "../../../modules/incidents/domain/incident.contracts.js";
 
-export type IncidentStatus = "open" | "investigating" | "resolved" | "closed";
-export type IncidentSeverity = "critical" | "high" | "medium" | "low" | "informational";
-export type IncidentSource = "rule" | "ai" | "both";
+export type {
+  IncidentEntity,
+  IncidentEntityType,
+  IncidentKillChainStage,
+  IncidentScoreBreakdown,
+  IncidentSeverity,
+  IncidentSource,
+  IncidentStatus,
+} from "../../../modules/incidents/domain/incident.contracts.js";
 
 export interface IncidentRecord {
   readonly id: string;
@@ -12,11 +28,11 @@ export interface IncidentRecord {
   readonly severity: IncidentSeverity;
   readonly riskScore: number;
   readonly source: IncidentSource;
-  readonly scoreBreakdown: Record<string, unknown>;
+  readonly scoreBreakdown: IncidentScoreBreakdown;
   readonly primaryEntity: string | null;
-  readonly entityType: string | null;
-  readonly entities: readonly unknown[];
-  readonly killChainStages: readonly unknown[];
+  readonly entityType: IncidentEntityType | null;
+  readonly entities: readonly IncidentEntity[];
+  readonly killChainStages: readonly IncidentKillChainStage[];
   readonly alertCount: number;
   readonly eventCount: number;
   readonly assignedTo: string | null;
@@ -37,11 +53,11 @@ export interface CreateIncidentInput {
   readonly severity?: IncidentSeverity;
   readonly riskScore?: number;
   readonly source?: IncidentSource;
-  readonly scoreBreakdown?: Record<string, unknown>;
+  readonly scoreBreakdown?: IncidentScoreBreakdown;
   readonly primaryEntity?: string | null;
-  readonly entityType?: string | null;
-  readonly entities?: readonly unknown[];
-  readonly killChainStages?: readonly unknown[];
+  readonly entityType?: IncidentEntityType | null;
+  readonly entities?: readonly IncidentEntity[];
+  readonly killChainStages?: readonly IncidentKillChainStage[];
   readonly alertCount?: number;
   readonly eventCount?: number;
   readonly assignedTo?: string | null;
@@ -59,11 +75,11 @@ export interface UpdateIncidentInput {
   readonly severity?: IncidentSeverity;
   readonly riskScore?: number;
   readonly source?: IncidentSource;
-  readonly scoreBreakdown?: Record<string, unknown>;
+  readonly scoreBreakdown?: IncidentScoreBreakdown;
   readonly primaryEntity?: string | null;
-  readonly entityType?: string | null;
-  readonly entities?: readonly unknown[];
-  readonly killChainStages?: readonly unknown[];
+  readonly entityType?: IncidentEntityType | null;
+  readonly entities?: readonly IncidentEntity[];
+  readonly killChainStages?: readonly IncidentKillChainStage[];
   readonly alertCount?: number;
   readonly eventCount?: number;
   readonly assignedTo?: string | null;
@@ -80,7 +96,7 @@ export interface IncidentListFilters extends PaginationOptions {
   readonly source?: IncidentSource | readonly IncidentSource[];
   readonly assignedTo?: string | null;
   readonly primaryEntity?: string;
-  readonly entityType?: string;
+  readonly entityType?: IncidentEntityType;
   readonly minRiskScore?: number;
   readonly createdFrom?: Date;
   readonly createdTo?: Date;
@@ -97,6 +113,12 @@ export interface IIncidentRepository {
   withTransaction(transaction: TransactionClient): IIncidentRepository;
   create(input: CreateIncidentInput): Promise<IncidentRecord>;
   findById(id: string): Promise<IncidentRecord | null>;
+  findOpenCandidates(
+    input: IncidentCorrelationCandidateInput,
+  ): Promise<readonly IncidentRecord[]>;
+  findOpenCandidatesForUpdate(
+    input: IncidentCorrelationCandidateInput,
+  ): Promise<readonly IncidentRecord[]>;
   list(filters?: IncidentListFilters): Promise<PageResult<IncidentRecord>>;
   update(id: string, input: UpdateIncidentInput): Promise<IncidentRecord | null>;
   assign(id: string, assignedTo: string | null): Promise<IncidentRecord | null>;

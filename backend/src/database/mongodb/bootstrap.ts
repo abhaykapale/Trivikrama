@@ -369,6 +369,11 @@ export const MONGO_COLLECTION_DEFINITIONS: readonly MongoCollectionDefinition[] 
         indexes: [
             { name: "idx_ai_event_id", keys: { event_id: 1 } },
             {
+                name: "idx_ai_event_model_identity",
+                keys: { event_id: 1, model_name: 1, model_version: 1 },
+                unique: true,
+            },
+            {
                 name: "idx_ai_anomaly_score",
                 keys: { anomaly_score: -1, created_at: -1 },
             },

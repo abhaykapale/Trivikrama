@@ -46,10 +46,18 @@ export interface DeleteIncidentEventLinkInput {
   readonly eventTime: Date;
 }
 
+export interface CreateIncidentEventsIfAbsentResult {
+  readonly insertedCount: number;
+  readonly existingCount: number;
+}
+
 export interface IIncidentEventRepository {
   withTransaction(transaction: TransactionClient): IIncidentEventRepository;
   create(input: CreateIncidentEventInput): Promise<IncidentEventRecord>;
   createMany(inputs: readonly CreateIncidentEventInput[]): Promise<readonly IncidentEventRecord[]>;
+  createManyIfAbsent(
+    inputs: readonly CreateIncidentEventInput[],
+  ): Promise<CreateIncidentEventsIfAbsentResult>;
   findById(id: string): Promise<IncidentEventRecord | null>;
   list(filters?: IncidentEventListFilters): Promise<PageResult<IncidentEventRecord>>;
   listByIncident(incidentId: string, filters?: PaginationOptions): Promise<PageResult<IncidentEventRecord>>;

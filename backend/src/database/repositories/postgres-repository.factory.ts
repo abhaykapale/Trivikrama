@@ -12,6 +12,8 @@ import type { IConfigurationRepository } from "./configuration/index.js";
 import { PostgresConfigurationRepository } from "./configuration/index.js";
 import type { IIncidentEventRepository } from "./incident-events/index.js";
 import { PostgresIncidentEventRepository } from "./incident-events/index.js";
+import type { IIncidentNotificationOutboxRepository } from "./incident-notification-outbox/index.js";
+import { PostgresIncidentNotificationOutboxRepository } from "./incident-notification-outbox/index.js";
 import type { IIncidentNoteRepository } from "./incident-notes/index.js";
 import { PostgresIncidentNoteRepository } from "./incident-notes/index.js";
 import type { IIncidentRepository } from "./incidents/index.js";
@@ -38,6 +40,7 @@ export const POSTGRES_REPOSITORY_NAMES = [
   "alerts",
   "incidentNotes",
   "incidentEvents",
+  "incidentNotificationOutbox",
 ] as const;
 
 export type PostgresRepositoryName = (typeof POSTGRES_REPOSITORY_NAMES)[number];
@@ -55,6 +58,7 @@ export interface RelationalRepositories {
   readonly alerts: IAlertRepository;
   readonly incidentNotes: IIncidentNoteRepository;
   readonly incidentEvents: IIncidentEventRepository;
+  readonly incidentNotificationOutbox: IIncidentNotificationOutboxRepository;
 }
 
 export type PostgresRepositories = RelationalRepositories;
@@ -73,6 +77,7 @@ export function createPostgresRepositories(client: PostgresClient): PostgresRepo
     alerts: new PostgresAlertRepository(client),
     incidentNotes: new PostgresIncidentNoteRepository(client),
     incidentEvents: new PostgresIncidentEventRepository(client),
+    incidentNotificationOutbox: new PostgresIncidentNotificationOutboxRepository(client),
   };
 }
 
@@ -92,6 +97,7 @@ export function createTransactionalPostgresRepositories(
     alerts: new PostgresAlertRepository(transaction),
     incidentNotes: new PostgresIncidentNoteRepository(transaction),
     incidentEvents: new PostgresIncidentEventRepository(transaction),
+    incidentNotificationOutbox: new PostgresIncidentNotificationOutboxRepository(transaction),
   };
 }
 
@@ -112,6 +118,8 @@ export function bindPostgresRepositoriesToTransaction(
     alerts: repositories.alerts.withTransaction(transaction),
     incidentNotes: repositories.incidentNotes.withTransaction(transaction),
     incidentEvents: repositories.incidentEvents.withTransaction(transaction),
+    incidentNotificationOutbox:
+      repositories.incidentNotificationOutbox.withTransaction(transaction),
   };
 }
 

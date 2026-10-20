@@ -1,0 +1,30 @@
+{
+  "collector_id": "collector-test-01",
+  "collector_version": "0.8.0",
+  "configuration_version": "test-config-v1",
+  "contract_version": "1.0.0",
+  "integrity": {
+    "algorithm": "HMAC-SHA256",
+    "key_id": "collector-test-key-01",
+    "value": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+  },
+  "message_type": "heartbeat",
+  "metrics": {
+    "cpu_percent": 12.5,
+    "disk_available_bytes": 1073741824,
+    "events_lost_best_effort": 0,
+    "events_published": 10,
+    "events_received": 11,
+    "events_rejected": 1,
+    "last_batch_id": "123e4567-e89b-42d3-a456-426614174000",
+    "memory_bytes": 67108864,
+    "outbox_batches": 0,
+    "outbox_bytes": 0,
+    "queue_bytes": 0,
+    "queue_events": 0
+  },
+  "sequence": 7,
+  "started_at": "2026-08-29T12:00:00Z",
+  "status": "online",
+  "timestamp": "2026-08-29T12:44:43Z"
+}

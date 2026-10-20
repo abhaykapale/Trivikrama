@@ -31,6 +31,7 @@ test("evaluates trusted normalized events and persists generated alerts", async 
     evaluation: engine.result.stats,
     insertedAlerts: 1,
     alreadyPresentAlerts: 0,
+    records: [],
   });
 });
 

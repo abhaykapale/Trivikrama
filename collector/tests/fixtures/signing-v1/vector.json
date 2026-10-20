@@ -1,0 +1,10 @@
+{
+  "canonicalization": "RFC8785",
+  "hmac": "HMAC-SHA256",
+  "key_id": "collector-test-key-01",
+  "secret_base64url": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+  "secret_bytes": 48,
+  "signing_domain": "TRIVIKRAMA-COLLECTOR-CONTRACT-V1\n",
+  "hmac_hex": "162519121b6367622672fded126729bc8b627df6803fc835ce031483ffcc4982",
+  "signature_base64url": "FiUZEhtjZ2Imcv3tEmcpvItiffaAP8g1zgMUg__MSYI"
+}

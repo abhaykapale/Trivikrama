@@ -11,6 +11,7 @@ export * from "./incidents/index.js";
 export * from "./alerts/index.js";
 export * from "./incident-notes/index.js";
 export * from "./incident-events/index.js";
+export * from "./incident-notification-outbox/index.js";
 export * from "./postgres-repository.factory.js";
 export * from "./mongodb/index.js";
 

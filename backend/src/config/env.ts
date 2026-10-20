@@ -91,6 +91,9 @@ const envSchema = z.object({
     AI_TIMEOUT: z.coerce.number().int().positive().default(5000),
     AI_BATCH_SIZE: z.coerce.number().int().positive().default(100),
     AI_THRESHOLD: z.coerce.number().min(0).max(1).default(0.65),
+    AI_CIRCUIT_FAILURE_THRESHOLD: z.coerce.number().int().positive().default(5),
+    AI_CIRCUIT_COOLDOWN_MS: z.coerce.number().int().positive().default(60000),
+    AI_CIRCUIT_SUCCESS_THRESHOLD: z.coerce.number().int().positive().default(2),
 
     FRONTEND_URL: z.string().url().default("http://localhost:3001"),
 
@@ -233,6 +236,9 @@ export function loadEnvironmentConfig(
           timeoutMs: env.AI_TIMEOUT,
           batchSize: env.AI_BATCH_SIZE,
           threshold: env.AI_THRESHOLD,
+          circuitFailureThreshold: env.AI_CIRCUIT_FAILURE_THRESHOLD,
+          circuitCooldownMs: env.AI_CIRCUIT_COOLDOWN_MS,
+          circuitSuccessThreshold: env.AI_CIRCUIT_SUCCESS_THRESHOLD,
       },
 
       frontend: {

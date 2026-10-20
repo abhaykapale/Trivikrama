@@ -10,6 +10,7 @@ import {
 } from "../../../src/modules/ingestion/index.js";
 
 import type { CollectorVerificationErrorCode } from "../../../src/modules/ingestion/index.js";
+import { CollectorMessageSemanticValidator } from "../../../src/modules/ingestion/infrastructure/collector-message.semantic.validator.js";
 
 interface TestKeyFixture {
     readonly key_id: string;
@@ -66,6 +67,30 @@ for (const vector of signingVectors.vectors) {
         assert.equal(result.message.integrity.value, vector.expected_hmac_base64url);
     });
 }
+
+test("accepts a source RFC 3339 timestamp after Collector millisecond normalization", async () => {
+    const fixtureBytes = readFileSync(join(FIXTURES_ROOT, "positive", "event-batch.json"));
+    const result = await verifier.verify(fixtureBytes);
+
+    assert.equal(result.message.message_type, "event_batch");
+
+    const [firstEvent, ...remainingEvents] = result.message.events;
+    const rawPayload = JSON.parse(firstEvent.raw_payload) as Record<string, unknown>;
+    rawPayload.timestamp = "2026-08-29T10:00:00Z";
+
+    const normalizedBatch = {
+        ...result.message,
+        events: [
+            {
+                ...firstEvent,
+                raw_payload: JSON.stringify(rawPayload),
+            },
+            ...remainingEvents,
+        ],
+    };
+
+    assert.doesNotThrow(() => new CollectorMessageSemanticValidator().validate(normalizedBatch));
+});
 
 const negativeCases: readonly {
     readonly name: string;

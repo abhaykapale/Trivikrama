@@ -93,7 +93,10 @@ class FakeNormalizedEventPersistence {
 }
 
 class FakeDetection {
+    public calls = 0;
+
     public async execute() {
+        this.calls += 1;
         return {
             evaluation: {
                 rulesEvaluated: 0,
@@ -104,6 +107,24 @@ class FakeDetection {
             },
             insertedAlerts: 0,
             alreadyPresentAlerts: 0,
+        };
+    }
+}
+
+class FakeAiDetection {
+    public calls = 0;
+
+    public constructor(private readonly usedFallback = false) {}
+
+    public async execute() {
+        this.calls += 1;
+        return {
+            eventsSubmitted: 0,
+            eventsScored: 0,
+            anomaliesDetected: 0,
+            insertedResults: 0,
+            alreadyPresentResults: 0,
+            usedFallback: this.usedFallback,
         };
     }
 }
@@ -161,6 +182,8 @@ function createService(
     reader: FakeReader,
     verifier: FakeVerifier,
     archive: FakeRawBatchArchive,
+    detection: FakeDetection = new FakeDetection(),
+    aiDetection: FakeAiDetection = new FakeAiDetection(),
 ): ProcessCollectorProcessingJobService {
     return new ProcessCollectorProcessingJobService({
         reader,
@@ -169,7 +192,8 @@ function createService(
         normalizer: new FakeNormalizer(),
         normalizedEventPersistence: new FakeNormalizedEventPersistence(),
         featureExtractor: new DeterministicFeatureExtractor(),
-        detection: new FakeDetection(),
+        detection,
+        aiDetection,
         now: () => new Date("2026-09-07T00:00:00.000Z"),
     });
 }
@@ -193,6 +217,11 @@ test("archives a safely reread and reverified queued batch", async () => {
         generatedAlerts: 0,
         insertedAlerts: 0,
         alreadyPresentAlerts: 0,
+        aiEventsScored: 0,
+        aiAnomaliesDetected: 0,
+        insertedAiResults: 0,
+        alreadyPresentAiResults: 0,
+        aiUsedFallback: false,
     });
     assert.deepEqual(reader.requests, [createJob()]);
     assert.equal(verifier.inputs.length, 1);
@@ -221,7 +250,32 @@ test("accepts an already archived batch with the same digest", async () => {
         generatedAlerts: 0,
         insertedAlerts: 0,
         alreadyPresentAlerts: 0,
+        aiEventsScored: 0,
+        aiAnomaliesDetected: 0,
+        insertedAiResults: 0,
+        alreadyPresentAiResults: 0,
+        aiUsedFallback: false,
     });
+});
+
+test("finishes rule processing when AI activates graceful fallback", async () => {
+    const rules = new FakeDetection();
+    const ai = new FakeAiDetection(true);
+    const result = await createService(
+        new FakeReader(new Uint8Array([1])),
+        new FakeVerifier(createVerifiedBatch()),
+        new FakeRawBatchArchive({
+            status: "archived",
+            document: createArchiveDocument(),
+        }),
+        rules,
+        ai,
+    ).execute(createJob());
+
+    assert.equal(result.status, "processed");
+    if (result.status === "processed") assert.equal(result.aiUsedFallback, true);
+    assert.equal(rules.calls, 1);
+    assert.equal(ai.calls, 1);
 });
 
 test("quarantines a batch that fails worker-side HMAC verification", async () => {

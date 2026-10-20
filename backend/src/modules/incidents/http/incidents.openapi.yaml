@@ -1,0 +1,335 @@
+openapi: 3.1.0
+info:
+  title: Trivikrama Incident Query API
+  version: 1.2.0-inc-02c
+paths:
+  /api/v1/incidents:
+    get:
+      operationId: listIncidents
+      summary: List incidents visible to the authenticated organization
+      security:
+        - bearerAuth: []
+        - cookieAuth: []
+      parameters:
+        - { name: page, in: query, schema: { type: integer, minimum: 1, maximum: 1000000, default: 1 } }
+        - { name: limit, in: query, schema: { type: integer, minimum: 1, maximum: 100, default: 25 } }
+        - { name: status, in: query, description: Comma-separated incident statuses, schema: { type: string } }
+        - { name: severity, in: query, description: Comma-separated severities, schema: { type: string } }
+        - { name: source, in: query, description: Comma-separated rule, ai, or both values, schema: { type: string } }
+        - { name: assignedTo, in: query, schema: { type: string, format: uuid } }
+        - { name: search, in: query, schema: { type: string, minLength: 1, maxLength: 200 } }
+        - { name: from, in: query, schema: { type: string, format: date-time } }
+        - { name: to, in: query, schema: { type: string, format: date-time } }
+        - name: sort
+          in: query
+          schema:
+            type: string
+            enum: [createdAt, riskScore, severity, alertCount, updatedAt]
+            default: createdAt
+        - { name: order, in: query, schema: { type: string, enum: [asc, desc], default: desc } }
+      responses:
+        "200":
+          description: Tenant-scoped incident page
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/IncidentPage" }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+  /api/v1/incidents/{id}:
+    get:
+      operationId: getIncident
+      summary: Get one incident visible to the authenticated organization
+      security:
+        - bearerAuth: []
+        - cookieAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: Incident detail
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Incident" }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+  /api/v1/incidents/{id}/timeline:
+    get:
+      operationId: getIncidentTimeline
+      summary: Get the chronological timeline for one visible incident
+      security:
+        - bearerAuth: []
+        - cookieAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - name: type
+          in: query
+          schema: { type: string, enum: [event, alert, action] }
+        - { name: from, in: query, schema: { type: string, format: date-time } }
+        - { name: to, in: query, schema: { type: string, format: date-time } }
+        - { name: page, in: query, schema: { type: integer, minimum: 1, maximum: 1000000, default: 1 } }
+        - { name: limit, in: query, schema: { type: integer, minimum: 1, maximum: 100, default: 50 } }
+      responses:
+        "200":
+          description: Chronological, tenant-scoped incident timeline page
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/IncidentTimelinePage" }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+  /api/v1/incidents/{id}/alerts:
+    get:
+      operationId: listIncidentAlerts
+      summary: List alerts attached to one visible incident
+      security:
+        - bearerAuth: []
+        - cookieAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - { name: type, in: query, schema: { type: string, enum: [rule, ai] } }
+        - { name: page, in: query, schema: { type: integer, minimum: 1, maximum: 1000000, default: 1 } }
+        - { name: limit, in: query, schema: { type: integer, minimum: 1, maximum: 100, default: 50 } }
+      responses:
+        "200":
+          description: Tenant-scoped incident alert page
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/IncidentAlertPage" }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+  /api/v1/incidents/{id}/events:
+    get:
+      operationId: listIncidentEvents
+      summary: List normalized events linked to one visible incident
+      security:
+        - bearerAuth: []
+        - cookieAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - { name: page, in: query, schema: { type: integer, minimum: 1, maximum: 1000000, default: 1 } }
+        - { name: limit, in: query, schema: { type: integer, minimum: 1, maximum: 100, default: 25 } }
+      responses:
+        "200":
+          description: Tenant-scoped linked normalized-event page
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/IncidentEventPage" }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+components:
+  securitySchemes:
+    bearerAuth: { type: http, scheme: bearer, bearerFormat: JWT }
+    cookieAuth: { type: apiKey, in: cookie, name: siem_token }
+  schemas:
+    Incident:
+      type: object
+      required: [id, title, description, status, severity, riskScore, source, scoreBreakdown, primaryEntity, entityType, entities, killChainStages, alertCount, eventCount, assignedTo, firstEventAt, lastEventAt, createdAt, updatedAt, resolvedAt, closedAt]
+      properties:
+        id: { type: string, format: uuid }
+        title: { type: string }
+        description: { type: [string, "null"] }
+        status: { type: string, enum: [open, investigating, resolved, closed] }
+        severity: { type: string, enum: [critical, high, medium, low, informational] }
+        riskScore: { type: number, minimum: 0, maximum: 100 }
+        source: { type: string, enum: [rule, ai, both] }
+        scoreBreakdown: { type: object, additionalProperties: true }
+        primaryEntity: { type: [string, "null"] }
+        entityType: { type: [string, "null"] }
+        entities: { type: array, items: { type: object, additionalProperties: true } }
+        killChainStages: { type: array, items: { type: string } }
+        alertCount: { type: integer, minimum: 0 }
+        eventCount: { type: integer, minimum: 0 }
+        assignedTo: { type: [string, "null"], format: uuid }
+        firstEventAt: { type: [string, "null"], format: date-time }
+        lastEventAt: { type: [string, "null"], format: date-time }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+        resolvedAt: { type: [string, "null"], format: date-time }
+        closedAt: { type: [string, "null"], format: date-time }
+    IncidentPage:
+      type: object
+      required: [data, pagination]
+      properties:
+        data: { type: array, items: { $ref: "#/components/schemas/Incident" } }
+        pagination:
+          type: object
+          required: [page, limit, total, totalPages, hasNext, hasPrev]
+          properties:
+            page: { type: integer }
+            limit: { type: integer }
+            total: { type: integer }
+            totalPages: { type: integer }
+            hasNext: { type: boolean }
+            hasPrev: { type: boolean }
+    IncidentTimelinePage:
+      type: object
+      required: [data, pagination]
+      properties:
+        data:
+          type: array
+          items:
+            oneOf:
+              - { $ref: "#/components/schemas/TimelineEventEntry" }
+              - { $ref: "#/components/schemas/TimelineAlertEntry" }
+              - { $ref: "#/components/schemas/TimelineActionEntry" }
+            discriminator:
+              propertyName: type
+        pagination: { $ref: "#/components/schemas/Pagination" }
+    TimelineEventEntry:
+      type: object
+      required: [id, incidentId, type, timestamp, eventId, eventClassUid, eventSeverity, eventMessage]
+      properties:
+        id: { type: string }
+        incidentId: { type: string, format: uuid }
+        type: { type: string, const: event }
+        timestamp: { type: string, format: date-time }
+        eventId: { type: string }
+        eventClassUid: { type: [integer, "null"] }
+        eventSeverity: { type: [integer, "null"] }
+        eventMessage: { type: [string, "null"] }
+    TimelineAlertEntry:
+      type: object
+      required: [id, incidentId, type, timestamp, alertId, alertType, alertSeverity, alertTitle, anomalyScore]
+      properties:
+        id: { type: string }
+        incidentId: { type: string, format: uuid }
+        type: { type: string, const: alert }
+        timestamp: { type: string, format: date-time }
+        alertId: { type: string, format: uuid }
+        alertType: { type: string, enum: [rule, ai] }
+        alertSeverity: { type: string, enum: [critical, high, medium, low, informational] }
+        alertTitle: { type: string }
+        anomalyScore: { type: [number, "null"] }
+    TimelineActionEntry:
+      type: object
+      required: [id, incidentId, type, timestamp, action, actorId, actorName, previousValue, newValue, noteContent]
+      properties:
+        id: { type: string }
+        incidentId: { type: string, format: uuid }
+        type: { type: string, const: action }
+        timestamp: { type: string, format: date-time }
+        action: { type: string, enum: [created, status_change, assigned, note_added, updated] }
+        actorId: { type: string, description: Actor UUID or system }
+        actorName: { type: string }
+        previousValue: { type: [string, "null"] }
+        newValue: { type: [string, "null"] }
+        noteContent: { type: [string, "null"] }
+    Pagination:
+      type: object
+      required: [page, limit, total, totalPages, hasNext, hasPrev]
+      properties:
+        page: { type: integer, minimum: 1 }
+        limit: { type: integer, minimum: 1, maximum: 100 }
+        total: { type: integer, minimum: 0 }
+        totalPages: { type: integer, minimum: 0 }
+        hasNext: { type: boolean }
+        hasPrev: { type: boolean }
+    IncidentAlertPage:
+      type: object
+      required: [data, pagination]
+      properties:
+        data:
+          type: array
+          items: { $ref: "#/components/schemas/IncidentAlert" }
+        pagination: { $ref: "#/components/schemas/Pagination" }
+    IncidentAlert:
+      type: object
+      required: [id, incidentId, alertType, ruleId, ruleName, matchedCondition, anomalyScore, confidence, threatCategory, modelVersion, shapValues, severity, weight, tags, matchedEventIds, createdAt]
+      properties:
+        id: { type: string, format: uuid }
+        incidentId: { type: string, format: uuid }
+        alertType: { type: string, enum: [rule, ai] }
+        ruleId: { type: [string, "null"], format: uuid }
+        ruleName: { type: [string, "null"] }
+        matchedCondition: { type: [string, "null"] }
+        anomalyScore: { type: [number, "null"], minimum: 0, maximum: 1 }
+        confidence: { type: [number, "null"], minimum: 0, maximum: 1 }
+        threatCategory: { type: [string, "null"] }
+        modelVersion: { type: [string, "null"] }
+        shapValues: { type: [object, "null"], additionalProperties: true }
+        severity: { type: string, enum: [critical, high, medium, low, informational] }
+        weight: { type: number, minimum: 0, maximum: 1 }
+        tags: { type: array, items: {} }
+        matchedEventIds: { type: array, items: {} }
+        createdAt: { type: string, format: date-time }
+    IncidentEventPage:
+      type: object
+      required: [data, pagination]
+      properties:
+        data:
+          type: array
+          items: { $ref: "#/components/schemas/IncidentNormalizedEvent" }
+        pagination: { $ref: "#/components/schemas/Pagination" }
+    IncidentNormalizedEvent:
+      type: object
+      required: [eventId, classUid, categoryUid, severityId, time, message, metadata, ingestion]
+      properties:
+        eventId: { type: string }
+        classUid: { type: integer, minimum: 0 }
+        categoryUid: { type: integer, minimum: 0 }
+        severityId: { type: integer, minimum: 0, maximum: 6 }
+        statusId: { type: integer }
+        duration: { type: number, minimum: 0 }
+        time: { type: string, format: date-time }
+        message: { type: string }
+        srcEndpoint: { type: object, additionalProperties: true }
+        dstEndpoint: { type: object, additionalProperties: true }
+        actor: { type: object, additionalProperties: true }
+        process: { type: object, additionalProperties: true }
+        query: { type: object, additionalProperties: true }
+        device: { type: object, additionalProperties: true }
+        metadata: { type: object, additionalProperties: true }
+        enrichments: { type: object, additionalProperties: true }
+        features: { type: object, additionalProperties: true }
+        ingestion:
+          type: object
+          required: [batchId, collectorId, ingestedAt]
+          properties:
+            batchId: { type: string }
+            collectorId: { type: string }
+            ingestedAt: { type: string, format: date-time }
+            pipelineDurationMs: { type: number, minimum: 0 }
+    Error:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: object
+          required: [code, message]
+          properties:
+            code: { type: string }
+            message: { type: string }
+            details: { type: object, additionalProperties: true }
+  responses:
+    ValidationError:
+      description: Invalid request parameters
+      content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } }
+    Unauthorized:
+      description: Authentication required
+      content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } }
+    Forbidden:
+      description: Insufficient permission
+      content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } }
+    NotFound:
+      description: Incident not found or not visible to this organization
+      content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } }

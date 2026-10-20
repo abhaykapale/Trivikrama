@@ -9,6 +9,7 @@ import {
 } from "../common/index.js";
 import type {
   CreateIncidentEventInput,
+  CreateIncidentEventsIfAbsentResult,
   DeleteIncidentEventLinkInput,
   IIncidentEventRepository,
   IncidentEventListFilters,
@@ -56,6 +57,29 @@ export class PostgresIncidentEventRepository implements IIncidentEventRepository
       .returning("*");
 
     return rows.map(mapIncidentEventRow);
+  }
+
+  public async createManyIfAbsent(
+    inputs: readonly CreateIncidentEventInput[],
+  ): Promise<CreateIncidentEventsIfAbsentResult> {
+    if (inputs.length === 0) return { insertedCount: 0, existingCount: 0 };
+    const insertables = inputs.map(toInsertableIncidentEvent);
+    const identities = inputs.map(
+      (input) =>
+        `${input.incidentId}\u0000${input.eventId}\u0000${input.eventTime.toISOString()}`,
+    );
+    if (new Set(identities).size !== identities.length) {
+      throw new Error("createManyIfAbsent requires unique incident-event identities.");
+    }
+    const inserted = await this.db<IncidentEventRow>(INCIDENT_EVENTS_TABLE)
+      .insert(insertables)
+      .onConflict(["incident_id", "event_id", "event_time"])
+      .ignore()
+      .returning("id");
+    return {
+      insertedCount: inserted.length,
+      existingCount: inputs.length - inserted.length,
+    };
   }
 
   public async findById(id: string): Promise<IncidentEventRecord | null> {

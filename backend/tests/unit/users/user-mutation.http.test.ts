@@ -41,7 +41,7 @@ const TEST_CONFIG: AppConfig = {
         secretBase64Url:
             "c8Wm1Qx4Ny7Rt2Ks5Vb9Lp3Hd6Fj0Za8Pe1Uy4Mi7Go2Cq5Xs9Dv3Ln6Ak0Jr8Tw",
     },
-}, ai: { engineUrl: "http://localhost:8000", timeoutMs: 5000, batchSize: 100, threshold: 0.65 },
+}, ai: { engineUrl: "http://localhost:8000", timeoutMs: 5000, batchSize: 100, threshold: 0.65, circuitFailureThreshold: 5, circuitCooldownMs: 60000, circuitSuccessThreshold: 2 },
   frontend: { url: "http://localhost:3001" }, logging: { level: "debug", format: "pretty" },
 };
 

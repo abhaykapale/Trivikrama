@@ -230,6 +230,35 @@ test("quarantines a batch whose signed batch_id differs from its file name", asy
     assert.equal(processingQueue.jobs.length, 0);
 });
 
+test("quarantines a batch whose signed collector_id differs from its source directory", async () => {
+    const fileIntake = new FakeFileIntake();
+    const processingQueue = new FakeProcessingQueue({
+        status: "enqueued",
+        jobId: CLAIMED_FILE.batchId,
+    });
+
+    const service = new VerifyAndQueueClaimedBatchService({
+        fileIntake,
+        reader: new FakeReader(),
+        verifier: new FakeVerifier(
+            createVerifiedBatch({
+                collector_id: "collector-other-01",
+            }),
+        ),
+        processingQueue,
+    });
+
+    const result = await service.execute(CLAIMED_FILE);
+
+    assert.deepEqual(result, {
+        status: "quarantined",
+        reason: "SOURCE_IDENTITY_MISMATCH",
+    });
+    assert.equal(processingQueue.jobs.length, 0);
+    assert.equal(fileIntake.quarantined.length, 1);
+    assert.equal(fileIntake.quarantined[0]?.reason, "SOURCE_IDENTITY_MISMATCH");
+});
+
 test("rethrows a Redis failure so the claimed file can be retried", async () => {
     const fileIntake = new FakeFileIntake();
 

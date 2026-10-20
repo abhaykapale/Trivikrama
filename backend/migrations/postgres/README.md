@@ -47,3 +47,7 @@ runs compiled code with `node dist/scripts/migrate.js`.
 - If a schema fix is needed, create a new corrective migration.
 - Keep migrations idempotent where practical when they repair historical state.
 - Run migrations on a clean database before marking a database milestone complete.
+
+Migrations that use `CREATE INDEX CONCURRENTLY` must export
+`config = { transaction: false }`. INC-02A uses this form for tenant-scoped
+incident list/sort indexes and trigram search indexes.

@@ -17,11 +17,12 @@ export function parseYamlRuleDocument(source: string): unknown {
 
   let documents;
 
+
   try {
     documents = parseAllDocuments(source, {
       schema: "core",
-      uniqueKeys: true,
-    });
+      uniqueKeys : true,
+    })
   } catch {
     return failYaml();
   }

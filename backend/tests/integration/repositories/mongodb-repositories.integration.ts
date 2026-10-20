@@ -134,6 +134,18 @@ export const mongoRepositoryIntegrationTests: readonly IntegrationTestCase[] = [
 
       assertEqual(aiResult.is_anomaly, true, "AI result should be inserted as an anomaly");
 
+      const aiReplay = await mongoRepositories.aiResults.createManyIfAbsent([aiResult]);
+      assertEqual(
+        aiReplay.insertedCount,
+        0,
+        "A repeated event/model identity should not insert a duplicate AI result",
+      );
+      assertEqual(
+        aiReplay.existingCount,
+        1,
+        "A repeated event/model identity should be reported as already present",
+      );
+
       const latestAi = await mongoRepositories.aiResults.findLatestByEventId(eventId);
       assertDefined(latestAi, "AI result should be findable by event_id");
       assertEqual(latestAi.model_version, "db09-test-model", "AI result should roundtrip model version");

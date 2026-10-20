@@ -89,4 +89,9 @@ export interface IAlertRepository {
   list(filters?: AlertListFilters): Promise<PageResult<AlertRecord>>;
   listByIncident(incidentId: string, filters?: PaginationOptions): Promise<PageResult<AlertRecord>>;
   update(id: string, input: UpdateAlertInput): Promise<AlertRecord | null>;
+  attachToIncidentIfUnassigned(
+    id: string,
+    incidentId: string,
+    orgId: string,
+  ): Promise<AlertRecord | null>;
 }

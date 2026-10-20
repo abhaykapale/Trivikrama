@@ -1,1 +1,1 @@
-"""Offline training-data export and validation components."""
+"""Offline dataset export, validation, and model-training components."""

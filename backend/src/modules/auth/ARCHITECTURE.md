@@ -8,6 +8,8 @@ The auth module owns the authentication boundary for the backend: it verifies in
 - Issue, verify, refresh, and revoke JWT-backed sessions.
 - Attach an `AuthenticatedPrincipal` to valid requests via `authenticateRequest()`.
 - Enforce RBAC through `requirePermission()` and `requireRole()`.
+- Grant `incidents.view` to the three documented operational roles while
+  retaining explicit route-level authorization for incident reads.
 - Record auth activity in the shared audit repository.
 
 ## Folder and Runtime Map

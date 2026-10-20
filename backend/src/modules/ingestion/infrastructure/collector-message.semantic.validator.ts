@@ -22,6 +22,8 @@ import {
 } from "../domain/collector-verification.errors.js";
 
 const RFC3339_UTC_MILLIS = /^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}\.[0-9]{3}Z$/;
+const RFC3339_WITH_TIMEZONE =
+    /^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(?:\.[0-9]+)?(?:Z|[+-][0-9]{2}:[0-9]{2})$/;
 
 export class CollectorMessageSemanticValidator implements ICollectorMessageSemanticValidator {
     private readonly rawPayloadParser: IStrictJsonParser;
@@ -157,6 +159,16 @@ export class CollectorMessageSemanticValidator implements ICollectorMessageSeman
 
         const sourceIp = this.requiredString(rawPayload, "source_ip", event.event_id);
 
+        const sourceTimestamp = Date.parse(timestamp);
+
+        if (!RFC3339_WITH_TIMEZONE.test(timestamp) || !Number.isFinite(sourceTimestamp)) {
+            this.fail(
+                COLLECTOR_VERIFICATION_ERROR_CODES.INVALID_TIMESTAMP,
+                "Raw payload timestamp is not valid RFC 3339 with a timezone.",
+                { eventId: event.event_id },
+            );
+        }
+
         if (
             endpointId !== event.source.original_endpoint_id ||
             endpointId !== event.ocsf.dst_endpoint.hostname
@@ -169,7 +181,7 @@ export class CollectorMessageSemanticValidator implements ICollectorMessageSeman
         }
 
         if (
-            timestamp !== event.event_time ||
+            sourceTimestamp !== eventTime ||
             username !== event.ocsf.user.name ||
             sourceIp !== event.ocsf.src_endpoint.ip
         ) {

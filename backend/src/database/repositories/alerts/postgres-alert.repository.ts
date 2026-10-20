@@ -199,6 +199,27 @@ export class PostgresAlertRepository implements IAlertRepository {
     return row ? mapAlertRow(row) : null;
   }
 
+  public async attachToIncidentIfUnassigned(
+    id: string,
+    incidentId: string,
+    orgId: string,
+  ): Promise<AlertRecord | null> {
+    const normalizedId = ensureNonBlank(id, "id");
+    const normalizedIncidentId = ensureNonBlank(incidentId, "incidentId");
+    const normalizedOrgId = ensureNonBlank(orgId, "orgId");
+    const [row] = await this.db<AlertRow>(ALERTS_TABLE)
+      .where("id", normalizedId)
+      .andWhere("org_id", normalizedOrgId)
+      .andWhere((builder) => {
+        builder
+          .whereNull("incident_id")
+          .orWhere("incident_id", normalizedIncidentId);
+      })
+      .update({ incident_id: normalizedIncidentId })
+      .returning("*");
+    return row ? mapAlertRow(row) : null;
+  }
+
   private baseQuery() {
     return this.db<AlertRow>(ALERTS_TABLE).select("*");
   }

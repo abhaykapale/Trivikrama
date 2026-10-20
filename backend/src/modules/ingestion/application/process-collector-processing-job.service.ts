@@ -9,6 +9,8 @@ import type { ICollectorEventNormalizer } from "../domain/collector-event-normal
 import type { PersistNormalizedCollectorEventsService } from "./persist-normalized-collector-events.service.js";
 import type { EvaluateAndPersistRuleAlertsService } from "../../detection/application/evaluate-and-persist-rule-alerts.service.js";
 import type { IFeatureExtractor } from "../../feature-extraction/domain/feature-extraction.contracts.js";
+import type { DetectAndPersistAiResultsService } from "../../analysis/application/detect-and-persist-ai-results.service.js";
+import type { TransactionalIncidentCorrelator } from "../../incidents/application/transactional-incident-correlator.js";
 
 export type ProcessCollectorProcessingJobResult =
     | {
@@ -20,6 +22,11 @@ export type ProcessCollectorProcessingJobResult =
           readonly generatedAlerts: number;
           readonly insertedAlerts: number;
           readonly alreadyPresentAlerts: number;
+          readonly aiEventsScored: number;
+          readonly aiAnomaliesDetected: number;
+          readonly insertedAiResults: number;
+          readonly alreadyPresentAiResults: number;
+          readonly aiUsedFallback: boolean;
       }
     | {
           readonly status: "quarantine";
@@ -35,6 +42,8 @@ export interface ProcessCollectorProcessingJobDependencies {
     readonly normalizedEventPersistence: Pick<PersistNormalizedCollectorEventsService, "execute">;
     readonly featureExtractor: IFeatureExtractor;
     readonly detection: Pick<EvaluateAndPersistRuleAlertsService, "execute">;
+    readonly aiDetection: Pick<DetectAndPersistAiResultsService, "execute">;
+    readonly incidentCorrelation?: Pick<TransactionalIncidentCorrelator, "correlate">;
     readonly now: () => Date;
 }
 
@@ -146,6 +155,25 @@ export class ProcessCollectorProcessingJobService {
         const detectionResult = await this.dependencies.detection.execute(
             featureExtraction.events,
         );
+        // AI is additive: its client converts transport, timeout, and open-circuit
+        // failures into a fallback result, so successful rule detection is never
+        // discarded merely because the inference service is unavailable.
+        const aiDetectionResult = await this.dependencies.aiDetection.execute(
+            featureExtraction.events,
+        );
+
+        if (this.dependencies.incidentCorrelation !== undefined) {
+            if (detectionResult.records === undefined || aiDetectionResult.results === undefined) {
+                throw new Error("Incident correlation requires persisted rule and AI records.");
+            }
+            await this.dependencies.incidentCorrelation.correlate({
+                orgId: featureExtraction.events[0]?.org_id ?? "default",
+                ruleAlerts: detectionResult.records,
+                aiResults: aiDetectionResult.results,
+                events: featureExtraction.events,
+                evaluatedAt: processedAt,
+            });
+        }
 
         return {
             status: "processed",
@@ -156,6 +184,11 @@ export class ProcessCollectorProcessingJobService {
             generatedAlerts: detectionResult.evaluation.alertsGenerated,
             insertedAlerts: detectionResult.insertedAlerts,
             alreadyPresentAlerts: detectionResult.alreadyPresentAlerts,
+            aiEventsScored: aiDetectionResult.eventsScored,
+            aiAnomaliesDetected: aiDetectionResult.anomaliesDetected,
+            insertedAiResults: aiDetectionResult.insertedResults,
+            alreadyPresentAiResults: aiDetectionResult.alreadyPresentResults,
+            aiUsedFallback: aiDetectionResult.usedFallback,
         };
     }
 }

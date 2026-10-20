@@ -22,6 +22,7 @@ import type {
   AiResultDocument,
   AiResultListFilters,
   CreateAiResultInput,
+  CreateAiResultsIfAbsentResult,
   IAiResultRepository,
 } from "./ai-result.repository.js";
 
@@ -56,6 +57,42 @@ export class MongoAiResultRepository implements IAiResultRepository {
       },
     );
     return result.insertedCount;
+  }
+
+  public async createManyIfAbsent(
+    inputs: readonly CreateAiResultInput[],
+  ): Promise<CreateAiResultsIfAbsentResult> {
+    if (inputs.length === 0) return { insertedCount: 0, existingCount: 0 };
+
+    const identities = new Set<string>();
+    for (const input of inputs) {
+      validateAiResult(input);
+      const identity = `${input.event_id}\u0000${input.model_name}\u0000${input.model_version}`;
+      if (identities.has(identity)) {
+        throw new Error("AI result input contains a duplicate event/model identity");
+      }
+      identities.add(identity);
+    }
+
+    const result = await this.collection().bulkWrite(
+      inputs.map((input) => ({
+        updateOne: {
+          filter: {
+            event_id: input.event_id,
+            model_name: input.model_name,
+            model_version: input.model_version,
+          },
+          update: { $setOnInsert: toMongoAiResultDocument(input) },
+          upsert: true,
+        },
+      })) as never,
+      { ordered: false },
+    );
+
+    return {
+      insertedCount: result.upsertedCount,
+      existingCount: inputs.length - result.upsertedCount,
+    };
   }
 
   public async findLatestByEventId(

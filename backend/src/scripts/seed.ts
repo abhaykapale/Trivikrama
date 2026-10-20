@@ -3,9 +3,19 @@ import "dotenv/config";
 import { z } from "zod";
 
 import {
+  closeMongoDb,
+  connectMongoDb,
+  createMongoDbClient,
+} from "../database/mongodb/client.js";
+import {
   closePostgres,
   createPostgresClient,
 } from "../database/postgres/client.js";
+import { createMongoRepositories } from "../database/repositories/mongodb/mongo-repository.factory.js";
+import {
+  readDevelopmentMongoSeedStatus,
+  seedDevelopmentMongoData,
+} from "../database/seeds/development-demo-mongodb.seed.js";
 import { runDatabaseSeed } from "../database/seeds/seed-runner.js";
 import type {
   InitialAdminSeedConfig,
@@ -20,6 +30,7 @@ const seedEnvSchema = z
       .enum(["development", "production", "test"])
       .default("development"),
     DATABASE_URL: z.string().min(1),
+    MONGODB_URI: z.string().trim().min(1).optional(),
     POSTGRES_POOL_MIN: z.coerce.number().int().nonnegative().default(0),
     POSTGRES_POOL_MAX: z.coerce.number().int().positive().default(1),
     POSTGRES_CONNECTION_TIMEOUT_MS: z.coerce
@@ -59,39 +70,89 @@ async function main(): Promise<void> {
     acquireConnectionTimeoutMs: environment.postgresAcquireConnectionTimeoutMs,
     applicationName: "trivikrama-seed-runner",
   });
+  let mongo: ReturnType<typeof createMongoDbClient> | undefined;
 
   let seedError: unknown;
 
   try {
-    const result = await runDatabaseSeed(client, {
+    const postgresResult = await runDatabaseSeed(client, {
       profile,
       environment,
     });
+    let mongoResult;
+
+    if (profile === "development" || profile === "status") {
+      const mongoUri = requireMongoUri(parsedMongoUri());
+      mongo = createMongoDbClient();
+      await connectMongoDb(mongo, {
+        uri: mongoUri,
+        minPoolSize: 0,
+        maxPoolSize: 2,
+      });
+      const repositories = createMongoRepositories(mongo);
+      const orgId = process.env.ADMIN_INITIAL_ORG_ID?.trim() || "default";
+
+      mongoResult = profile === "development"
+        ? await seedDevelopmentMongoData(repositories, orgId)
+        : await readDevelopmentMongoSeedStatus(repositories, orgId);
+    }
+
+    const result = {
+      ...postgresResult,
+      ...(mongoResult === undefined ? {} : { mongo: mongoResult }),
+    };
 
     logger.info(JSON.stringify(result, null, 2));
 
-    if (!result.success) {
+    if (!postgresResult.success || mongoResult?.complete === false) {
       process.exitCode = 1;
     }
   } catch (error: unknown) {
     seedError = error;
     throw error;
   } finally {
-    try {
-      await closePostgres(client);
-    } catch (closeError: unknown) {
+    const cleanupResults = await Promise.allSettled([
+      closePostgres(client),
+      ...(mongo === undefined ? [] : [closeMongoDb(mongo)]),
+    ]);
+    const cleanupFailure = cleanupResults.find(
+      (result): result is PromiseRejectedResult => result.status === "rejected",
+    );
+
+    if (cleanupFailure !== undefined) {
       if (seedError !== undefined) {
-        logger.error("PostgreSQL cleanup also failed.", {
+        logger.error("Database seed cleanup also failed.", {
           error:
-            closeError instanceof Error
-              ? closeError.message
-              : String(closeError),
+            cleanupFailure.reason instanceof Error
+              ? cleanupFailure.reason.message
+              : String(cleanupFailure.reason),
         });
       } else {
-        throw closeError;
+        throw cleanupFailure.reason;
       }
     }
   }
+}
+
+function parsedMongoUri(): string | undefined {
+  const parsed = z.string().trim().min(1).optional().safeParse(
+    process.env.MONGODB_URI,
+  );
+
+  if (!parsed.success) {
+    throw new Error("MONGODB_URI must be a non-empty connection string");
+  }
+
+  return parsed.data;
+}
+
+function requireMongoUri(value: string | undefined): string {
+  if (value === undefined) {
+    throw new Error(
+      "MONGODB_URI is required for development seeding and cross-store seed status",
+    );
+  }
+  return value;
 }
 
 function parseSeedProfile(rawProfile: string | undefined): SeedProfile {

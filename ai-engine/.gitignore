@@ -1,0 +1,14 @@
+.env
+.mypy_cache/
+.pytest_cache/
+.ruff_cache/
+.venv/
+__pycache__/
+*.py[cod]
+htmlcov/
+.coverage
+training_data/*
+!training_data/README.md
+proof_runs/
+models/*
+!models/README.md
