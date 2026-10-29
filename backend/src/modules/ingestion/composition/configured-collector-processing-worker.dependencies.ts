@@ -17,6 +17,7 @@ import {
     connectRedis,
     createRedisClient,
 } from "../../../database/redis/client.js";
+import logger from "../../../shared/logger/logger.js";
 import { createPostgresRepositories } from "../../../database/repositories/postgres-repository.factory.js";
 import { createPostgresUnitOfWork } from "../../../database/transactions/postgres-unit-of-work.js";
 import { createMongoRepositories } from "../../../database/repositories/mongodb/mongo-repository.factory.js";
@@ -218,6 +219,20 @@ export async function createConfiguredCollectorProcessingWorker(
         worker = new BullMqCollectorProcessingWorker(
             {
                 redisUrl: configuration.redisUrl,
+                onCompleted: (job) => {
+                    logger.info("Collector processing job completed.", {
+                        batchId: job.batchId,
+                        collectorId: job.collectorId,
+                    });
+                },
+                onFailed: (job, error) => {
+                    logger.error("Collector processing job failed.", {
+                        batchId: job?.batchId,
+                        collectorId: job?.collectorId,
+                        errorName: error.name,
+                        errorMessage: error.message,
+                    });
+                },
             },
             {
                 jobHandler,

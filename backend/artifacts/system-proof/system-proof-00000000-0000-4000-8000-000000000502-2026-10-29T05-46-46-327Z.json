@@ -1,0 +1,126 @@
+{
+  "proof": "trivikrama-end-to-end-siem",
+  "proofVersion": "1.0",
+  "generatedAt": "2026-10-29T05:46:46.327Z",
+  "passed": false,
+  "eventSelection": "explicit",
+  "eventId": "00000000-0000-4000-8000-000000000502",
+  "organizationId": "default",
+  "stages": [
+    {
+      "id": "event_selection",
+      "label": "Evidence event selected",
+      "status": "PASS",
+      "summary": "Selected event 00000000-0000-4000-8000-000000000502.",
+      "details": {
+        "method": "explicit"
+      }
+    },
+    {
+      "id": "normalized_event",
+      "label": "OCSF event normalized and stored",
+      "status": "FAIL",
+      "summary": "The selected event is absent from MongoDB normalized events.",
+      "details": {}
+    },
+    {
+      "id": "verified_archive",
+      "label": "Signed collector batch verified and archived",
+      "status": "FAIL",
+      "summary": "No verified raw-batch archive was found for the selected event.",
+      "details": {}
+    },
+    {
+      "id": "feature_extraction",
+      "label": "AI feature vector extracted",
+      "status": "FAIL",
+      "summary": "Missing or invalid model features: hour_of_day, day_of_week, is_business_hours, time_since_last_event, time_deviation_score, events_per_minute_src_ip, events_per_hour_user, unique_dst_ips_per_src, unique_users_per_src_ip, frequency_deviation, src_ip_entropy, username_entropy, process_name_entropy, bytes_sent, bytes_received, bytes_ratio, severity_id, failed_login_count_10min, failed_to_success_ratio, new_source_ip.",
+      "details": {
+        "expectedFeatureCount": 20,
+        "missingFeatures": [
+          "hour_of_day",
+          "day_of_week",
+          "is_business_hours",
+          "time_since_last_event",
+          "time_deviation_score",
+          "events_per_minute_src_ip",
+          "events_per_hour_user",
+          "unique_dst_ips_per_src",
+          "unique_users_per_src_ip",
+          "frequency_deviation",
+          "src_ip_entropy",
+          "username_entropy",
+          "process_name_entropy",
+          "bytes_sent",
+          "bytes_received",
+          "bytes_ratio",
+          "severity_id",
+          "failed_login_count_10min",
+          "failed_to_success_ratio",
+          "new_source_ip"
+        ]
+      }
+    },
+    {
+      "id": "ai_inference",
+      "label": "AI inference persisted",
+      "status": "FAIL",
+      "summary": "No persisted AI inference exists for this event; fallback or an incomplete pipeline may have occurred.",
+      "details": {}
+    },
+    {
+      "id": "detection",
+      "label": "Rule or AI alert persisted",
+      "status": "FAIL",
+      "summary": "No persisted alert references the selected event.",
+      "details": {
+        "matchingAlertCount": 0,
+        "alertTypes": [],
+        "ruleNames": []
+      }
+    },
+    {
+      "id": "incident_correlation",
+      "label": "Incident correlated and risk scored",
+      "status": "FAIL",
+      "summary": "Expected exactly one incident link; found 0.",
+      "details": {
+        "incidentLinkCount": 0
+      }
+    },
+    {
+      "id": "immutable_audit",
+      "label": "Immutable incident audit recorded",
+      "status": "FAIL",
+      "summary": "No tenant-scoped incident_create audit record was found.",
+      "details": {}
+    },
+    {
+      "id": "notification_outbox",
+      "label": "Replay-safe notification queued",
+      "status": "FAIL",
+      "summary": "No incident notification outbox record was found.",
+      "details": {}
+    },
+    {
+      "id": "redis_publication",
+      "label": "Redis notification publication verified",
+      "status": "FAIL",
+      "summary": "The notification is not published or its Redis marker is missing.",
+      "details": {
+        "required": true,
+        "markerMatches": false
+      }
+    },
+    {
+      "id": "collector_heartbeat",
+      "label": "Collector heartbeat recorded",
+      "status": "FAIL",
+      "summary": "No matching tenant-scoped collector heartbeat is stored.",
+      "details": {
+        "required": true
+      }
+    }
+  ],
+  "evidence": {}
+}

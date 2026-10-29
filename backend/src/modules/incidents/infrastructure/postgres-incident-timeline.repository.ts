@@ -104,12 +104,14 @@ const TIMELINE_CTE = `
         WHEN 'incident_status_change' THEN 'status_change'
         WHEN 'incident_assign' THEN 'assigned'
         WHEN 'incident_note_added' THEN 'note_added'
+        WHEN 'incident_resolve' THEN 'status_change'
         ELSE 'updated'
       END,
       COALESCE(log.actor_id::text, 'system'),
       COALESCE(log.actor_username, 'System'),
       CASE log.action::text
         WHEN 'incident_status_change' THEN log.previous_state ->> 'status'
+        WHEN 'incident_resolve' THEN log.previous_state ->> 'status'
         WHEN 'incident_assign' THEN COALESCE(
           log.previous_state ->> 'assignedTo',
           log.previous_state ->> 'assigned_to'
@@ -119,14 +121,16 @@ const TIMELINE_CTE = `
       CASE log.action::text
         WHEN 'incident_create' THEN log.new_state ->> 'status'
         WHEN 'incident_status_change' THEN log.new_state ->> 'status'
+        WHEN 'incident_resolve' THEN log.new_state ->> 'status'
         WHEN 'incident_assign' THEN COALESCE(
           log.new_state ->> 'assignedTo',
           log.new_state ->> 'assigned_to'
         )
         ELSE NULL
       END,
-      CASE WHEN log.action::text = 'incident_note_added'
-        THEN log.details ->> 'content'
+      CASE log.action::text
+        WHEN 'incident_note_added' THEN log.details ->> 'content'
+        WHEN 'incident_resolve' THEN log.details ->> 'note'
         ELSE NULL
       END,
       2

@@ -1,0 +1,47 @@
+collector:
+  id: "collector-dev-01"
+  configuration_version: "local-v1"
+  log_level: "INFO"
+  log_format: "json"
+  log_file: "../runtime/logs/collector.log"
+  log_max_size_mb: 10
+  log_max_files: 5
+
+output:
+  # Collector handoff root. Publications land in incoming/<collector-id>/.
+  directory: "../runtime/handoff"
+  state_directory: "../runtime/state"
+  outbox_directory: "../runtime/outbox"
+  rejected_directory: "../runtime/rejected"
+  checkpoint_file: "../runtime/state/checkpoint.json"
+  heartbeat_interval_seconds: 30
+
+scheduler:
+  poll_interval_ms: 100
+  batch_size: 1000
+  batch_timeout_seconds: 5
+  queue_capacity: 100000
+  queue_capacity_bytes: 67108864
+
+outbox:
+  maximum_bytes: 10737418240
+  maximum_batches: 10000
+  warning_percent: 80
+  critical_percent: 95
+
+sources:
+  - id: "simulated_auth_input"
+    type: "file_drop"
+    enabled: true
+    path: "../samples/simulated-auth.jsonl"
+    start_position: "oldest"
+
+ocsf:
+  schema_version: "1.1.0"
+  unknown_field_policy: "unmapped"
+  custom_mappings_dir: "../mappings"
+
+security:
+  key_id: "collector-dev-key-01"
+  # Keep the secret out of YAML. Set COLLECTOR_HMAC_SECRET or
+  # COLLECTOR_HMAC_SECRET_FILE at runtime.

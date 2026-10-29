@@ -38,6 +38,11 @@ export class BullMqProcessingQueue implements IProcessingQueue {
                 connection: this.connection,
                 prefix: configuration.prefix ?? DEFAULT_QUEUE_PREFIX,
                 defaultJobOptions: {
+                    attempts: 5,
+                    backoff: {
+                        type: "exponential",
+                        delay: 1_000,
+                    },
                     removeOnComplete: false,
                     removeOnFail: false,
                 },
@@ -50,6 +55,15 @@ export class BullMqProcessingQueue implements IProcessingQueue {
         const existingJob = await this.queue.getJob(jobId);
 
         if (existingJob !== undefined) {
+            if ((await existingJob.getState()) === "failed") {
+                await existingJob.retry("failed");
+
+                return {
+                    status: "enqueued",
+                    jobId,
+                };
+            }
+
             return {
                 status: "already_exists",
                 jobId,

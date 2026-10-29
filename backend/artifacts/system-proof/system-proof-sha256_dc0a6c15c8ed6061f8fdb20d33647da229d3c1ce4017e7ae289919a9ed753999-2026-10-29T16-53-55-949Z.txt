@@ -1,0 +1,40 @@
+TRIVIKRAMA END-TO-END SIEM PROOF
+================================
+Generated: 2026-10-29T16:53:55.949Z
+Event ID:  sha256:dc0a6c15c8ed6061f8fdb20d33647da229d3c1ce4017e7ae289919a9ed753999
+Selection: latest-linked-event
+
+PASS  Evidence event selected
+      Selected event sha256:dc0a6c15c8ed6061f8fdb20d33647da229d3c1ce4017e7ae289919a9ed753999.
+PASS  OCSF event normalized and stored
+      The tenant-scoped normalized OCSF event is present.
+PASS  Signed collector batch verified and archived
+      The verified collector batch and canonical digest are present.
+PASS  AI feature vector extracted
+      All 20 model features are stored and finite.
+PASS  AI inference persisted
+      A contract-valid, non-fallback model result is stored.
+PASS  Rule or AI alert persisted
+      1 persisted alert(s) reference the selected event.
+PASS  Incident correlated and risk scored
+      The tenant-scoped incident, evidence counts, and risk score are consistent.
+PASS  Immutable incident audit recorded
+      The incident creation audit record is present.
+PASS  Replay-safe notification queued
+      The notification is published.
+PASS  Redis notification publication verified
+      The published outbox row and Redis deduplication marker agree.
+PASS  Collector heartbeat recorded
+      Collector status is online.
+
+RESULT SUMMARY
+--------------
+Incident ID:        5fc8aa4e-5fea-46d8-9db5-f52f64964743
+Severity:           medium
+Risk score:         47.25
+Detection source:   rule
+AI model:           v20261029_061230
+AI anomaly score:   0.635538
+SHAP features:      0
+
+OVERALL RESULT: PASS

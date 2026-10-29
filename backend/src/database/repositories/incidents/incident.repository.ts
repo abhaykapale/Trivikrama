@@ -113,6 +113,7 @@ export interface IIncidentRepository {
   withTransaction(transaction: TransactionClient): IIncidentRepository;
   create(input: CreateIncidentInput): Promise<IncidentRecord>;
   findById(id: string): Promise<IncidentRecord | null>;
+  findByIdForUpdate(id: string, orgId: string): Promise<IncidentRecord | null>;
   findOpenCandidates(
     input: IncidentCorrelationCandidateInput,
   ): Promise<readonly IncidentRecord[]>;
@@ -122,5 +123,15 @@ export interface IIncidentRepository {
   list(filters?: IncidentListFilters): Promise<PageResult<IncidentRecord>>;
   update(id: string, input: UpdateIncidentInput): Promise<IncidentRecord | null>;
   assign(id: string, assignedTo: string | null): Promise<IncidentRecord | null>;
+  assignForOrg(
+    id: string,
+    orgId: string,
+    assignedTo: string | null,
+  ): Promise<IncidentRecord | null>;
   transitionStatus(id: string, input: IncidentStatusTransitionInput): Promise<IncidentRecord | null>;
+  transitionStatusForOrg(
+    id: string,
+    orgId: string,
+    input: IncidentStatusTransitionInput,
+  ): Promise<IncidentRecord | null>;
 }

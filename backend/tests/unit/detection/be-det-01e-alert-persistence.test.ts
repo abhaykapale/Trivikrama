@@ -96,6 +96,29 @@ test("persists a rule alert once and accepts an exact retry", async () => {
   assert.equal(first.records[0].orgId, ORG_ID);
 });
 
+test("accepts a retry whose deterministic matched-event set has a different order", async () => {
+  const repository = new InMemoryIdempotentAlertRepository();
+  const service = new PersistRuleAlertsService({ alerts: repository });
+  const alert = {
+    ...ruleAlert(),
+    matchedEvents: ["event-c", "event-a", "event-b"],
+  };
+
+  await service.execute(ORG_ID, [alert]);
+  const replay = await service.execute(ORG_ID, [
+    {
+      ...alert,
+      matchedEvents: ["event-a", "event-b", "event-c"],
+    },
+  ]);
+
+  assert.deepEqual(
+    [replay.insertedCount, replay.alreadyPresentCount],
+    [0, 1],
+  );
+  assert.equal(repository.records.size, 1);
+});
+
 test("rejects reuse of an alert ID for different security content", async () => {
   const repository = new InMemoryIdempotentAlertRepository();
   const service = new PersistRuleAlertsService({ alerts: repository });

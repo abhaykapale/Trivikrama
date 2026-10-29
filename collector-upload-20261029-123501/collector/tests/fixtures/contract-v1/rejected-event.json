@@ -1,0 +1,33 @@
+{
+  "collector_id": "collector-test-01",
+  "contract_version": "1.0.0",
+  "integrity": {
+    "algorithm": "HMAC-SHA256",
+    "key_id": "collector-test-key-01",
+    "value": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+  },
+  "message_type": "rejected_event",
+  "payload": {
+    "byte_length": 3,
+    "capture": "YmFk",
+    "capture_encoding": "base64",
+    "capture_truncated": false,
+    "content_type": "application/json",
+    "sha256": "2f05d4b689d270cafb02285f35f44866f7dc8a2d368a3f9d1124373eeab31fb1"
+  },
+  "rejected_at": "2026-08-29T12:44:43Z",
+  "rejection": {
+    "code": "invalid_json",
+    "message": "Input record is not valid JSON",
+    "stage": "input_validation"
+  },
+  "rejection_id": "123e4567-e89b-42d3-a456-426614174001",
+  "source": {
+    "adapter_type": "file_drop",
+    "file_identity": "simulated-auth.jsonl",
+    "record_end_offset": 3,
+    "record_start_offset": 0,
+    "source_id": "simulated-auth-input"
+  }
+}
+

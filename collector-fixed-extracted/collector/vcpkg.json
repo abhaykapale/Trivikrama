@@ -1,0 +1,12 @@
+{
+  "$schema": "https://raw.githubusercontent.com/microsoft/vcpkg-tool/main/docs/vcpkg.schema.json",
+  "name": "trivikrama-collector",
+  "version-semver": "0.8.0",
+  "description": "Trivikrama central security-event Collector",
+  "dependencies": [
+    "gtest",
+    "nlohmann-json",
+    "openssl",
+    "yaml-cpp"
+  ]
+}

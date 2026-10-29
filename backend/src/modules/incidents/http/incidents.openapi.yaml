@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
-  title: Trivikrama Incident Query API
-  version: 1.2.0-inc-02c
+  title: Trivikrama Incident API
+  version: 2.3.0-inc-03d
 paths:
   /api/v1/incidents:
     get:
@@ -136,6 +136,142 @@ paths:
         "401": { $ref: "#/components/responses/Unauthorized" }
         "403": { $ref: "#/components/responses/Forbidden" }
         "404": { $ref: "#/components/responses/NotFound" }
+  /api/v1/incidents/{id}/context:
+    get:
+      operationId: getIncidentContext
+      summary: Get historical incidents, assets, and entity activity for one visible incident
+      security:
+        - bearerAuth: []
+        - cookieAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: Tenant-scoped 30-day incident context
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/IncidentContext" }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+  /api/v1/incidents/{id}/status:
+    put:
+      operationId: transitionIncidentStatus
+      summary: Transition one visible incident to a permitted lifecycle status
+      description: The status change and immutable audit record are committed atomically.
+      security:
+        - bearerAuth: []
+        - cookieAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/TransitionIncidentStatusRequest" }
+      responses:
+        "200":
+          description: Incident status transitioned
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/TransitionIncidentStatusResponse" }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "422": { $ref: "#/components/responses/InvalidStatusTransition" }
+  /api/v1/incidents/{id}/assign:
+    put:
+      operationId: assignIncident
+      summary: Assign or unassign one visible incident
+      description: Requires incidents.assign. The assignment and immutable audit record are committed atomically; null unassigns the incident.
+      security:
+        - bearerAuth: []
+        - cookieAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/AssignIncidentRequest" }
+      responses:
+        "200":
+          description: Incident assignment updated
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AssignIncidentResponse" }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/AssignmentNotFound" }
+  /api/v1/incidents/{id}/notes:
+    post:
+      operationId: addIncidentNote
+      summary: Add an investigation note to one visible incident
+      description: Raw Markdown is stored as text. The note and immutable audit record are committed atomically.
+      security:
+        - bearerAuth: []
+        - cookieAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/AddIncidentNoteRequest" }
+      responses:
+        "201":
+          description: Investigation note created
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AddIncidentNoteResponse" }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+  /api/v1/incidents/{id}/resolve:
+    put:
+      operationId: resolveIncident
+      summary: Resolve one investigating incident with a classified reason
+      description: The status transition, optional note, and immutable reason-bearing audit record commit atomically.
+      security:
+        - bearerAuth: []
+        - cookieAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ResolveIncidentRequest" }
+      responses:
+        "200":
+          description: Incident resolved
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ResolveIncidentResponse" }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "422": { $ref: "#/components/responses/InvalidStatusTransition" }
 components:
   securitySchemes:
     bearerAuth: { type: http, scheme: bearer, bearerFormat: JWT }
@@ -309,6 +445,114 @@ components:
             collectorId: { type: string }
             ingestedAt: { type: string, format: date-time }
             pipelineDurationMs: { type: number, minimum: 0 }
+    IncidentContext:
+      type: object
+      required: [previousIncidents, assets, entityHistory]
+      properties:
+        previousIncidents:
+          type: array
+          maxItems: 50
+          items: { $ref: "#/components/schemas/PreviousIncidentContext" }
+        assets:
+          type: array
+          items: { $ref: "#/components/schemas/IncidentAssetContext" }
+        entityHistory:
+          type: object
+          additionalProperties:
+            $ref: "#/components/schemas/IncidentEntityHistory"
+    PreviousIncidentContext:
+      type: object
+      required: [id, title, severity, status, createdAt]
+      properties:
+        id: { type: string, format: uuid }
+        title: { type: string }
+        severity: { type: string, enum: [critical, high, medium, low, informational] }
+        status: { type: string, enum: [open, investigating, resolved, closed] }
+        createdAt: { type: string, format: date-time }
+    IncidentAssetContext:
+      type: object
+      required: [name, assetType, ipAddress, criticality, owner, department, tags]
+      properties:
+        name: { type: string }
+        assetType: { type: string }
+        ipAddress: { type: [string, "null"] }
+        criticality: { type: number, minimum: 0, maximum: 1 }
+        owner: { type: [string, "null"] }
+        department: { type: [string, "null"] }
+        tags: { type: array, items: {} }
+    IncidentEntityHistory:
+      type: object
+      required: [firstSeenAt, incidentCount30d, alertCount30d]
+      properties:
+        firstSeenAt: { type: [string, "null"], format: date-time }
+        incidentCount30d: { type: integer, minimum: 0 }
+        alertCount30d: { type: integer, minimum: 0 }
+    TransitionIncidentStatusRequest:
+      type: object
+      additionalProperties: false
+      required: [status]
+      properties:
+        status: { type: string, enum: [open, investigating, resolved, closed] }
+    TransitionIncidentStatusResponse:
+      type: object
+      additionalProperties: false
+      required: [id, status, updatedAt]
+      properties:
+        id: { type: string, format: uuid }
+        status: { type: string, enum: [open, investigating, resolved, closed] }
+        updatedAt: { type: string, format: date-time }
+    AssignIncidentRequest:
+      type: object
+      additionalProperties: false
+      required: [assignedTo]
+      properties:
+        assignedTo: { type: [string, "null"], format: uuid }
+    AssignIncidentResponse:
+      type: object
+      additionalProperties: false
+      required: [id, assignedTo, updatedAt]
+      properties:
+        id: { type: string, format: uuid }
+        assignedTo: { type: [string, "null"], format: uuid }
+        updatedAt: { type: string, format: date-time }
+    AddIncidentNoteRequest:
+      type: object
+      additionalProperties: false
+      required: [content]
+      properties:
+        content: { type: string, minLength: 1, maxLength: 10000 }
+    AddIncidentNoteResponse:
+      type: object
+      additionalProperties: false
+      required: [id, incidentId, authorId, authorName, content, createdAt]
+      properties:
+        id: { type: string, format: uuid }
+        incidentId: { type: string, format: uuid }
+        authorId: { type: string, format: uuid }
+        authorName: { type: string }
+        content: { type: string, minLength: 1, maxLength: 10000 }
+        createdAt: { type: string, format: date-time }
+    ResolveIncidentRequest:
+      type: object
+      additionalProperties: false
+      required: [resolution]
+      properties:
+        resolution:
+          type: string
+          enum: [tp_mitigated, tp_accepted, fp_rule_tuning, fp_ai_noise, fp_known, duplicate, informational]
+        note: { type: string, minLength: 1, maxLength: 10000 }
+    ResolveIncidentResponse:
+      type: object
+      additionalProperties: false
+      required: [id, status, resolution, resolvedAt, updatedAt]
+      properties:
+        id: { type: string, format: uuid }
+        status: { type: string, const: resolved }
+        resolution:
+          type: string
+          enum: [tp_mitigated, tp_accepted, fp_rule_tuning, fp_ai_noise, fp_known, duplicate, informational]
+        resolvedAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
     Error:
       type: object
       required: [error]
@@ -332,4 +576,10 @@ components:
       content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } }
     NotFound:
       description: Incident not found or not visible to this organization
+      content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } }
+    InvalidStatusTransition:
+      description: The requested lifecycle transition is not permitted
+      content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } }
+    AssignmentNotFound:
+      description: Incident is not visible or the requested assignee is unavailable
       content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } }

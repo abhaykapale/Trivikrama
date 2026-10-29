@@ -117,6 +117,8 @@ BEGIN
         'incident_update',
         'incident_status_change',
         'incident_assign',
+        'incident_note_added',
+        'incident_resolve',
         'rule_create',
         'rule_update',
         'rule_delete',

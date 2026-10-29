@@ -1,4 +1,5 @@
 from collections.abc import Iterator
+from pathlib import Path
 
 import pytest
 from fastapi import FastAPI
@@ -23,8 +24,10 @@ def clock() -> FakeClock:
 
 
 @pytest.fixture
-def application(clock: FakeClock) -> FastAPI:
-    application = create_app(Settings(environment=Environment.TEST), clock=clock)
+def application(clock: FakeClock, tmp_path: Path) -> FastAPI:
+    application = create_app(
+        Settings(environment=Environment.TEST, models_dir=tmp_path), clock=clock
+    )
     return application
 
 

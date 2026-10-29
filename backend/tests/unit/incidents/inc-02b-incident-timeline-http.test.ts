@@ -22,6 +22,7 @@ import type {
   ListIncidentAlertsQuery,
   ListIncidentEventsQuery,
 } from "../../../src/modules/incidents/domain/incident-evidence.contracts.js";
+import type { GetIncidentContextQuery } from "../../../src/modules/incidents/domain/incident-context.contracts.js";
 import { createIncidentQueryRouter } from "../../../src/modules/incidents/http/incident-query.routes.js";
 
 const USER_ID = "550e8400-e29b-41d4-a716-446655440001";
@@ -110,7 +111,7 @@ test("incident alert and event endpoints require authentication", async () => {
   const harness = createHarness();
 
   await withServer(harness.app, async (baseUrl) => {
-    for (const resource of ["alerts", "events"]) {
+    for (const resource of ["alerts", "events", "context"]) {
       const response = await requestJson(
         baseUrl,
         `/api/v1/incidents/${INCIDENT_ID}/${resource}`,
@@ -121,6 +122,7 @@ test("incident alert and event endpoints require authentication", async () => {
   });
   assert.equal(harness.alertInputs.length, 0);
   assert.equal(harness.eventInputs.length, 0);
+  assert.equal(harness.contextInputs.length, 0);
 });
 
 test("incident evidence endpoints use trusted tenant and documented pagination", async () => {
@@ -204,6 +206,51 @@ test("incident evidence endpoints conceal absent and cross-tenant incidents", as
   });
 });
 
+test("incident context uses the authenticated tenant and returns historical context", async () => {
+  const harness = createHarness();
+  harness.addActiveToken("analyst-token", "org-alpha");
+
+  await withServer(harness.app, async (baseUrl) => {
+    const response = await requestJson(
+      baseUrl,
+      `/api/v1/incidents/${INCIDENT_ID}/context?orgId=forged-org`,
+      "analyst-token",
+    );
+    assert.equal(response.status, 200);
+    assert.equal(response.body.previousIncidents[0].title, "Earlier activity");
+    assert.equal(response.body.assets[0].name, "web-server-01");
+    assert.equal(response.body.entityHistory["192.168.1.100"].incidentCount30d, 2);
+  });
+
+  assert.deepEqual(harness.contextInputs, [
+    { incidentId: INCIDENT_ID, orgId: "org-alpha" },
+  ]);
+});
+
+test("incident context validates UUIDs and conceals cross-tenant absence", async () => {
+  const harness = createHarness();
+  harness.addActiveToken("analyst-token", "org-alpha");
+
+  await withServer(harness.app, async (baseUrl) => {
+    const invalid = await requestJson(
+      baseUrl,
+      "/api/v1/incidents/not-a-uuid/context",
+      "analyst-token",
+    );
+    assert.equal(invalid.status, 400);
+    assert.equal(invalid.body.error.code, "VALIDATION_ERROR");
+
+    harness.contextResult = null;
+    const hidden = await requestJson(
+      baseUrl,
+      `/api/v1/incidents/${INCIDENT_ID}/context`,
+      "analyst-token",
+    );
+    assert.equal(hidden.status, 404);
+    assert.equal(hidden.body.error.code, "RESOURCE_NOT_FOUND");
+  });
+});
+
 function createHarness() {
   const jwtService = new FakeJwtService();
   const sessions = new Map<string, SessionRecord>();
@@ -211,14 +258,17 @@ function createHarness() {
   const inputs: GetIncidentTimelineQuery[] = [];
   const alertInputs: ListIncidentAlertsQuery[] = [];
   const eventInputs: ListIncidentEventsQuery[] = [];
+  const contextInputs: GetIncidentContextQuery[] = [];
   const harness = {
     app: express(),
     inputs,
     alertInputs,
     eventInputs,
+    contextInputs,
     result: timelineResult() as ReturnType<typeof timelineResult> | null,
     alertResult: alertResult() as ReturnType<typeof alertResult> | null,
     eventResult: eventResult() as ReturnType<typeof eventResult> | null,
+    contextResult: contextResult() as ReturnType<typeof contextResult> | null,
     addActiveToken(token: string, orgId: string) {
       const jwtId = `jwt-${token}`;
       const nowSeconds = Math.floor(Date.now() / 1000);
@@ -261,6 +311,12 @@ function createHarness() {
       getIncidentDetailUseCase: {
         async execute() {
           throw new Error("Outside INC-02B test scope.");
+        },
+      },
+      getIncidentContextUseCase: {
+        async execute(input) {
+          contextInputs.push(input);
+          return harness.contextResult;
         },
       },
       getIncidentTimelineUseCase: {
@@ -346,6 +402,38 @@ function eventResult() {
       totalPages: 3,
       hasNext: false,
       hasPrev: true,
+    },
+  };
+}
+
+function contextResult() {
+  return {
+    previousIncidents: [
+      {
+        id: "00000000-0000-4000-8000-000000000502",
+        title: "Earlier activity",
+        severity: "medium" as const,
+        status: "closed" as const,
+        createdAt: new Date("2026-10-01T00:00:00Z"),
+      },
+    ],
+    assets: [
+      {
+        name: "web-server-01",
+        assetType: "server",
+        ipAddress: "10.0.0.5",
+        criticality: 0.9,
+        owner: "DevOps Team",
+        department: "Engineering",
+        tags: ["production"],
+      },
+    ],
+    entityHistory: {
+      "192.168.1.100": {
+        firstSeenAt: new Date("2026-09-20T00:00:00Z"),
+        incidentCount30d: 2,
+        alertCount30d: 5,
+      },
     },
   };
 }

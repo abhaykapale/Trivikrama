@@ -54,6 +54,17 @@ export class PostgresUserRepository implements IUserRepository {
     return row ? mapUserRow(row) : null;
   }
 
+  public async findByIdAndOrg(
+    id: string,
+    orgId: string,
+  ): Promise<UserRecord | null> {
+    const row = await this.baseQuery()
+      .where("id", ensureNonBlank(id, "id"))
+      .andWhere("org_id", ensureNonBlank(orgId, "orgId"))
+      .first<UserRow>();
+    return row ? mapUserRow(row) : null;
+  }
+
   public async findByUsername(
     username: string,
     orgId = DEFAULT_ORG_ID,

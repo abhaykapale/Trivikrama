@@ -1,0 +1,30 @@
+/build/
+/out/
+/.cache/
+/.vs/
+/Testing/
+compile_commands.json
+CMakeUserPresets.json
+*.user
+*.tmp
+
+# Runtime handoff and processing artifacts
+/incoming/*
+!/incoming/.gitkeep
+/processing/*
+!/processing/.gitkeep
+/processed/*
+!/processed/.gitkeep
+/quarantine/*
+!/quarantine/.gitkeep
+
+# Collector-owned durable runtime state
+/runtime/handoff/*
+!/runtime/handoff/.gitkeep
+/runtime/outbox/*
+!/runtime/outbox/.gitkeep
+/runtime/rejected/*
+!/runtime/rejected/.gitkeep
+/runtime/state/*
+!/runtime/state/.gitkeep
+/runtime/logs/

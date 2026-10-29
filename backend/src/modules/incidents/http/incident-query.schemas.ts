@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { INCIDENT_RESOLUTIONS } from "../domain/incident-resolution.contracts.js";
 
 const commaSeparatedEnum = <
   const TValues extends readonly [string, ...string[]],
@@ -95,3 +96,28 @@ export const incidentEventsQuerySchema = z.object({
   page: z.coerce.number().int().min(1).max(1_000_000).default(1),
   limit: z.coerce.number().int().min(1).max(100).default(25),
 });
+
+export const transitionIncidentStatusBodySchema = z
+  .object({
+    status: z.enum(["open", "investigating", "resolved", "closed"]),
+  })
+  .strict();
+
+export const assignIncidentBodySchema = z
+  .object({
+    assignedTo: z.string().uuid().nullable(),
+  })
+  .strict();
+
+export const addIncidentNoteBodySchema = z
+  .object({
+    content: z.string().trim().min(1).max(10_000),
+  })
+  .strict();
+
+export const resolveIncidentBodySchema = z
+  .object({
+    resolution: z.enum(INCIDENT_RESOLUTIONS),
+    note: z.string().trim().min(1).max(10_000).optional(),
+  })
+  .strict();

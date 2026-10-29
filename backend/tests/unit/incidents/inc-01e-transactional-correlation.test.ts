@@ -37,6 +37,28 @@ test("creates one scored incident and merges rule plus AI evidence", async () =>
   assert.equal(unitOfWork.audit.length, 2);
 });
 
+test("accepts PostgreSQL-rounded AI scores without reporting an identity collision", async () => {
+  const unitOfWork = new InMemoryCorrelationUnitOfWork();
+  const correlator = new TransactionalIncidentCorrelator({ unitOfWork });
+  const precise = input();
+  precise.aiResults = [
+    {
+      ...precise.aiResults[0]!,
+      anomaly_score: 0.642871,
+      confidence: 0.876543,
+    },
+  ];
+
+  const result = await correlator.correlate(precise);
+
+  assert.equal(result.alertsAttached, 2);
+  const aiAlert = [...unitOfWork.alerts.values()].find(
+    (alert) => alert.alertType === "ai",
+  );
+  assert.equal(aiAlert?.anomalyScore, 0.6429);
+  assert.equal(aiAlert?.confidence, 0.8765);
+});
+
 test("replaying the same correlation input creates no duplicates", async () => {
   const unitOfWork = new InMemoryCorrelationUnitOfWork();
   const correlator = new TransactionalIncidentCorrelator({ unitOfWork });
@@ -383,19 +405,30 @@ function alertRecord(input: CreateAlertInput): AlertRecord {
     ruleId: input.ruleId ?? null,
     ruleName: input.ruleName ?? null,
     matchedCondition: input.matchedCondition ?? null,
-    anomalyScore: input.anomalyScore ?? null,
-    confidence: input.confidence ?? null,
+    anomalyScore:
+      input.anomalyScore === undefined || input.anomalyScore === null
+        ? null
+        : round(input.anomalyScore, 4),
+    confidence:
+      input.confidence === undefined || input.confidence === null
+        ? null
+        : round(input.confidence, 4),
     threatCategory: input.threatCategory ?? null,
     modelVersion: input.modelVersion ?? null,
     shapValues: input.shapValues ?? null,
     severity: input.severity ?? "medium",
-    weight: input.weight ?? 0.5,
+    weight: round(input.weight ?? 0.5, 2),
     tags: input.tags ?? [],
     metadata: JSON.parse(JSON.stringify(input.metadata ?? {})) as Record<string, unknown>,
     matchedEventIds: input.matchedEventIds ?? [],
     createdAt: EVENT_TIME,
     orgId: input.orgId ?? "default",
   };
+}
+
+function round(value: number, decimalPlaces: number): number {
+  const factor = 10 ** decimalPlaces;
+  return Math.round((value + Number.EPSILON) * factor) / factor;
 }
 
 function snapshotCounts(unitOfWork: InMemoryCorrelationUnitOfWork) {

@@ -1,4 +1,5 @@
 import type { Collection, Filter, Sort } from "mongodb";
+import { SHA256_DIGEST_PATTERN } from "../../../shared/sha256-digest.js";
 
 import {
   removeUndefined,
@@ -23,7 +24,6 @@ import type {
 } from "./raw-event-archive.repository.js";
 
 const COLLECTION_NAME = "raw_events_archive";
-const SHA256_DIGEST_PATTERN = /^sha256:[a-f0-9]{64}$/;
 
 type MutableMongoFilter = Record<string, unknown>;
 

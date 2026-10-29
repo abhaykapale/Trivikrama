@@ -99,8 +99,22 @@ function sameAlert(record: AlertRecord, expected: CreateAlertInput): boolean {
     record.orgId === expected.orgId &&
     isDeepStrictEqual(record.tags, expected.tags) &&
     isDeepStrictEqual(record.metadata, expected.metadata) &&
-    isDeepStrictEqual(record.matchedEventIds, expected.matchedEventIds)
+    sameEventIdSet(record.matchedEventIds, expected.matchedEventIds ?? [])
   );
+}
+
+function sameEventIdSet(
+  persisted: readonly unknown[],
+  expected: readonly unknown[],
+): boolean {
+  if (
+    !persisted.every((eventId): eventId is string => typeof eventId === "string") ||
+    !expected.every((eventId): eventId is string => typeof eventId === "string")
+  ) {
+    return false;
+  }
+
+  return isDeepStrictEqual([...persisted].sort(), [...expected].sort());
 }
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu;

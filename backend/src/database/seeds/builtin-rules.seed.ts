@@ -34,7 +34,7 @@ const SSH_BRUTE_FORCE_RULE_REFERENCES = [
   "https://attack.mitre.org/techniques/T1110/",
 ] as const;
 
-const SSH_BRUTE_FORCE_RULE_YAML = `title: SSH Brute Force
+export const SSH_BRUTE_FORCE_RULE_YAML = `title: SSH Brute Force
 id: rule-bf-ssh-001
 description: >
   Detects multiple failed SSH login attempts from the same
@@ -48,7 +48,8 @@ logsource:
   category_uid: 3
 detection:
   selection:
-    message|contains: "Failed password"
+    status_id: 2
+    message|startswith: "Failed login for "
     severity_id|gte: 3
   condition: "selection"
   count:
@@ -111,7 +112,7 @@ export async function seedBuiltinRules(
     tags: JSON.stringify([...SSH_BRUTE_FORCE_RULE_TAGS]),
     false_positives: JSON.stringify([...SSH_BRUTE_FORCE_RULE_FALSE_POSITIVES]),
     rule_references: JSON.stringify([...SSH_BRUTE_FORCE_RULE_REFERENCES]),
-    version: 1,
+    version: 2,
     is_builtin: true,
     created_by: createdBy?.id ?? null,
     updated_by: null,
@@ -191,7 +192,7 @@ async function writeBuiltinRuleSeedAuditLog(
       tags: [...SSH_BRUTE_FORCE_RULE_TAGS],
       false_positives: [...SSH_BRUTE_FORCE_RULE_FALSE_POSITIVES],
       references: [...SSH_BRUTE_FORCE_RULE_REFERENCES],
-      version: 1,
+      version: 2,
       is_builtin: true,
       org_id: context.initialAdmin.orgId,
     },
