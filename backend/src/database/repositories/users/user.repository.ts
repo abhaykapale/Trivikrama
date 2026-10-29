@@ -61,6 +61,8 @@ export interface IUserRepository {
 
   findById(id: string): Promise<UserRecord | null>;
 
+  findByIdAndOrg(id: string, orgId: string): Promise<UserRecord | null>;
+
   findByUsername(username: string, orgId?: string): Promise<UserRecord | null>;
 
   findByUsernameAndOrg(

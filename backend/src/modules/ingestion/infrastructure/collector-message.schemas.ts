@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { SHA256_DIGEST_PATTERN } from "../../../shared/sha256-digest.js";
 
 import type { CollectorMessage, JsonValue } from "../domain/collector-contract.types.js";
 
@@ -31,7 +32,7 @@ const timestamp = z
 
 const safeInteger = z.number().int().min(0).max(Number.MAX_SAFE_INTEGER);
 
-const sha256 = z.string().regex(/^sha256:[0-9a-f]{64}$/);
+const sha256 = z.string().regex(SHA256_DIGEST_PATTERN);
 
 const integrity = z
     .object({

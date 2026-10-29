@@ -139,8 +139,8 @@ def test_model_info_returns_only_validated_loaded_bundle_metadata() -> None:
     ]
 
 
-def test_model_info_returns_503_without_a_loaded_bundle() -> None:
-    application = create_app(Settings(environment=Environment.TEST))
+def test_model_info_returns_503_without_a_loaded_bundle(tmp_path: Path) -> None:
+    application = create_app(Settings(environment=Environment.TEST, models_dir=tmp_path))
 
     with TestClient(application) as client:
         response = client.get("/api/v1/model/info")

@@ -1,0 +1,160 @@
+{
+  "proof": "trivikrama-end-to-end-siem",
+  "proofVersion": "1.0",
+  "generatedAt": "2026-10-29T06:40:19.685Z",
+  "passed": false,
+  "eventSelection": "explicit",
+  "eventId": "sha256:aaaa8690e65530ec21a3289ac4c11b8dedaaae2cd82c47dc810f18f44c171770",
+  "organizationId": "default",
+  "stages": [
+    {
+      "id": "event_selection",
+      "label": "Evidence event selected",
+      "status": "PASS",
+      "summary": "Selected event sha256:aaaa8690e65530ec21a3289ac4c11b8dedaaae2cd82c47dc810f18f44c171770.",
+      "details": {
+        "method": "explicit"
+      }
+    },
+    {
+      "id": "normalized_event",
+      "label": "OCSF event normalized and stored",
+      "status": "PASS",
+      "summary": "The tenant-scoped normalized OCSF event is present.",
+      "details": {
+        "batchId": "e0b87901-e4f0-42f0-9d0f-fb96dfec8f0f",
+        "collectorId": "collector-dev-01",
+        "classUid": 3002,
+        "severityId": 3,
+        "ingestedAt": "2026-10-29T06:35:22.531Z"
+      }
+    },
+    {
+      "id": "verified_archive",
+      "label": "Signed collector batch verified and archived",
+      "status": "FAIL",
+      "summary": "The archived batch metadata is internally inconsistent.",
+      "details": {
+        "batchId": "e0b87901-e4f0-42f0-9d0f-fb96dfec8f0f",
+        "collectorId": "collector-dev-01",
+        "eventCount": 8,
+        "storedEventCount": 8,
+        "canonicalUnsignedSha256": "sha256:21498ad45e16717c3e5b49fc16a24002535d105e9b90c0aa52f27f5611e180cb",
+        "archivedAt": "2026-10-29T06:35:22.531Z"
+      }
+    },
+    {
+      "id": "feature_extraction",
+      "label": "AI feature vector extracted",
+      "status": "PASS",
+      "summary": "All 20 model features are stored and finite.",
+      "details": {
+        "expectedFeatureCount": 20,
+        "missingFeatures": []
+      }
+    },
+    {
+      "id": "ai_inference",
+      "label": "AI inference persisted",
+      "status": "PASS",
+      "summary": "A contract-valid, non-fallback model result is stored.",
+      "details": {
+        "modelName": "isolation_forest_v1",
+        "modelVersion": "v20261029_061230",
+        "anomalyScore": 0.642871,
+        "confidence": 0.5178,
+        "isAnomaly": false,
+        "shapFeatureCount": 0,
+        "processingTimeMs": 15
+      }
+    },
+    {
+      "id": "detection",
+      "label": "Rule or AI alert persisted",
+      "status": "FAIL",
+      "summary": "No persisted alert references the selected event.",
+      "details": {
+        "matchingAlertCount": 0,
+        "alertTypes": [],
+        "ruleNames": []
+      }
+    },
+    {
+      "id": "incident_correlation",
+      "label": "Incident correlated and risk scored",
+      "status": "FAIL",
+      "summary": "Expected exactly one incident link; found 0.",
+      "details": {
+        "incidentLinkCount": 0
+      }
+    },
+    {
+      "id": "immutable_audit",
+      "label": "Immutable incident audit recorded",
+      "status": "FAIL",
+      "summary": "No tenant-scoped incident_create audit record was found.",
+      "details": {}
+    },
+    {
+      "id": "notification_outbox",
+      "label": "Replay-safe notification queued",
+      "status": "FAIL",
+      "summary": "No incident notification outbox record was found.",
+      "details": {}
+    },
+    {
+      "id": "redis_publication",
+      "label": "Redis notification publication verified",
+      "status": "FAIL",
+      "summary": "The notification is not published or its Redis marker is missing.",
+      "details": {
+        "required": true,
+        "markerMatches": false
+      }
+    },
+    {
+      "id": "collector_heartbeat",
+      "label": "Collector heartbeat recorded",
+      "status": "PASS",
+      "summary": "Collector status is online.",
+      "details": {
+        "required": true,
+        "collectorId": "collector-dev-01",
+        "status": "online",
+        "lastHeartbeatAt": "2026-10-29T06:39:51.323Z",
+        "filesProcessed": 0,
+        "eventsCollected": 8,
+        "errorsCount": 0
+      }
+    }
+  ],
+  "evidence": {
+    "normalizedEvent": {
+      "eventId": "sha256:aaaa8690e65530ec21a3289ac4c11b8dedaaae2cd82c47dc810f18f44c171770",
+      "batchId": "e0b87901-e4f0-42f0-9d0f-fb96dfec8f0f",
+      "collectorId": "collector-dev-01",
+      "classUid": 3002,
+      "severityId": 3,
+      "schemaValid": true,
+      "ingestedAt": "2026-10-29T06:35:22.531Z",
+      "pipelineDurationMs": null
+    },
+    "verifiedBatch": {
+      "batchId": "e0b87901-e4f0-42f0-9d0f-fb96dfec8f0f",
+      "collectorId": "collector-dev-01",
+      "canonicalUnsignedSha256": "sha256:21498ad45e16717c3e5b49fc16a24002535d105e9b90c0aa52f27f5611e180cb",
+      "eventCount": 8,
+      "archivedAt": "2026-10-29T06:35:22.531Z"
+    },
+    "aiResult": {
+      "modelName": "isolation_forest_v1",
+      "modelVersion": "v20261029_061230",
+      "anomalyScore": 0.642871,
+      "confidence": 0.5178,
+      "isAnomaly": false,
+      "processingTimeMs": 15,
+      "shapFeatureCount": 0,
+      "createdAt": "2026-10-29T06:35:22.699Z"
+    }
+  }
+}

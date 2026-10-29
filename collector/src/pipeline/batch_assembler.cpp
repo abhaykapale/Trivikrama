@@ -3,6 +3,7 @@
 #include "trivikrama/collector/contract/contract_profile.hpp"
 #include "trivikrama/collector/contract/serialization.hpp"
 
+#include <cstddef>
 #include <utility>
 
 namespace trivikrama::collector::pipeline {
@@ -14,6 +15,15 @@ namespace {
     batch.integrity.value =
         std::string(contract::ContractProfile::encoded_signature_length, 'A');
     return contract::serialize(batch, true).size();
+}
+
+[[nodiscard]] constexpr std::size_t decimal_digit_count(std::size_t value) noexcept {
+    std::size_t digits = 1U;
+    while (value >= 10U) {
+        value /= 10U;
+        ++digits;
+    }
+    return digits;
 }
 
 } // namespace
@@ -80,14 +90,23 @@ BatchAddResult BatchAssembler::try_add(contract::ContractEvent event) {
     if (contribution > maximum_encoded_bytes_ - empty_batch_bytes_) {
         return BatchAddResult::event_too_large;
     }
-    const auto separator = batch_->events.empty() ? 0U : 1U;
-    if (batch_->events.size() >= maximum_events_ ||
-        encoded_bytes_ + separator > maximum_encoded_bytes_ ||
-        contribution > maximum_encoded_bytes_ - encoded_bytes_ - separator) {
+    const auto current_count = batch_->events.size();
+    if (current_count >= maximum_events_) {
         return BatchAddResult::flush_required;
     }
+
+    const auto separator = current_count == 0U ? 0U : 1U;
+    const auto next_count = current_count + 1U;
+    const auto event_count_growth =
+        decimal_digit_count(next_count) - decimal_digit_count(current_count);
+    const auto framing_growth = separator + event_count_growth;
+    if (framing_growth > maximum_encoded_bytes_ - encoded_bytes_ ||
+        contribution > maximum_encoded_bytes_ - encoded_bytes_ - framing_growth) {
+        return BatchAddResult::flush_required;
+    }
+
     batch_->events.push_back(std::move(event));
-    encoded_bytes_ += contribution + separator;
+    encoded_bytes_ += contribution + framing_growth;
     return BatchAddResult::accepted;
 }
 

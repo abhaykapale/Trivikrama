@@ -1,0 +1,11 @@
+{
+  "batch_filename": "batch_<uuid-v4>.json",
+  "canonicalization": "RFC8785",
+  "contract_version": "1.0.0",
+  "maximum_json_nesting": 128,
+  "numeric_policy": "finite-ieee754-safe-range",
+  "parser_policy": "reject-bom-invalid-utf8-duplicate-keys-and-unknown-contract-fields",
+  "publication": "same-filesystem-fsync-then-atomic-rename",
+  "signature_encoding": "base64url-unpadded",
+  "unsigned_document_rule": "omit-only-integrity.value"
+}

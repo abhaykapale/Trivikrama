@@ -14,6 +14,8 @@ export interface BullMqCollectorProcessingWorkerConfiguration {
     readonly queueName?: string;
     readonly prefix?: string;
     readonly concurrency?: number;
+    readonly onCompleted?: (job: CollectorProcessingJob) => void;
+    readonly onFailed?: (job: CollectorProcessingJob | undefined, error: Error) => void;
 }
 
 export interface BullMqCollectorProcessingWorkerDependencies {
@@ -70,6 +72,12 @@ export class BullMqCollectorProcessingWorker {
         );
 
         this.worker.on("error", () => undefined);
+        this.worker.on("completed", (job) => {
+            configuration.onCompleted?.(job.data);
+        });
+        this.worker.on("failed", (job, error) => {
+            configuration.onFailed?.(job?.data, error);
+        });
     }
 
     public async waitUntilReady(): Promise<void> {

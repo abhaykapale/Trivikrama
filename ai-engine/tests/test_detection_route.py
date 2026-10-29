@@ -98,9 +98,9 @@ def event(event_id: str) -> dict[str, object]:
     }
 
 
-def test_returns_503_and_records_an_error_before_a_model_is_ready() -> None:
+def test_returns_503_and_records_an_error_before_a_model_is_ready(tmp_path: Path) -> None:
     application = create_app(
-        Settings(environment=Environment.TEST),
+        Settings(environment=Environment.TEST, models_dir=tmp_path),
         clock=StepClock(100.0, 100.01, 100.02),
     )
 

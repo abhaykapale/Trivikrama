@@ -147,3 +147,32 @@ combines these paths with a trusted organization predicate. The migration is
 non-transactional only because PostgreSQL requires that for
 `CREATE INDEX CONCURRENTLY`.
 
+INC-02D adds a GIN `jsonb_path_ops` index for exact incident-entity containment
+and partial active-asset indexes prefixed by `org_id` for IP address and
+case-insensitive hostname/name matching. Its migration is likewise
+non-transactional because every index is created concurrently.
+
+## Incident command repository boundaries
+
+Incident mutations use tenant-scoped repository methods even after a
+tenant-scoped row lock. `transitionStatusForOrg()` and `assignForOrg()` both
+include `org_id` in the update predicate as defense in depth. Assignment user
+validation uses `findByIdAndOrg()` on the transaction-bound user repository,
+so the incident update, user check, and immutable audit insertion share one
+PostgreSQL transaction and cannot cross organization boundaries.
+
+INC-03C creates incident notes only after `findByIdForUpdate()` confirms the
+incident belongs to the trusted organization. The transaction-bound note and
+audit repositories then commit together. Migration
+`20261020000100_inc_03c_incident_notes.js` adds the timeline-compatible
+`incident_note_added` audit action and enforces the 10,000-character content
+limit at the database boundary.
+
+INC-03D resolves incidents through the same locked, tenant-scoped command
+boundary. The status update, optional `incident_notes` insert, and immutable
+reason-bearing audit share one transaction. Migration
+`20261020000200_inc_03d_incident_resolution.js` extends the audit action enum
+with `incident_resolve`; because the incident table has no resolution-reason
+column, this immutable audit event is the authoritative classification source
+and is projected into the incident timeline as a status change.
+

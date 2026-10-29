@@ -1,0 +1,40 @@
+TRIVIKRAMA END-TO-END SIEM PROOF
+================================
+Generated: 2026-10-29T05:53:08.805Z
+Event ID:  mongo-demo-normalized-event-login-001
+Selection: latest-linked-event
+
+PASS  Evidence event selected
+      Selected event mongo-demo-normalized-event-login-001.
+PASS  OCSF event normalized and stored
+      The tenant-scoped normalized OCSF event is present.
+FAIL  Signed collector batch verified and archived
+      No verified raw-batch archive was found for the selected event.
+FAIL  AI feature vector extracted
+      Missing or invalid model features: day_of_week, time_since_last_event, time_deviation_score, events_per_minute_src_ip, events_per_hour_user, unique_dst_ips_per_src, unique_users_per_src_ip, frequency_deviation, src_ip_entropy, username_entropy, process_name_entropy, bytes_sent, bytes_received, bytes_ratio, severity_id, failed_login_count_10min, failed_to_success_ratio.
+FAIL  AI inference persisted
+      The stored AI result failed tenant, batch, feature, or score validation.
+PASS  Rule or AI alert persisted
+      1 persisted alert(s) reference the selected event.
+PASS  Incident correlated and risk scored
+      The tenant-scoped incident, evidence counts, and risk score are consistent.
+FAIL  Immutable incident audit recorded
+      No tenant-scoped incident_create audit record was found.
+FAIL  Replay-safe notification queued
+      No incident notification outbox record was found.
+FAIL  Redis notification publication verified
+      The notification is not published or its Redis marker is missing.
+PASS  Collector heartbeat recorded
+      Collector status is offline.
+
+RESULT SUMMARY
+--------------
+Incident ID:        00000000-0000-4000-8000-000000000502
+Severity:           high
+Risk score:         62.3
+Detection source:   ai
+AI model:           dev-seed-v1
+AI anomaly score:   0.86
+SHAP features:      2
+
+OVERALL RESULT: FAIL

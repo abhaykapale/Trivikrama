@@ -15,7 +15,10 @@ import { createAuthApplicationDependencies } from "./modules/auth/composition/in
 import { createCollectorMonitoringDependencies } from "./modules/collector-monitoring/index.js";
 import type { CollectorMonitoringDependencies } from "./modules/collector-monitoring/index.js";
 import HealthService from "./modules/health/health.service.js";
-import { createIncidentQueryDependencies } from "./modules/incidents/index.js";
+import {
+  createIncidentCommandDependencies,
+  createIncidentQueryDependencies,
+} from "./modules/incidents/index.js";
 import { createUserManagementDependencies } from "./modules/users/composition/index.js";
 import { ShutdownCoordinator } from "./runtime/shutdown-coordinator.js";
 import logger from "./shared/logger/index.js";
@@ -114,6 +117,8 @@ const bootstrap = async (): Promise<void> => {
       databaseClients.postgres,
       mongoRepositories.normalizedEvents,
     );
+    const incidentCommandDependencies =
+      createIncidentCommandDependencies(unitOfWork);
     collectorMonitoringDependencies =
       createCollectorMonitoringDependencies({
         collectorStatusRepository: repositories.collectorStatus,
@@ -160,6 +165,16 @@ const bootstrap = async (): Promise<void> => {
         listIncidentsUseCase: incidentQueryDependencies.listIncidentsUseCase,
         getIncidentDetailUseCase:
           incidentQueryDependencies.getIncidentDetailUseCase,
+        getIncidentContextUseCase:
+          incidentQueryDependencies.getIncidentContextUseCase,
+        transitionIncidentStatusUseCase:
+          incidentCommandDependencies.transitionIncidentStatusUseCase,
+        assignIncidentUseCase:
+          incidentCommandDependencies.assignIncidentUseCase,
+        addIncidentNoteUseCase:
+          incidentCommandDependencies.addIncidentNoteUseCase,
+        resolveIncidentUseCase:
+          incidentCommandDependencies.resolveIncidentUseCase,
         getIncidentTimelineUseCase:
           incidentQueryDependencies.getIncidentTimelineUseCase,
         listIncidentAlertsUseCase:

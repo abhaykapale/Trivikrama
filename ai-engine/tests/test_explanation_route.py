@@ -154,8 +154,8 @@ def test_explains_a_normal_event_because_the_request_is_explicit() -> None:
     assert response.json()["shap_explanation"] is not None
 
 
-def test_returns_503_before_a_model_is_ready() -> None:
-    application = create_app(Settings(environment=Environment.TEST))
+def test_returns_503_before_a_model_is_ready(tmp_path: Path) -> None:
+    application = create_app(Settings(environment=Environment.TEST, models_dir=tmp_path))
 
     with TestClient(application) as client:
         response = client.post("/api/v1/explain", json=request_body())

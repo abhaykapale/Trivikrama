@@ -33,6 +33,8 @@ import type {
 
 const MAX_ALERTS_PER_INCIDENT = 500;
 const ALERT_PAGE_SIZE = 100;
+const ALERT_SCORE_DECIMAL_PLACES = 4;
+const ALERT_WEIGHT_DECIMAL_PLACES = 2;
 
 export interface TransactionalIncidentCorrelatorDependencies {
   readonly unitOfWork: IncidentCorrelationUnitOfWork;
@@ -368,7 +370,7 @@ function toCreateAlertInput(alert: UnifiedAlert): CreateAlertInput {
       ruleName: alert.ruleName,
       matchedCondition: alert.matchedCondition,
       severity: alert.severity,
-      weight: alert.weight,
+      weight: normalizeDecimal(alert.weight, ALERT_WEIGHT_DECIMAL_PLACES),
       tags: alert.tags,
       metadata: { ...alert.metadata },
       matchedEventIds: alert.matchedEventIds,
@@ -379,13 +381,16 @@ function toCreateAlertInput(alert: UnifiedAlert): CreateAlertInput {
     id: alert.id,
     incidentId: null,
     alertType: "ai",
-    anomalyScore: alert.anomalyScore,
-    confidence: alert.confidence,
+    anomalyScore: normalizeDecimal(alert.anomalyScore, ALERT_SCORE_DECIMAL_PLACES),
+    confidence:
+      alert.confidence === null
+        ? null
+        : normalizeDecimal(alert.confidence, ALERT_SCORE_DECIMAL_PLACES),
     threatCategory: optionalString(alert.metadata.threatCategory),
     modelVersion: alert.modelVersion,
     shapValues: asRecord(alert.metadata.shapExplanation),
     severity: alert.severity,
-    weight: alert.weight,
+    weight: normalizeDecimal(alert.weight, ALERT_WEIGHT_DECIMAL_PLACES),
     tags: alert.tags,
     metadata: {
       ...alert.metadata,
@@ -418,7 +423,7 @@ function samePersistedAlert(alert: UnifiedAlert, record: AlertRecord): boolean {
     record.alertType !== alert.type ||
     record.orgId !== alert.orgId ||
     record.severity !== alert.severity ||
-    record.weight !== alert.weight ||
+    record.weight !== normalizeDecimal(alert.weight, ALERT_WEIGHT_DECIMAL_PLACES) ||
     !isDeepStrictEqual(stringArray(record.tags), [...alert.tags]) ||
     !isDeepStrictEqual(
       [...record.matchedEventIds].sort(),
@@ -443,8 +448,11 @@ function samePersistedAlert(alert: UnifiedAlert, record: AlertRecord): boolean {
     correlationEntities: alert.entities,
   });
   return (
-    record.anomalyScore === alert.anomalyScore &&
-    record.confidence === alert.confidence &&
+    record.anomalyScore === normalizeDecimal(alert.anomalyScore, ALERT_SCORE_DECIMAL_PLACES) &&
+    record.confidence ===
+      (alert.confidence === null
+        ? null
+        : normalizeDecimal(alert.confidence, ALERT_SCORE_DECIMAL_PLACES)) &&
     record.modelVersion === alert.modelVersion &&
     record.threatCategory === optionalString(alert.metadata.threatCategory) &&
     isDeepStrictEqual(record.shapValues, asRecord(alert.metadata.shapExplanation)) &&
@@ -584,6 +592,11 @@ function asRecord(value: unknown): Record<string, unknown> | null {
   return typeof value === "object" && value !== null && !Array.isArray(value)
     ? { ...(value as Record<string, unknown>) }
     : null;
+}
+
+function normalizeDecimal(value: number, decimalPlaces: number): number {
+  const factor = 10 ** decimalPlaces;
+  return Math.round((value + Number.EPSILON) * factor) / factor;
 }
 
 function jsonObject(value: Readonly<Record<string, unknown>>): Record<string, unknown> {

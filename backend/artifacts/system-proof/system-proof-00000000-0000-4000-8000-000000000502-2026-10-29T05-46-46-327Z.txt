@@ -1,0 +1,33 @@
+TRIVIKRAMA END-TO-END SIEM PROOF
+================================
+Generated: 2026-10-29T05:46:46.327Z
+Event ID:  00000000-0000-4000-8000-000000000502
+Selection: explicit
+
+PASS  Evidence event selected
+      Selected event 00000000-0000-4000-8000-000000000502.
+FAIL  OCSF event normalized and stored
+      The selected event is absent from MongoDB normalized events.
+FAIL  Signed collector batch verified and archived
+      No verified raw-batch archive was found for the selected event.
+FAIL  AI feature vector extracted
+      Missing or invalid model features: hour_of_day, day_of_week, is_business_hours, time_since_last_event, time_deviation_score, events_per_minute_src_ip, events_per_hour_user, unique_dst_ips_per_src, unique_users_per_src_ip, frequency_deviation, src_ip_entropy, username_entropy, process_name_entropy, bytes_sent, bytes_received, bytes_ratio, severity_id, failed_login_count_10min, failed_to_success_ratio, new_source_ip.
+FAIL  AI inference persisted
+      No persisted AI inference exists for this event; fallback or an incomplete pipeline may have occurred.
+FAIL  Rule or AI alert persisted
+      No persisted alert references the selected event.
+FAIL  Incident correlated and risk scored
+      Expected exactly one incident link; found 0.
+FAIL  Immutable incident audit recorded
+      No tenant-scoped incident_create audit record was found.
+FAIL  Replay-safe notification queued
+      No incident notification outbox record was found.
+FAIL  Redis notification publication verified
+      The notification is not published or its Redis marker is missing.
+FAIL  Collector heartbeat recorded
+      No matching tenant-scoped collector heartbeat is stored.
+
+RESULT SUMMARY
+--------------
+
+OVERALL RESULT: FAIL

@@ -183,6 +183,38 @@ TEST(CollectorRuntime, ComposesSignedPipelineMetricsCheckpointAndShutdownHeartbe
     EXPECT_TRUE(verifier.verify(heartbeat));
 }
 
+TEST(CollectorRuntime, PublishesTenEventBatchAcrossCountDigitBoundary) {
+    TemporaryWorkspace workspace;
+    std::string input;
+    for (std::size_t index = 0U; index < 10U; ++index) {
+        input += valid_event("auth-" + std::to_string(index));
+    }
+    workspace.write_input(input);
+    auto config = configuration(workspace);
+    FixedClock clock;
+    FixedResources resources;
+    DeterministicIdentifiers identifiers{5U};
+    CollectorRuntime runtime{config, clock, identifiers, resources};
+    const auto started = CollectorRuntime::MonotonicTime{};
+
+    runtime.start(started);
+    runtime.poll_once(started);
+    EXPECT_NO_THROW(runtime.shutdown(started + std::chrono::seconds{1}));
+
+    const auto batches = read_batches(workspace);
+    ASSERT_EQ(batches.size(), 1U);
+    EXPECT_EQ(batches.front().event_count(), 10U);
+    security::ContractSigner verifier{config.security.key_id,
+                                      config.security.hmac_secret};
+    EXPECT_TRUE(verifier.verify(batches.front()));
+
+    durability::CheckpointStore checkpoints{config.output.checkpoint_file};
+    const auto checkpoint = checkpoints.load();
+    ASSERT_TRUE(checkpoint.has_value());
+    EXPECT_EQ(checkpoint->sources.at("simulated_auth_input").at("end_offset"),
+              std::filesystem::file_size(workspace.input_path()));
+}
+
 TEST(CollectorRuntime, PreservesPublicationOrderAcrossRejectedInput) {
     TemporaryWorkspace workspace;
     workspace.write_input(valid_event("auth-0001") + "{not-json}\n" +

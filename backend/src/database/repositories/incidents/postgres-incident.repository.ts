@@ -106,6 +106,18 @@ export class PostgresIncidentRepository implements IIncidentRepository {
     return row ? mapIncidentRow(row) : null;
   }
 
+  public async findByIdForUpdate(
+    id: string,
+    orgId: string,
+  ): Promise<IncidentRecord | null> {
+    const row = await this.baseQuery()
+      .where("id", ensureNonBlank(id, "id"))
+      .andWhere("org_id", ensureNonBlank(orgId, "orgId"))
+      .forUpdate()
+      .first<IncidentRow>();
+    return row ? mapIncidentRow(row) : null;
+  }
+
   public async findOpenCandidates(
     input: IncidentCorrelationCandidateInput,
   ): Promise<readonly IncidentRecord[]> {
@@ -275,6 +287,19 @@ export class PostgresIncidentRepository implements IIncidentRepository {
     return this.update(id, { assignedTo });
   }
 
+  public async assignForOrg(
+    id: string,
+    orgId: string,
+    assignedTo: string | null,
+  ): Promise<IncidentRecord | null> {
+    const [row] = await this.db<IncidentRow>(INCIDENTS_TABLE)
+      .where("id", ensureNonBlank(id, "id"))
+      .andWhere("org_id", ensureNonBlank(orgId, "orgId"))
+      .update({ assigned_to: assignedTo })
+      .returning("*");
+    return row ? mapIncidentRow(row) : null;
+  }
+
   public async transitionStatus(
     id: string,
     input: IncidentStatusTransitionInput,
@@ -287,6 +312,25 @@ export class PostgresIncidentRepository implements IIncidentRepository {
     };
 
     return this.update(id, updates);
+  }
+
+  public async transitionStatusForOrg(
+    id: string,
+    orgId: string,
+    input: IncidentStatusTransitionInput,
+  ): Promise<IncidentRecord | null> {
+    const now = new Date();
+    const updates = {
+      status: input.status,
+      resolved_at: resolveResolvedAt(input.status, input.resolvedAt, now),
+      closed_at: resolveClosedAt(input.status, input.closedAt, now),
+    };
+    const [row] = await this.db<IncidentRow>(INCIDENTS_TABLE)
+      .where("id", ensureNonBlank(id, "id"))
+      .andWhere("org_id", ensureNonBlank(orgId, "orgId"))
+      .update(updates)
+      .returning("*");
+    return row ? mapIncidentRow(row) : null;
   }
 
   private baseQuery() {
