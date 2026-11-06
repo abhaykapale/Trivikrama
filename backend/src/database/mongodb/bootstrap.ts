@@ -279,6 +279,42 @@ export const MONGO_COLLECTION_DEFINITIONS: readonly MongoCollectionDefinition[] 
                 expireAfterSeconds: NORMALIZED_EVENTS_RETENTION_SECONDS,
             },
             { name: "idx_org_time", keys: { org_id: 1, time: -1 } },
+            {
+                name: "idx_org_time_event",
+                keys: { org_id: 1, time: -1, event_id: -1 },
+            },
+            {
+                name: "idx_org_severity_time_event",
+                keys: { org_id: 1, severity_id: -1, time: -1, event_id: -1 },
+            },
+            {
+                name: "idx_org_class_time_event",
+                keys: { org_id: 1, class_uid: 1, time: -1, event_id: -1 },
+            },
+            {
+                name: "idx_org_src_ip_time",
+                keys: { org_id: 1, "src_endpoint.ip": 1, time: -1 },
+                sparse: true,
+            },
+            {
+                name: "idx_org_dst_ip_time",
+                keys: { org_id: 1, "dst_endpoint.ip": 1, time: -1 },
+                sparse: true,
+            },
+            {
+                name: "idx_org_actor_user_time",
+                keys: { org_id: 1, "actor.user.name": 1, time: -1 },
+                sparse: true,
+            },
+            {
+                name: "idx_org_device_hostname_time",
+                keys: { org_id: 1, "device.hostname": 1, time: -1 },
+                sparse: true,
+            },
+            {
+                name: "idx_org_collector_time",
+                keys: { org_id: 1, "ingestion.collector_id": 1, time: -1 },
+            },
         ],
     },
     {
@@ -383,6 +419,10 @@ export const MONGO_COLLECTION_DEFINITIONS: readonly MongoCollectionDefinition[] 
                 keys: { model_name: 1, model_version: 1, created_at: -1 },
             },
             { name: "idx_ai_batch_id", keys: { batch_id: 1 } },
+            {
+                name: "idx_ai_org_event_created",
+                keys: { org_id: 1, event_id: 1, created_at: -1 },
+            },
             {
                 name: "idx_ai_ttl_expiry",
                 keys: { created_at: 1 },

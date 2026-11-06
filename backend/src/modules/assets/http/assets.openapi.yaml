@@ -1,0 +1,82 @@
+openapi: 3.1.0
+info:
+  title: Trivikrama Asset Inventory API
+  version: 1.0.0
+paths:
+  /api/v1/assets:
+    get:
+      summary: List tenant assets
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { in: query, name: type, schema: { type: string, enum: [server, workstation, network_device, application] } }
+        - { in: query, name: search, schema: { type: string, minLength: 1, maxLength: 200 } }
+        - { in: query, name: isActive, schema: { type: boolean, default: true } }
+        - { in: query, name: page, schema: { type: integer, minimum: 1, default: 1 } }
+        - { in: query, name: limit, schema: { type: integer, minimum: 1, maximum: 100, default: 25 } }
+      responses:
+        "200": { description: Tenant-scoped paginated assets }
+        "400": { description: Invalid query }
+        "401": { description: Authentication required }
+        "403": { description: Permission denied }
+    post:
+      summary: Transactionally register an asset
+      description: Admin and Security Engineer only. Asset and immutable asset_create audit entry commit atomically.
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/AssetWrite" }
+      responses:
+        "201": { description: Asset registered }
+        "400": { description: Invalid asset }
+        "401": { description: Authentication required }
+        "403": { description: Permission denied }
+  /api/v1/assets/{id}:
+    parameters:
+      - { in: path, name: id, required: true, schema: { type: string, format: uuid } }
+    get:
+      summary: Get one tenant asset with metadata
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200": { description: Asset detail }
+        "404": { description: Asset absent or belongs to another tenant }
+    put:
+      summary: Transactionally update an asset
+      description: Admin and Security Engineer only. Update and immutable asset_update audit entry commit atomically.
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/AssetWrite" }
+      responses:
+        "200": { description: Asset updated }
+        "400": { description: Invalid update }
+        "403": { description: Permission denied }
+        "404": { description: Asset absent or belongs to another tenant }
+    delete:
+      summary: Transactionally deactivate an asset
+      description: Admin only. Soft deletion and immutable asset_delete audit entry commit atomically.
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200": { description: Asset deactivated }
+        "403": { description: Admin permission required }
+        "404": { description: Asset absent or belongs to another tenant }
+components:
+  securitySchemes:
+    bearerAuth: { type: http, scheme: bearer, bearerFormat: JWT }
+  schemas:
+    AssetWrite:
+      type: object
+      additionalProperties: false
+      properties:
+        name: { type: string, minLength: 1, maxLength: 255 }
+        assetType: { type: string, enum: [server, workstation, network_device, application] }
+        ipAddress: { type: [string, "null"], format: ip }
+        hostname: { type: [string, "null"], maxLength: 253 }
+        criticality: { type: number, minimum: 0, maximum: 1 }
+        owner: { type: [string, "null"], maxLength: 255 }
+        department: { type: [string, "null"], maxLength: 255 }
+        tags: { type: array, maxItems: 50, items: { type: string, minLength: 1, maxLength: 64 } }
+        metadata: { type: object, additionalProperties: true }

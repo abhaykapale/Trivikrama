@@ -1,0 +1,188 @@
+openapi: 3.1.0
+info:
+  title: Trivikrama Sigma Rule Query API
+  version: 1.0.0
+paths:
+  /api/v1/rules:
+    get:
+      summary: List tenant-visible Sigma detection rules
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { in: query, name: status, schema: { type: string, enum: [active, disabled, archived] } }
+        - { in: query, name: type, schema: { type: string, enum: [match, count, sequence] } }
+        - { in: query, name: severity, schema: { type: string, enum: [critical, high, medium, low, informational] } }
+        - { in: query, name: search, schema: { type: string, minLength: 1, maxLength: 200 } }
+        - { in: query, name: tag, schema: { type: string, minLength: 1, maxLength: 200 } }
+        - { in: query, name: isBuiltin, schema: { type: boolean } }
+        - { in: query, name: page, schema: { type: integer, minimum: 1, default: 1 } }
+        - { in: query, name: limit, schema: { type: integer, minimum: 1, maximum: 100, default: 25 } }
+        - { in: query, name: sort, schema: { type: string, enum: [name, severity, status, createdAt, updatedAt], default: name } }
+        - { in: query, name: order, schema: { type: string, enum: [asc, desc], default: asc } }
+      responses:
+        "200": { description: Paginated rules without YAML source }
+        "400": { description: Invalid query parameters }
+        "401": { description: Authentication required }
+        "403": { description: Permission denied }
+    post:
+      summary: Validate, compile, and transactionally create a custom Sigma rule
+      description: Admin and Security Engineer only. The rule and immutable audit record commit atomically; a post-commit Redis signal requests worker hot-reload.
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [yamlContent]
+              properties:
+                yamlContent:
+                  type: string
+                  minLength: 1
+                  maxLength: 51200
+      responses:
+        "201": { description: Rule created and reload status reported }
+        "400": { description: Invalid request or unsupported/invalid Sigma rule }
+        "401": { description: Authentication required }
+        "403": { description: Rule creation permission required }
+        "409": { description: Tenant already has the Sigma ID or rule name }
+  /api/v1/rules/{id}:
+    get:
+      summary: Get one tenant-visible rule with full Sigma YAML
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { in: path, name: id, required: true, schema: { type: string, format: uuid } }
+      responses:
+        "200": { description: Rule detail including YAML content and compilation hash }
+        "400": { description: Invalid rule identifier }
+        "401": { description: Authentication required }
+        "403": { description: Permission denied }
+        "404": { description: Rule absent or not visible to the caller's organization }
+    put:
+      summary: Validate, compile, and transactionally update a custom Sigma rule
+      description: Admin and Security Engineer only. Sigma identity is immutable, built-in and archived rules are protected, and the rule version plus immutable audit record commit atomically.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { in: path, name: id, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [yamlContent]
+              properties:
+                yamlContent:
+                  type: string
+                  minLength: 1
+                  maxLength: 51200
+      responses:
+        "200": { description: Updated version and post-commit reload status }
+        "400": { description: Invalid request or unsupported/invalid Sigma rule }
+        "401": { description: Authentication required }
+        "403": { description: Permission denied or built-in rule protected }
+        "404": { description: Rule absent or not visible to the caller's organization }
+        "409": { description: Immutable identity, archived status, or tenant name conflict }
+    delete:
+      summary: Transactionally soft-archive a custom Sigma rule
+      description: Admin only. Rules are never hard-deleted; the archived status and immutable rule_delete audit record commit together before worker reload is signaled.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { in: path, name: id, required: true, schema: { type: string, format: uuid } }
+      responses:
+        "200": { description: Archived status and post-commit reload status }
+        "400": { description: Invalid rule identifier or request body }
+        "401": { description: Authentication required }
+        "403": { description: Admin permission required or built-in rule protected }
+        "404": { description: Rule absent or not visible to the caller's organization }
+  /api/v1/rules/{id}/enable:
+    put:
+      summary: Transactionally enable a Sigma rule
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { in: path, name: id, required: true, schema: { type: string, format: uuid } }
+      responses:
+        "200": { description: Active status and post-commit reload status }
+        "400": { description: Invalid rule identifier }
+        "401": { description: Authentication required }
+        "403": { description: Rule-enable permission required }
+        "404": { description: Rule absent or not visible to the caller's organization }
+        "409": { description: Archived rule cannot be restored by this endpoint }
+  /api/v1/rules/{id}/disable:
+    put:
+      summary: Transactionally disable a Sigma rule
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { in: path, name: id, required: true, schema: { type: string, format: uuid } }
+      responses:
+        "200": { description: Disabled status and post-commit reload status }
+        "400": { description: Invalid rule identifier }
+        "401": { description: Authentication required }
+        "403": { description: Rule-enable permission required }
+        "404": { description: Rule absent or not visible to the caller's organization }
+        "409": { description: Archived rule cannot be changed }
+  /api/v1/rules/{id}/test:
+    post:
+      summary: Dry-run one tenant rule against bounded historical events
+      description: All authenticated operational roles. Evaluation is side-effect free and does not modify Redis windows/cooldowns or persist alerts/incidents.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { in: path, name: id, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              properties:
+                timeRange: { type: string, pattern: '^[1-9][0-9]{0,4}[mhd]$', default: 24h }
+                limit: { type: integer, minimum: 1, maximum: 1000, default: 1000 }
+      responses:
+        "200": { description: Match counts, event IDs, bounded samples, and execution time }
+        "400": { description: Invalid parameters or stored rule cannot compile }
+        "401": { description: Authentication required }
+        "403": { description: Dry-run permission required }
+        "404": { description: Rule absent or not visible to the caller's organization }
+  /api/v1/rules/import:
+    post:
+      summary: Import bounded multi-document Sigma YAML
+      description: Admin and Security Engineer only. Each valid non-duplicate document commits with an immutable rule_import audit record; invalid and duplicate documents are reported without hiding successful imports.
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          text/yaml:
+            schema:
+              type: string
+              maxLength: 524288
+      responses:
+        "200": { description: Per-document imported, skipped, or failed results }
+        "400": { description: Invalid or empty YAML archive }
+        "401": { description: Authentication required }
+        "403": { description: Import permission required }
+        "413": { description: Import exceeds the 512 KiB boundary }
+        "415": { description: A supported YAML media type is required }
+  /api/v1/rules/export:
+    get:
+      summary: Export tenant rules as a multi-document YAML attachment
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { in: query, name: status, schema: { type: string, enum: [active, disabled, archived], default: active } }
+      responses:
+        "200":
+          description: Stable name-ordered YAML archive
+          content:
+            text/yaml:
+              schema: { type: string }
+        "400": { description: Invalid export status }
+        "401": { description: Authentication required }
+        "403": { description: Export permission required }
+        "413": { description: Tenant export exceeds the bounded maximum }
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT

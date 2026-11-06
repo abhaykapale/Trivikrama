@@ -1,0 +1,80 @@
+openapi: 3.0.3
+info:
+  title: Trivikrama Event Investigation API
+  version: 1.0.0
+paths:
+  /api/v1/events/search:
+    get:
+      summary: Search normalized OCSF events
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { $ref: "#/components/parameters/Query" }
+        - { $ref: "#/components/parameters/ClassUid" }
+        - { $ref: "#/components/parameters/SeverityId" }
+        - { $ref: "#/components/parameters/SrcIp" }
+        - { $ref: "#/components/parameters/DstIp" }
+        - { $ref: "#/components/parameters/Username" }
+        - { $ref: "#/components/parameters/Hostname" }
+        - { $ref: "#/components/parameters/CollectorId" }
+        - { $ref: "#/components/parameters/From" }
+        - { $ref: "#/components/parameters/To" }
+        - { name: page, in: query, schema: { type: integer, minimum: 1, default: 1 } }
+        - { name: limit, in: query, schema: { type: integer, minimum: 1, maximum: 200, default: 50 } }
+        - { name: sort, in: query, schema: { type: string, enum: [time, severityId], default: time } }
+        - { name: order, in: query, schema: { type: string, enum: [asc, desc], default: desc } }
+      responses:
+        "200": { description: Tenant-scoped event page }
+        "400": { description: Invalid query }
+        "401": { description: Authentication required }
+  /api/v1/events/export:
+    get:
+      summary: Export a bounded normalized-event result set
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { $ref: "#/components/parameters/Query" }
+        - { $ref: "#/components/parameters/ClassUid" }
+        - { $ref: "#/components/parameters/SeverityId" }
+        - { $ref: "#/components/parameters/SrcIp" }
+        - { $ref: "#/components/parameters/DstIp" }
+        - { $ref: "#/components/parameters/Username" }
+        - { $ref: "#/components/parameters/Hostname" }
+        - { $ref: "#/components/parameters/CollectorId" }
+        - { $ref: "#/components/parameters/From" }
+        - { $ref: "#/components/parameters/To" }
+        - { name: format, in: query, schema: { type: string, enum: [csv, json], default: csv } }
+        - { name: maxResults, in: query, schema: { type: integer, minimum: 1, maximum: 10000, default: 10000 } }
+      responses:
+        "200": { description: Downloadable CSV or JSON evidence }
+        "400": { description: Invalid export request }
+        "401": { description: Authentication required }
+  /api/v1/events/{eventId}:
+    get:
+      summary: Get a normalized event with latest AI and SHAP evidence
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: eventId
+          in: path
+          required: true
+          schema: { type: string, minLength: 1, maxLength: 256 }
+      responses:
+        "200": { description: Tenant-scoped normalized event detail }
+        "400": { description: Invalid event ID }
+        "401": { description: Authentication required }
+        "404": { description: Event absent or outside the authenticated tenant }
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  parameters:
+    Query: { name: query, in: query, schema: { type: string, maxLength: 200 } }
+    ClassUid: { name: classUid, in: query, schema: { type: integer, minimum: 0 } }
+    SeverityId: { name: severityId, in: query, schema: { type: integer, minimum: 0, maximum: 6 } }
+    SrcIp: { name: srcIp, in: query, schema: { type: string, maxLength: 45 } }
+    DstIp: { name: dstIp, in: query, schema: { type: string, maxLength: 45 } }
+    Username: { name: username, in: query, schema: { type: string, maxLength: 255 } }
+    Hostname: { name: hostname, in: query, schema: { type: string, maxLength: 255 } }
+    CollectorId: { name: collectorId, in: query, schema: { type: string, maxLength: 255 } }
+    From: { name: from, in: query, schema: { type: string, format: date-time } }
+    To: { name: to, in: query, schema: { type: string, format: date-time } }

@@ -35,6 +35,7 @@ export interface UpdateConfigurationInput {
 export interface IConfigurationRepository {
   withTransaction(transaction: TransactionClient): IConfigurationRepository;
   findByKey<TValue = unknown>(key: string): Promise<ConfigurationRecord<TValue> | null>;
+  findByKeyForUpdate<TValue = unknown>(key: string): Promise<ConfigurationRecord<TValue> | null>;
   getValue<TValue = unknown>(key: string): Promise<TValue | null>;
   list(filters?: ConfigurationListFilters): Promise<PageResult<ConfigurationRecord>>;
   createIfMissing(input: CreateConfigurationInput): Promise<ConfigurationRecord>;

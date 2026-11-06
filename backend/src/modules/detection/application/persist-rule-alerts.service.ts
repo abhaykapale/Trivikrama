@@ -99,14 +99,18 @@ function sameAlert(record: AlertRecord, expected: CreateAlertInput): boolean {
     record.orgId === expected.orgId &&
     isDeepStrictEqual(record.tags, expected.tags) &&
     isDeepStrictEqual(record.metadata, expected.metadata) &&
-    sameEventIdSet(record.matchedEventIds, expected.matchedEventIds ?? [])
+    sameEventIdSet(record.matchedEventIds, expected.matchedEventIds)
   );
 }
 
 function sameEventIdSet(
-  persisted: readonly unknown[],
-  expected: readonly unknown[],
+  persisted: readonly unknown[] | undefined,
+  expected: readonly unknown[] | undefined,
 ): boolean {
+  if (persisted === undefined || expected === undefined) {
+    return false;
+  }
+
   if (
     !persisted.every((eventId): eventId is string => typeof eventId === "string") ||
     !expected.every((eventId): eventId is string => typeof eventId === "string")

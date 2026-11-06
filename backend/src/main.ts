@@ -12,7 +12,15 @@ import {
   type DatabaseClients,
 } from "./database/index.js";
 import { createAuthApplicationDependencies } from "./modules/auth/composition/index.js";
+import { createAuditQueryDependencies } from "./modules/audit/index.js";
+import { createAssetDependencies } from "./modules/assets/index.js";
 import { createCollectorMonitoringDependencies } from "./modules/collector-monitoring/index.js";
+import { createConfigurationDependencies } from "./modules/configuration/index.js";
+import { createDashboardDependencies } from "./modules/dashboard/index.js";
+import { createEventQueryDependencies } from "./modules/events/index.js";
+import { createRuleQueryDependencies } from "./modules/detection/composition/rule-query.dependencies.js";
+import { createRuleCommandDependencies } from "./modules/detection/composition/rule-command.dependencies.js";
+import { createRuleOperationalDependencies } from "./modules/detection/composition/rule-operational.dependencies.js";
 import type { CollectorMonitoringDependencies } from "./modules/collector-monitoring/index.js";
 import HealthService from "./modules/health/health.service.js";
 import {
@@ -20,6 +28,7 @@ import {
   createIncidentQueryDependencies,
 } from "./modules/incidents/index.js";
 import { createUserManagementDependencies } from "./modules/users/composition/index.js";
+import { createRealtimeDependencies, type RealtimeDependencies } from "./modules/realtime/index.js";
 import { ShutdownCoordinator } from "./runtime/shutdown-coordinator.js";
 import logger from "./shared/logger/index.js";
 import startServer from "./server.js";
@@ -68,6 +77,7 @@ const bootstrap = async (): Promise<void> => {
   let databaseClients: DatabaseClients | null = null;
   let server: Server | null = null;
   let collectorMonitoringDependencies: CollectorMonitoringDependencies | null = null;
+  let realtimeDependencies: RealtimeDependencies | null = null;
 
   try {
     logger.info("Initializing databases...");
@@ -113,12 +123,29 @@ const bootstrap = async (): Promise<void> => {
       passwordHasher: authApplicationDependencies.passwordService,
       unitOfWork,
     });
+    const assetDependencies = createAssetDependencies(repositories.assets, unitOfWork);
+    const auditQueryDependencies = createAuditQueryDependencies(databaseClients.postgres);
+    const configurationDependencies = createConfigurationDependencies(repositories.configuration, unitOfWork);
     const incidentQueryDependencies = createIncidentQueryDependencies(
       databaseClients.postgres,
       mongoRepositories.normalizedEvents,
     );
     const incidentCommandDependencies =
       createIncidentCommandDependencies(unitOfWork);
+    const eventQueryDependencies = createEventQueryDependencies(
+      databaseClients.mongodb,
+    );
+    const ruleQueryDependencies = createRuleQueryDependencies(
+      databaseClients.postgres,
+    );
+    const ruleCommandDependencies = createRuleCommandDependencies(
+      unitOfWork,
+      databaseClients.redis,
+    );
+    const ruleOperationalDependencies = createRuleOperationalDependencies(
+      databaseClients.postgres,
+      databaseClients.mongodb,
+    );
     collectorMonitoringDependencies =
       createCollectorMonitoringDependencies({
         collectorStatusRepository: repositories.collectorStatus,
@@ -127,6 +154,11 @@ const bootstrap = async (): Promise<void> => {
         aiEngineUrl: env.ai.engineUrl,
         aiTimeoutMs: env.ai.timeoutMs,
       });
+    const dashboardDependencies = createDashboardDependencies(
+      databaseClients.postgres,
+      databaseClients.mongodb,
+      collectorMonitoringDependencies.aiEngineHealthMonitor,
+    );
 
     const authenticationDependencies = {
       jwtService: authApplicationDependencies.jwtService,
@@ -134,6 +166,8 @@ const bootstrap = async (): Promise<void> => {
       userRepository: repositories.users,
       config: env,
     };
+    realtimeDependencies = createRealtimeDependencies(databaseClients.redis, authenticationDependencies);
+    await realtimeDependencies.start();
 
     logger.info("Databases initialized successfully.");
     logger.info("Starting server...");
@@ -148,6 +182,18 @@ const bootstrap = async (): Promise<void> => {
         userRepository: repositories.users,
         redisClient: databaseClients.redis,
         config: env,
+      },
+      assets: {
+        authentication: authenticationDependencies,
+        ...assetDependencies,
+      },
+      audit: {
+        authentication: authenticationDependencies,
+        ...auditQueryDependencies,
+      },
+      configuration: {
+        authentication: authenticationDependencies,
+        ...configurationDependencies,
       },
       users: {
         authentication: authenticationDependencies,
@@ -182,6 +228,25 @@ const bootstrap = async (): Promise<void> => {
         listIncidentEventsUseCase:
           incidentQueryDependencies.listIncidentEventsUseCase,
       },
+      events: {
+        authentication: authenticationDependencies,
+        searchEventsUseCase: eventQueryDependencies.searchEventsUseCase,
+        getEventDetailUseCase: eventQueryDependencies.getEventDetailUseCase,
+        exportEventsUseCase: eventQueryDependencies.exportEventsUseCase,
+      },
+      rules: {
+        authentication: authenticationDependencies,
+        listRulesUseCase: ruleQueryDependencies.listRulesUseCase,
+        getRuleDetailUseCase: ruleQueryDependencies.getRuleDetailUseCase,
+        createRuleUseCase: ruleCommandDependencies.createRuleUseCase,
+        updateRuleUseCase: ruleCommandDependencies.updateRuleUseCase,
+        enableRuleUseCase: ruleCommandDependencies.enableRuleUseCase,
+        disableRuleUseCase: ruleCommandDependencies.disableRuleUseCase,
+        archiveRuleUseCase: ruleCommandDependencies.archiveRuleUseCase,
+        importRulesUseCase: ruleCommandDependencies.importRulesUseCase,
+        dryRunRuleUseCase: ruleOperationalDependencies.dryRunRuleUseCase,
+        exportRulesUseCase: ruleOperationalDependencies.exportRulesUseCase,
+      },
       collectorMonitoring: {
         authentication: authenticationDependencies,
         getCollectorStatusUseCase:
@@ -191,10 +256,19 @@ const bootstrap = async (): Promise<void> => {
         retryQuarantinedFileUseCase:
           collectorMonitoringDependencies.retryQuarantinedFileUseCase,
       },
+      dashboard: {
+        authentication: authenticationDependencies,
+        ...dashboardDependencies,
+      },
+      realtime: realtimeDependencies,
     });
 
     registerSignalHandlers(
       new ShutdownCoordinator([
+        {
+          name: "realtime-gateway",
+          close: () => realtimeDependencies!.close(),
+        },
         {
           name: "http-server",
           close: () => closeHttpServer(server!),
@@ -221,6 +295,12 @@ const bootstrap = async (): Promise<void> => {
     logger.info("Server started successfully.");
   } catch (error: unknown) {
     logger.error("Failed to bootstrap application", { error });
+
+    if (realtimeDependencies !== null) {
+      await realtimeDependencies.close().catch((closeError: unknown) => {
+        logger.error("Failed to close real-time gateway after bootstrap failure", { error: closeError });
+      });
+    }
 
     if (server !== null) {
       await closeHttpServer(server).catch((closeError: unknown) => {

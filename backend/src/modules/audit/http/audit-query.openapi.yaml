@@ -1,0 +1,71 @@
+openapi: 3.1.0
+info:
+  title: Trivikrama Audit Investigation API
+  version: 1.0.0
+paths:
+  /api/v1/audit:
+    get:
+      summary: Investigate immutable tenant audit entries
+      description: Admin and Security Engineer only. The organization is derived exclusively from the authenticated principal. If no time range is supplied, the preceding 24 hours are queried.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { in: query, name: action, schema: { $ref: "#/components/schemas/AuditAction" } }
+        - { in: query, name: actorId, schema: { type: string, format: uuid } }
+        - { in: query, name: targetType, schema: { type: string, minLength: 1, maxLength: 100, pattern: "^[a-z][a-z0-9_]*$" } }
+        - { in: query, name: targetId, schema: { type: string, minLength: 1, maxLength: 255 } }
+        - { in: query, name: ipAddress, schema: { type: string, format: ip } }
+        - { in: query, name: from, schema: { type: string, format: date-time } }
+        - { in: query, name: to, schema: { type: string, format: date-time } }
+        - { in: query, name: page, schema: { type: integer, minimum: 1, maximum: 1000000, default: 1 } }
+        - { in: query, name: limit, schema: { type: integer, minimum: 1, maximum: 100, default: 50 } }
+        - { in: query, name: sort, schema: { type: string, enum: [createdAt, action, actorUsername, targetType], default: createdAt } }
+        - { in: query, name: order, schema: { type: string, enum: [asc, desc], default: desc } }
+      responses:
+        "200":
+          description: Tenant-scoped audit page
+          headers:
+            Cache-Control: { schema: { type: string }, description: private, no-store }
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AuditPage" }
+        "400": { description: Invalid filter, pagination, sort, or time range }
+        "401": { description: Authentication required }
+        "403": { description: Admin or Security Engineer permission required }
+components:
+  securitySchemes:
+    bearerAuth: { type: http, scheme: bearer, bearerFormat: JWT }
+  schemas:
+    AuditAction:
+      type: string
+      enum: [login, login_failed, logout, session_revoked, incident_create, incident_update, incident_status_change, incident_assign, incident_note_added, incident_resolve, rule_create, rule_update, rule_delete, rule_enable, rule_disable, rule_import, asset_create, asset_update, asset_delete, user_create, user_update, user_password_reset, user_delete, config_change, collector_config_change]
+    AuditEntry:
+      type: object
+      additionalProperties: false
+      required: [id, action, actorId, actorUsername, actorRole, ipAddress, targetType, targetId, targetName, details, createdAt]
+      properties:
+        id: { type: string, format: uuid }
+        action: { $ref: "#/components/schemas/AuditAction" }
+        actorId: { type: [string, "null"], format: uuid }
+        actorUsername: { type: [string, "null"] }
+        actorRole: { type: [string, "null"], enum: [admin, security_engineer, soc_analyst, null] }
+        ipAddress: { type: [string, "null"] }
+        targetType: { type: [string, "null"] }
+        targetId: { type: [string, "null"] }
+        targetName: { type: [string, "null"] }
+        details: { type: object, additionalProperties: true }
+        createdAt: { type: string, format: date-time }
+    AuditPage:
+      type: object
+      required: [data, pagination]
+      properties:
+        data: { type: array, items: { $ref: "#/components/schemas/AuditEntry" } }
+        pagination:
+          type: object
+          required: [page, limit, total, totalPages, hasNext, hasPrev]
+          properties:
+            page: { type: integer }
+            limit: { type: integer }
+            total: { type: integer }
+            totalPages: { type: integer }
+            hasNext: { type: boolean }
+            hasPrev: { type: boolean }

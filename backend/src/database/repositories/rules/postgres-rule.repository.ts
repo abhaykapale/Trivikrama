@@ -23,6 +23,7 @@ import type {
 
 interface RuleRow {
   readonly id: string;
+  readonly sigma_id?: string | null;
   readonly name: string;
   readonly description: string | null;
   readonly status: RuleStatus;
@@ -60,9 +61,31 @@ export class PostgresRuleRepository implements IRuleRepository {
     return row ? mapRuleRow(row) : null;
   }
 
+  public async findByIdForUpdate(id: string, orgId: string): Promise<RuleRecord | null> {
+    const row = await this.baseQuery()
+      .where("id", ensureNonBlank(id, "id"))
+      .andWhere("org_id", ensureNonBlank(orgId, "orgId"))
+      .forUpdate()
+      .first<RuleRow>();
+
+    return row ? mapRuleRow(row) : null;
+  }
+
   public async findByName(name: string, orgId = DEFAULT_ORG_ID): Promise<RuleRecord | null> {
     const row = await this.baseQuery()
-      .where("name", ensureNonBlank(name, "name"))
+      .whereRaw("lower(name) = lower(?)", [ensureNonBlank(name, "name")])
+      .andWhere("org_id", ensureNonBlank(orgId, "orgId"))
+      .first<RuleRow>();
+
+    return row ? mapRuleRow(row) : null;
+  }
+
+  public async findBySigmaId(
+    sigmaId: string,
+    orgId = DEFAULT_ORG_ID,
+  ): Promise<RuleRecord | null> {
+    const row = await this.baseQuery()
+      .where("sigma_id", ensureNonBlank(sigmaId, "sigmaId"))
       .andWhere("org_id", ensureNonBlank(orgId, "orgId"))
       .first<RuleRow>();
 
@@ -126,6 +149,7 @@ export class PostgresRuleRepository implements IRuleRepository {
 
     const insertable = {
       ...(input.id ? { id: input.id } : {}),
+      sigma_id: input.sigmaId ?? null,
       name: ensureNonBlank(input.name, "name"),
       description: input.description ?? null,
       status: input.status ?? "active",
@@ -151,6 +175,27 @@ export class PostgresRuleRepository implements IRuleRepository {
   }
 
   public async update(id: string, input: UpdateRuleInput): Promise<RuleRecord | null> {
+    return this.updateWhere({ id: ensureNonBlank(id, "id") }, input);
+  }
+
+  public async updateForOrg(
+    id: string,
+    orgId: string,
+    input: UpdateRuleInput,
+  ): Promise<RuleRecord | null> {
+    return this.updateWhere(
+      {
+        id: ensureNonBlank(id, "id"),
+        org_id: ensureNonBlank(orgId, "orgId"),
+      },
+      input,
+    );
+  }
+
+  private async updateWhere(
+    identity: Readonly<Record<string, string>>,
+    input: UpdateRuleInput,
+  ): Promise<RuleRecord | null> {
     const patch: Record<string, unknown> = {};
 
     if (input.name !== undefined) {
@@ -216,11 +261,12 @@ export class PostgresRuleRepository implements IRuleRepository {
     }
 
     if (Object.keys(patch).length === 0) {
-      return this.findById(id);
+      const row = await this.baseQuery().where(identity).first<RuleRow>();
+      return row ? mapRuleRow(row) : null;
     }
 
     const [row] = await this.db<RuleRow>(RULES_TABLE)
-      .where("id", id)
+      .where(identity)
       .update(patch)
       .returning("*");
 
@@ -247,6 +293,7 @@ export class PostgresRuleRepository implements IRuleRepository {
 function mapRuleRow(row: RuleRow): RuleRecord {
   return {
     id: row.id,
+    sigmaId: row.sigma_id ?? null,
     name: row.name,
     description: row.description,
     status: row.status,

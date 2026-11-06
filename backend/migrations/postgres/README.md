@@ -59,13 +59,8 @@ PostgreSQL enum-value additions are forward-only. INC-03D adds
 does not rebuild the enum because doing so could invalidate immutable audit
 history.
 
-`20261029000100_sys_01a_collector_builtin_rule.js` upgrades only the unchanged
-version-1 built-in SSH count rule (`00000000-0000-4000-8000-000000000101`).
-It requires the exact historical YAML/hash and built-in identity, locks the
-row, retains its tenant and activation status, and atomically writes version 2,
-the corrected YAML/hash, and an immutable tenant-scoped `rule_update` audit.
-Custom rules and operator-modified revisions are preserved. Reruns are no-ops;
-fresh installs receive the corrected version from the core seed. This data
-correction is forward-only. Restart the ingestion processing worker after
-migration so its in-memory rule cache reloads; changed hashes also isolate new
-Redis count/cooldown state from the old rule.
+RULE-02B adds the nullable `rules.sigma_id` compatibility column, backfills
+recognizable top-level IDs from historical YAML, then enforces tenant-unique
+Sigma IDs and case-insensitive rule names. New writes always supply
+`sigma_id`; nullable historical rows allow migration without inventing rule
+identities for malformed legacy content.
