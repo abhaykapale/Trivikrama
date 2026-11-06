@@ -16,7 +16,7 @@ class SampleClock final : public ingress::IUtcClock {
 };
 
 TEST(SimulatedInputPipelineTest, ReadsAndMapsEveryShippedAuthenticationEvent) {
-    constexpr std::size_t expected_event_count = 6U;
+    constexpr std::size_t expected_event_count = 24U;
     const SampleClock clock;
     ingress::FileReader reader{
         ingress::FileReaderOptions{
@@ -29,7 +29,7 @@ TEST(SimulatedInputPipelineTest, ReadsAndMapsEveryShippedAuthenticationEvent) {
         clock};
     const ocsf::BaselineMapper mapper;
 
-    const auto read = reader.poll(10U);
+    const auto read = reader.poll(expected_event_count + 1U);
 
     ASSERT_EQ(read.items.size(), expected_event_count);
     std::size_t mapped_count = 0U;
