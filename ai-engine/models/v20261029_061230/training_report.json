@@ -1,0 +1,314 @@
+{
+  "schema_version": "ai-model-training-report-v1",
+  "version": "v20261029_061230",
+  "trained_at": "2026-10-29T06:12:30.831833Z",
+  "dataset_sha256": "1522d22c03e8be6842364575000746b38f0052d700a378b3bb3161da6163ab26",
+  "dataset_file": "simulated-development-seed42.jsonl",
+  "dataset_origin": "simulated",
+  "org_id": "trivikrama-simulated-demo",
+  "feature_names": [
+    "hour_of_day",
+    "day_of_week",
+    "is_business_hours",
+    "time_since_last_event",
+    "time_deviation_score",
+    "events_per_minute_src_ip",
+    "events_per_hour_user",
+    "unique_dst_ips_per_src",
+    "unique_users_per_src_ip",
+    "frequency_deviation",
+    "src_ip_entropy",
+    "username_entropy",
+    "process_name_entropy",
+    "bytes_sent",
+    "bytes_received",
+    "bytes_ratio",
+    "severity_id",
+    "failed_login_count_10min",
+    "failed_to_success_ratio",
+    "new_source_ip"
+  ],
+  "total_samples": 10000,
+  "training_samples": 8000,
+  "holdout_samples": 2000,
+  "train_fraction": 0.8,
+  "random_state": 42,
+  "hyperparameters": {
+    "n_estimators": 200,
+    "max_samples": "auto",
+    "contamination": "auto",
+    "max_features": 1.0,
+    "n_jobs": -1,
+    "random_state": 42,
+    "bootstrap": false
+  },
+  "threshold_method": "holdout_percentile",
+  "threshold_percentile": 95.0,
+  "threshold": 0.2961,
+  "anomaly_count_at_threshold": 101,
+  "anomaly_rate_at_threshold": 0.0505,
+  "holdout_scores": {
+    "raw_minimum": -0.266552339595272,
+    "raw_maximum": 0.12780333944364014,
+    "anomaly_mean": 0.16226935395834288,
+    "anomaly_standard_deviation": 0.11847671166923945,
+    "anomaly_p50": 0.14205337933436407,
+    "anomaly_p95": 0.29611264218598715,
+    "anomaly_p99": 0.9022397212499806
+  },
+  "shap_validation_passed": true,
+  "production_eligible": false,
+  "quality_report": {
+    "schema_version": "ai-training-quality-v1",
+    "dataset_sha256": "1522d22c03e8be6842364575000746b38f0052d700a378b3bb3161da6163ab26",
+    "org_id": "trivikrama-simulated-demo",
+    "row_count": 10000,
+    "first_event_time": "2026-08-01T00:00:00Z",
+    "last_event_time": "2026-08-09T00:00:00Z",
+    "time_span_days": 8.0,
+    "minimum_sample_requirement_met": true,
+    "minimum_time_span_requirement_met": true,
+    "warnings": [
+      "new_source_ip equals its neutral default in at least 95% of rows"
+    ],
+    "class_distribution": {
+      "1007": 1497,
+      "3002": 4480,
+      "4001": 4023
+    },
+    "feature_statistics": {
+      "hour_of_day": {
+        "minimum": 0.0,
+        "maximum": 23.0,
+        "mean": 11.4978,
+        "standard_deviation": 6.922773660896332,
+        "p01": 0.0,
+        "p50": 11.0,
+        "p95": 22.0,
+        "p99": 23.0,
+        "default_rate": 0.0417
+      },
+      "day_of_week": {
+        "minimum": 0.0,
+        "maximum": 6.0,
+        "mean": 3.2501,
+        "standard_deviation": 1.9844268668812162,
+        "p01": 0.0,
+        "p50": 3.5,
+        "p95": 6.0,
+        "p99": 6.0,
+        "default_rate": 0.125
+      },
+      "is_business_hours": {
+        "minimum": 0.0,
+        "maximum": 1.0,
+        "mean": 0.2604,
+        "standard_deviation": 0.4388528682827537,
+        "p01": 0.0,
+        "p50": 0.0,
+        "p95": 1.0,
+        "p99": 1.0,
+        "default_rate": 0.2604
+      },
+      "time_since_last_event": {
+        "minimum": 0.004311031834249589,
+        "maximum": 561.6173362525487,
+        "mean": 59.00378324263561,
+        "standard_deviation": 58.512239735361646,
+        "p01": 0.599677711398003,
+        "p50": 41.73653168337009,
+        "p95": 172.31827498744678,
+        "p99": 266.45681492645616,
+        "default_rate": 0.0
+      },
+      "time_deviation_score": {
+        "minimum": 0.00004644633693394453,
+        "maximum": 11.98218752080864,
+        "mean": 0.7150331538066497,
+        "standard_deviation": 1.228343437509375,
+        "p01": 0.006478941494542867,
+        "p50": 0.4794449385496569,
+        "p95": 1.5010543686581244,
+        "p99": 8.45816242384681,
+        "default_rate": 0.0
+      },
+      "events_per_minute_src_ip": {
+        "minimum": 0.0,
+        "maximum": 179.0,
+        "mean": 4.3505,
+        "standard_deviation": 17.30105342891004,
+        "p01": 0.0,
+        "p50": 2.0,
+        "p95": 5.0,
+        "p99": 122.0,
+        "default_rate": 0.1391
+      },
+      "events_per_hour_user": {
+        "minimum": 5.0,
+        "maximum": 898.0,
+        "mean": 31.7479,
+        "standard_deviation": 85.6266836073312,
+        "p01": 11.0,
+        "p50": 20.0,
+        "p95": 29.0,
+        "p99": 609.0700000000015,
+        "default_rate": 0.0
+      },
+      "unique_dst_ips_per_src": {
+        "minimum": 1.0,
+        "maximum": 12.0,
+        "mean": 3.0662,
+        "standard_deviation": 1.6632551097170871,
+        "p01": 1.0,
+        "p50": 3.0,
+        "p95": 6.0,
+        "p99": 8.0,
+        "default_rate": 0.1959
+      },
+      "unique_users_per_src_ip": {
+        "minimum": 1.0,
+        "maximum": 6.0,
+        "mean": 1.361,
+        "standard_deviation": 0.7007702904661414,
+        "p01": 1.0,
+        "p50": 1.0,
+        "p95": 3.0,
+        "p99": 4.0,
+        "default_rate": 0.7407
+      },
+      "frequency_deviation": {
+        "minimum": 0.00011737011171717225,
+        "maximum": 17.944271126311246,
+        "mean": 0.8904920433478913,
+        "standard_deviation": 1.8976466879927871,
+        "p01": 0.010134649373094908,
+        "p50": 0.5493926503416201,
+        "p95": 1.741980457028418,
+        "p99": 13.58921502372447,
+        "default_rate": 0.0
+      },
+      "src_ip_entropy": {
+        "minimum": 0.5002007951917017,
+        "maximum": 3.9996544558185927,
+        "mean": 2.2459157391933404,
+        "standard_deviation": 1.010359308627326,
+        "p01": 0.5353700087039519,
+        "p50": 2.2503385531729485,
+        "p95": 3.820884437302301,
+        "p99": 3.9723493437351522,
+        "default_rate": 0.0
+      },
+      "username_entropy": {
+        "minimum": 0.20011919336455666,
+        "maximum": 3.499992947770161,
+        "mean": 1.8499510698537909,
+        "standard_deviation": 0.9617282424442207,
+        "p01": 0.22978889076199607,
+        "p50": 1.8475285523051435,
+        "p95": 3.3416640511418803,
+        "p99": 3.4664848953403133,
+        "default_rate": 0.0
+      },
+      "process_name_entropy": {
+        "minimum": 0.5001802509949029,
+        "maximum": 4.499858358619505,
+        "mean": 2.5151620918445916,
+        "standard_deviation": 1.154661489029543,
+        "p01": 0.537541819800533,
+        "p50": 2.4940008521090924,
+        "p95": 4.3097250056698995,
+        "p99": 4.4595735385160395,
+        "default_rate": 0.0
+      },
+      "bytes_sent": {
+        "minimum": 40.168450026153764,
+        "maximum": 19874464.979720745,
+        "mean": 208963.5797584658,
+        "standard_deviation": 1642490.0190212515,
+        "p01": 215.32178036408106,
+        "p50": 1354.616488463915,
+        "p95": 5948.162181106584,
+        "p99": 10052190.206660422,
+        "default_rate": 0.0
+      },
+      "bytes_received": {
+        "minimum": 128.00322987762414,
+        "maximum": 266718.3488068026,
+        "mean": 4566.250687098406,
+        "standard_deviation": 5911.075522477002,
+        "p01": 362.9222239049599,
+        "p50": 2977.8339033986476,
+        "p95": 13443.968831655611,
+        "p99": 25281.58646194263,
+        "default_rate": 0.0
+      },
+      "bytes_ratio": {
+        "minimum": 0.0022324529429212847,
+        "maximum": 39068.77088167892,
+        "mean": 93.3358577017059,
+        "standard_deviation": 987.5495975292578,
+        "p01": 0.02796624917446616,
+        "p50": 0.4587178774209922,
+        "p95": 4.122235888394111,
+        "p99": 3174.462955033211,
+        "default_rate": 0.0
+      },
+      "severity_id": {
+        "minimum": 0.0,
+        "maximum": 6.0,
+        "mean": 1.264,
+        "standard_deviation": 0.8663163394511268,
+        "p01": 0.0,
+        "p50": 1.0,
+        "p95": 3.0,
+        "p99": 5.0,
+        "default_rate": 0.1013
+      },
+      "failed_login_count_10min": {
+        "minimum": 0.0,
+        "maximum": 99.0,
+        "mean": 1.5734,
+        "standard_deviation": 9.43720363455192,
+        "p01": 0.0,
+        "p50": 0.0,
+        "p95": 2.0,
+        "p99": 63.0,
+        "default_rate": 0.7278
+      },
+      "failed_to_success_ratio": {
+        "minimum": 5.3955609811052975e-6,
+        "maximum": 0.999915967649557,
+        "mean": 0.07908579277396041,
+        "standard_deviation": 0.12840992462646628,
+        "p01": 0.0006068946857871493,
+        "p50": 0.04643535528052188,
+        "p95": 0.20990669406824103,
+        "p99": 0.8669341980751817,
+        "default_rate": 0.0
+      },
+      "new_source_ip": {
+        "minimum": 0.0,
+        "maximum": 1.0,
+        "mean": 0.0487,
+        "standard_deviation": 0.21524012172455212,
+        "p01": 0.0,
+        "p50": 0.0,
+        "p95": 0.0,
+        "p99": 1.0,
+        "default_rate": 0.9513
+      }
+    }
+  },
+  "artifacts": {
+    "model": {
+      "path": "v20261029_061230/model.joblib",
+      "sha256": "4ed3535da7d2bdf2f5eb5f85322b63ff6f3d33e7703bb470b7950557fba3ee83",
+      "size_bytes": 2090749
+    },
+    "scaler": {
+      "path": "v20261029_061230/scaler.joblib",
+      "sha256": "36d2c05abaea335f4a0b0df091672cfe83b751a3fe0bf3dc6b3888b88208dc50",
+      "size_bytes": 1063
+    }
+  }
+}

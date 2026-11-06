@@ -1,0 +1,41 @@
+flowchart TD
+    A[main ts bootstrap] --> B[initializeDatabases]
+    B --> C[databaseClients.postgres]
+    C --> D[createPostgresClient]
+    D --> E[Knex PostgreSQL client]
+
+    E --> F[createPostgresRepositories]
+    F --> G[PostgresUserRepository]
+    F --> H[PostgresAuditRepository]
+
+    G --> I[repository dot db equals client]
+    H --> J[repository dot db equals client]
+
+    I --> K[repositories.users]
+    J --> L[repositories.audit]
+
+    K --> M[createUserManagementDependencies]
+    M --> N[Transaction adapter]
+    N --> O[unitOfWork execute]
+
+    O --> P[repositories.users from transaction]
+    P --> Q[UserMutationRepositoryAdapter]
+    Q --> R[adapter.userRepository]
+    R --> S[PostgresUserRepository.updateByIdAndOrg]
+    S --> T[this.db.update]
+    T --> U[(public.users)]
+
+    O --> V[repositories.audit from transaction]
+    V --> W[UserMutationAuditWriterAdapter]
+    W --> X[PostgresAuditRepository.create]
+    X --> Y[(audit.audit_logs)]
+
+    classDef db fill:#F3E5F5,stroke:#8E24AA,stroke-width:1px;
+    classDef repo fill:#E3F2FD,stroke:#1E88E5,stroke-width:1px;
+    classDef app fill:#E8F5E9,stroke:#43A047,stroke-width:1px;
+    classDef sql fill:#FFF3E0,stroke:#FB8C00,stroke-width:1px;
+
+    class C,D,E db;
+    class G,H,I,J,K,L,M,N,O,P,Q,R,S,W,X repo;
+    class A,B,F app;
+    class T,U,Y sql;

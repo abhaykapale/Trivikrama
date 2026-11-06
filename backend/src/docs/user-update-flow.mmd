@@ -1,0 +1,47 @@
+flowchart TD
+    A[Client sends PUT API request] --> B[App mounts users router]
+    B --> C[Users router PUT route]
+    C --> D[AuthenticateRequest]
+    D --> E{JWT valid and session active?}
+    E -- No --> F[401 Unauthorized]
+    E -- Yes --> G[Require user.manage permission]
+    G -- No --> H[403 Forbidden]
+    G -- Yes --> I[HandleUpdateUser]
+    I --> J[Validate user id param]
+    I --> K[Validate update body]
+    I --> L[Read authenticated principal]
+    J --> M[UpdateUserUseCase.execute]
+    K --> M
+    L --> M
+
+    subgraph ApplicationLayer[Application Layer]
+        M --> N[UpdateUserUseCase]
+        N --> O[Unit of work executes mutation]
+    end
+
+    subgraph TransactionLayer[Transaction and Infrastructure]
+        O --> P[PostgresUserMutationUnitOfWorkAdapter]
+        P --> Q[Transaction with READ COMMITTED]
+        Q --> R[UserMutationRepositoryAdapter.updateUser]
+        R --> S[PostgresUserRepository.updateByIdAndOrg]
+        S --> T[(public.users)]
+        T --> U[Updated UserRecord]
+        N --> V[UserMutationAuditWriterAdapter.record]
+        V --> W[PostgresAuditRepository.create]
+        W --> X[(audit.audit_logs)]
+    end
+
+    U --> Y[Return updated user]
+    X --> Y
+    Y --> Z[Send HTTP 200 response]
+    Z --> AA[Client receives success response]
+
+    classDef auth fill:#E3F2FD,stroke:#1E88E5,stroke-width:1px;
+    classDef app fill:#E8F5E9,stroke:#43A047,stroke-width:1px;
+    classDef infra fill:#FFF3E0,stroke:#FB8C00,stroke-width:1px;
+    classDef db fill:#F3E5F5,stroke:#8E24AA,stroke-width:1px;
+
+    class D,E,G,L auth;
+    class N,O,M,I,J,K,Y,Z app;
+    class P,Q,R,S,V,W infra;
+    class T,X db;
