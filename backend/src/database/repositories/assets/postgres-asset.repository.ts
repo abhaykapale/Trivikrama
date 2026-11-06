@@ -1,3 +1,5 @@
+import type { Knex } from "knex";
+
 import {
   ensureNonBlank,
   pageByLimitOffset,
@@ -71,6 +73,23 @@ export class PostgresAssetRepository implements IAssetRepository {
     return row ? mapAssetRow(row) : null;
   }
 
+  public async findByIdForOrg(id: string, orgId: string): Promise<AssetRecord | null> {
+    const row = await this.baseQuery()
+      .where("id", ensureNonBlank(id, "id"))
+      .andWhere("org_id", ensureNonBlank(orgId, "orgId"))
+      .first<AssetRow>();
+    return row ? mapAssetRow(row) : null;
+  }
+
+  public async findByIdForUpdate(id: string, orgId: string): Promise<AssetRecord | null> {
+    const row = await this.baseQuery()
+      .where("id", ensureNonBlank(id, "id"))
+      .andWhere("org_id", ensureNonBlank(orgId, "orgId"))
+      .forUpdate()
+      .first<AssetRow>();
+    return row ? mapAssetRow(row) : null;
+  }
+
   public async findByHostname(hostname: string, orgId = DEFAULT_ORG_ID): Promise<AssetRecord | null> {
     const row = await this.baseQuery()
       .whereRaw("lower(hostname) = lower(?)", [ensureNonBlank(hostname, "hostname")])
@@ -94,59 +113,22 @@ export class PostgresAssetRepository implements IAssetRepository {
   }
 
   public async list(filters: AssetListFilters = {}): Promise<PageResult<AssetRecord>> {
-    const query = this.baseQuery().orderBy("criticality", "desc").orderBy("name", "asc").orderBy("id", "asc");
-
-    if (filters.orgId !== undefined) {
-      query.where("org_id", ensureNonBlank(filters.orgId, "orgId"));
-    }
-
-    if (filters.assetType !== undefined) {
-      query.where("asset_type", ensureNonBlank(filters.assetType, "assetType"));
-    }
-
-    if (filters.isActive !== undefined) {
-      query.where("is_active", filters.isActive);
-    }
-
-    if (filters.owner !== undefined) {
-      query.where("owner", ensureNonBlank(filters.owner, "owner"));
-    }
-
-    if (filters.department !== undefined) {
-      query.where("department", ensureNonBlank(filters.department, "department"));
-    }
-
-    if (filters.minCriticality !== undefined) {
-      validateCriticality(filters.minCriticality);
-      query.where("criticality", ">=", filters.minCriticality);
-    }
-
-    if (filters.search !== undefined) {
-      const search = `%${ensureNonBlank(filters.search, "search")}%`;
-      query.andWhere((builder) => {
-        builder.whereILike("name", search).orWhereILike("hostname", search).orWhereILike("owner", search);
-      });
-    }
+    const query = applyAssetFilters(this.baseQuery(), filters)
+      .orderBy("criticality", "desc")
+      .orderBy("name", "asc")
+      .orderBy("id", "asc");
 
     return pageByLimitOffset<AssetRow, AssetRecord>(query, filters, mapAssetRow);
   }
 
-  public async update(id: string, input: UpdateAssetInput): Promise<AssetRecord | null> {
-    const updates: Record<string, unknown> = {};
+  public async count(filters: AssetListFilters = {}): Promise<number> {
+    const query = applyAssetFilters(this.db<AssetRow>(ASSETS_TABLE), filters);
+    const row = await query.count<{ count: string | number }>("id as count").first();
+    return Number(row?.count ?? 0);
+  }
 
-    if (input.name !== undefined) updates.name = ensureNonBlank(input.name, "name");
-    if (input.assetType !== undefined) updates.asset_type = ensureNonBlank(input.assetType, "assetType");
-    if (input.ipAddress !== undefined) updates.ip_address = input.ipAddress;
-    if (input.hostname !== undefined) updates.hostname = input.hostname;
-    if (input.criticality !== undefined) {
-      validateCriticality(input.criticality);
-      updates.criticality = input.criticality;
-    }
-    if (input.owner !== undefined) updates.owner = input.owner;
-    if (input.department !== undefined) updates.department = input.department;
-    if (input.tags !== undefined) updates.tags = toJsonb(input.tags);
-    if (input.metadata !== undefined) updates.metadata = toJsonb(input.metadata);
-    if (input.isActive !== undefined) updates.is_active = input.isActive;
+  public async update(id: string, input: UpdateAssetInput): Promise<AssetRecord | null> {
+    const updates = toAssetUpdates(input);
 
     if (Object.keys(updates).length === 0) {
       return this.findById(id);
@@ -164,9 +146,71 @@ export class PostgresAssetRepository implements IAssetRepository {
     return this.update(id, { isActive: false });
   }
 
+  public async updateForOrg(
+    id: string,
+    orgId: string,
+    input: UpdateAssetInput,
+  ): Promise<AssetRecord | null> {
+    const updates = toAssetUpdates(input);
+    if (Object.keys(updates).length === 0) return this.findByIdForOrg(id, orgId);
+    const [row] = await this.db<AssetRow>(ASSETS_TABLE)
+      .where("id", ensureNonBlank(id, "id"))
+      .andWhere("org_id", ensureNonBlank(orgId, "orgId"))
+      .update(updates)
+      .returning("*");
+    return row ? mapAssetRow(row) : null;
+  }
+
+  public async deactivateForOrg(id: string, orgId: string): Promise<AssetRecord | null> {
+    return this.updateForOrg(id, orgId, { isActive: false });
+  }
+
   private baseQuery() {
     return this.db<AssetRow>(ASSETS_TABLE).select("*");
   }
+}
+
+function applyAssetFilters<TRecord extends {}, TResult>(
+  query: Knex.QueryBuilder<TRecord, TResult>,
+  filters: AssetListFilters,
+): Knex.QueryBuilder<TRecord, TResult> {
+  if (filters.orgId !== undefined) query.where("org_id", ensureNonBlank(filters.orgId, "orgId"));
+  if (filters.assetType !== undefined) query.where("asset_type", ensureNonBlank(filters.assetType, "assetType"));
+  if (filters.isActive !== undefined) query.where("is_active", filters.isActive);
+  if (filters.owner !== undefined) query.where("owner", ensureNonBlank(filters.owner, "owner"));
+  if (filters.department !== undefined) query.where("department", ensureNonBlank(filters.department, "department"));
+  if (filters.minCriticality !== undefined) {
+    validateCriticality(filters.minCriticality);
+    query.where("criticality", ">=", filters.minCriticality);
+  }
+  if (filters.search !== undefined) {
+    const search = `%${ensureNonBlank(filters.search, "search")}%`;
+    query.andWhere((builder) => {
+      builder
+        .whereILike("name", search)
+        .orWhereILike("hostname", search)
+        .orWhereRaw("ip_address::text ILIKE ?", [search]);
+    });
+  }
+  return query;
+}
+
+function toAssetUpdates(input: UpdateAssetInput): Record<string, unknown> {
+  const updates: Record<string, unknown> = {};
+  if (input.name !== undefined) updates.name = ensureNonBlank(input.name, "name");
+  if (input.assetType !== undefined) updates.asset_type = ensureNonBlank(input.assetType, "assetType");
+  if (input.ipAddress !== undefined) updates.ip_address = input.ipAddress;
+  if (input.hostname !== undefined) updates.hostname = input.hostname;
+  if (input.criticality !== undefined) {
+    validateCriticality(input.criticality);
+    updates.criticality = input.criticality;
+  }
+  if (input.owner !== undefined) updates.owner = input.owner;
+  if (input.department !== undefined) updates.department = input.department;
+  if (input.tags !== undefined) updates.tags = toJsonb(input.tags);
+  if (input.metadata !== undefined) updates.metadata = toJsonb(input.metadata);
+  if (input.isActive !== undefined) updates.is_active = input.isActive;
+  return updates;
 }
 
 function validateCriticality(value: number): void {

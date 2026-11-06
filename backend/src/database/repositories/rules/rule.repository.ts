@@ -6,6 +6,7 @@ export type RuleSeverity = "critical" | "high" | "medium" | "low" | "information
 
 export interface RuleRecord {
   readonly id: string;
+  readonly sigmaId?: string | null;
   readonly name: string;
   readonly description: string | null;
   readonly status: RuleStatus;
@@ -41,6 +42,7 @@ export interface RuleListFilters extends PaginationOptions {
 
 export interface CreateRuleInput {
   readonly id?: string;
+  readonly sigmaId?: string | null;
   readonly name: string;
   readonly description?: string | null;
   readonly status?: RuleStatus;
@@ -82,11 +84,14 @@ export interface UpdateRuleInput {
 export interface IRuleRepository {
   withTransaction(transaction: TransactionClient): IRuleRepository;
   findById(id: string): Promise<RuleRecord | null>;
+  findByIdForUpdate(id: string, orgId: string): Promise<RuleRecord | null>;
+  findBySigmaId(sigmaId: string, orgId?: string): Promise<RuleRecord | null>;
   findByName(name: string, orgId?: string): Promise<RuleRecord | null>;
   findActive(orgId?: string): Promise<readonly RuleRecord[]>;
   list(filters?: RuleListFilters): Promise<PageResult<RuleRecord>>;
   create(input: CreateRuleInput): Promise<RuleRecord>;
   update(id: string, input: UpdateRuleInput): Promise<RuleRecord | null>;
+  updateForOrg(id: string, orgId: string, input: UpdateRuleInput): Promise<RuleRecord | null>;
   enable(id: string, updatedBy?: string | null): Promise<RuleRecord | null>;
   disable(id: string, updatedBy?: string | null): Promise<RuleRecord | null>;
   archive(id: string, updatedBy?: string | null): Promise<RuleRecord | null>;

@@ -45,6 +45,15 @@ export class PostgresConfigurationRepository implements IConfigurationRepository
     return row ? mapConfigurationRow<TValue>(row) : null;
   }
 
+  public async findByKeyForUpdate<TValue = unknown>(key: string): Promise<ConfigurationRecord<TValue> | null> {
+    const row = await this.baseQuery()
+      .where("key", ensureNonBlank(key, "key"))
+      .forUpdate()
+      .first<ConfigurationRow>();
+
+    return row ? mapConfigurationRow<TValue>(row) : null;
+  }
+
   public async getValue<TValue = unknown>(key: string): Promise<TValue | null> {
     const record = await this.findByKey<TValue>(key);
     return record ? record.value : null;

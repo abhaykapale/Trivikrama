@@ -1,4 +1,5 @@
 import type { ICollectorStatusRepository } from "../../../database/index.js";
+import type { IAiEngineHealthMonitor } from "../domain/collector-monitoring.contracts.js";
 import { GetCollectorStatusUseCase } from "../application/get-collector-status.use-case.js";
 import { ListQuarantinedFilesUseCase } from "../application/list-quarantined-files.use-case.js";
 import { RetryQuarantinedFileUseCase } from "../application/retry-quarantined-file.use-case.js";
@@ -24,6 +25,7 @@ export interface CreateCollectorMonitoringDependenciesInput {
 }
 
 export interface CollectorMonitoringDependencies {
+  readonly aiEngineHealthMonitor: IAiEngineHealthMonitor;
   readonly getCollectorStatusUseCase: GetCollectorStatusUseCase;
   readonly listQuarantinedFilesUseCase: ListQuarantinedFilesUseCase;
   readonly retryQuarantinedFileUseCase: RetryQuarantinedFileUseCase;
@@ -57,6 +59,7 @@ export function createCollectorMonitoringDependencies(
   });
 
   return {
+    aiEngineHealthMonitor,
     getCollectorStatusUseCase: new GetCollectorStatusUseCase(
       repository,
       queueMonitor,

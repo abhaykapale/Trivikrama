@@ -59,9 +59,14 @@ export interface IAssetRepository {
   withTransaction(transaction: TransactionClient): IAssetRepository;
   create(input: CreateAssetInput): Promise<AssetRecord>;
   findById(id: string): Promise<AssetRecord | null>;
+  findByIdForOrg(id: string, orgId: string): Promise<AssetRecord | null>;
+  findByIdForUpdate(id: string, orgId: string): Promise<AssetRecord | null>;
   findByHostname(hostname: string, orgId?: string): Promise<AssetRecord | null>;
   findByIpAddress(ipAddress: string, orgId?: string): Promise<AssetRecord | null>;
   list(filters?: AssetListFilters): Promise<PageResult<AssetRecord>>;
+  count(filters?: AssetListFilters): Promise<number>;
   update(id: string, input: UpdateAssetInput): Promise<AssetRecord | null>;
+  updateForOrg(id: string, orgId: string, input: UpdateAssetInput): Promise<AssetRecord | null>;
   deactivate(id: string): Promise<AssetRecord | null>;
+  deactivateForOrg(id: string, orgId: string): Promise<AssetRecord | null>;
 }

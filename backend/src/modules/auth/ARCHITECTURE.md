@@ -10,6 +10,17 @@ The auth module owns the authentication boundary for the backend: it verifies in
 - Enforce RBAC through `requirePermission()` and `requireRole()`.
 - Grant `incidents.view` to the three documented operational roles while
   retaining explicit route-level authorization for incident reads.
+- Grant `events.view` to Admin, Security Engineer, and SOC Analyst for the
+  tenant-scoped LOG-01A search, detail, and export routes.
+- Grant `rules.view` to Admin, Security Engineer, and SOC Analyst for the
+  tenant-scoped RULE-02A Sigma rule list and detail routes.
+- Retain `rules.create` for Admin and Security Engineer only; RULE-02B enforces
+  it after authentication and before parsing or compiling submitted YAML.
+- Grant `rules.edit` and `rules.enable` to Admin and Security Engineer only;
+  RULE-02C denies SOC Analysts before update or status-command execution.
+- RULE-02D keeps `rules.delete` Admin-only, grants `rules.import` to Admin and
+  Security Engineer, and grants `rules.test`/`rules.export` to all three
+  authenticated operational roles.
 - Record auth activity in the shared audit repository.
 
 ## Folder and Runtime Map
@@ -139,6 +150,19 @@ flowchart TD
 - A valid JWT is validated by `IJwtService`, and the `jti` is checked against the session repository.
 - `AuthenticatedPrincipal` includes `userId`, `orgId`, `role`, `jwtId`, `issuedAt`, and `expiresAt` and is attached to `request.user`.
 - Protected routes call `requirePermission()` and/or `requireRole()` after request authentication succeeds.
+- Asset permissions mirror the security matrix: every operational role has
+  `assets.view`; Admin and Security Engineer have `assets.create` and
+  `assets.edit`; only Admin has `assets.delete`.
+- Every authenticated operational role has `dashboard.view`; dashboard routes
+  still derive `orgId` exclusively from the verified principal.
+- Only Admin and Security Engineer roles have `audit.view`; SOC Analysts are
+  rejected before the audit query use case executes.
+- Only Admin has `config.view` and `config.modify`. Admin and Security Engineer
+  have `config.ai_threshold`, which is selected only for the exact
+  `ai.anomaly_threshold` key; SOC Analyst has no configuration permission.
+- WS-01A reuses JWT, session, and active-user contracts during the HTTP upgrade
+  but accepts credentials only from the HttpOnly auth cookie. It additionally
+  requires the configured frontend origin and exact session/user ownership.
 
 ## Important Components
 

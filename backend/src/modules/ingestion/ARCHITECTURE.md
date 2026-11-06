@@ -199,6 +199,12 @@ sequenceDiagram
 
 ## Important Components
 
+The configured processing worker also owns `RedisRuleReloadSubscriber`. It
+listens for committed rule changes, ignores signals for other organizations,
+and calls the long-lived organization Rule Engine's coalesced `reloadRules()`
+method. Startup already performs a complete load, so restarts recover any
+signal missed while the worker was offline.
+
 - [`application/verify-collector-message.service.ts`](./application/verify-collector-message.service.ts): orchestrates the full verification pipeline.
 - [`composition/configured-ingestion-verification.dependencies.ts`](./composition/configured-ingestion-verification.dependencies.ts): builds a runtime trust store and verifier.
 - [`composition/ingestion-verification.dependencies.ts`](./composition/ingestion-verification.dependencies.ts): instantiates parser, validators, canonicalizer, HMAC verifier, and service.

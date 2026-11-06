@@ -152,6 +152,75 @@ and partial active-asset indexes prefixed by `org_id` for IP address and
 case-insensitive hostname/name matching. Its migration is likewise
 non-transactional because every index is created concurrently.
 
+## Sigma rule query indexes
+
+RULE-02A adds tenant-first B-tree indexes for stable rule-name and updated-time
+pagination, a composite organization/filter index, a GIN index for exact tag
+containment, and an organization/rule/time index for alert statistics. These
+support `PostgresRuleQueryRepository` without weakening its mandatory
+`org_id` predicates.
+
+RULE-02B adds `rules.sigma_id`, backfills recognizable existing YAML IDs, and
+enforces tenant-unique Sigma identities plus case-insensitive tenant-unique
+rule names. Custom creation persists the rule row and immutable audit row in
+one retrying SERIALIZABLE transaction.
+
+RULE-02C adds tenant-scoped command repository methods rather than new schema.
+`findByIdForUpdate(id, orgId)` locks only a rule visible to the trusted tenant,
+and `updateForOrg(id, orgId, patch)` repeats the tenant predicate on the write.
+Rule content/version updates and enable/disable status changes commit with
+their immutable audit records in retrying SERIALIZABLE transactions.
+
+RULE-02D reuses the same locked tenant mutation boundary for soft archive and
+the same creation boundary for each imported document. No schema migration is
+required: `archived`, `rule_delete`, and `rule_import` already exist in the
+status/action enums. Historical dry-run reads MongoDB through an explicit
+tenant, OCSF class/category, time-range, and limit filter; export pages
+PostgreSQL with mandatory organization and status predicates.
+
+## Asset inventory boundaries
+
+ASSET-01A adds explicit tenant-scoped asset detail, row-lock, update, and
+deactivation methods. The command unit of work atomically persists each asset
+mutation with its immutable audit event. Migration
+`20261027000100_asset_inventory_audit_and_indexes.js` adds the three asset
+audit actions and a tenant/active/criticality/name index for stable inventory
+listing. Asset search includes name, hostname, and textual IP representation.
+
+## Dashboard analytics indexes
+
+DASH-01A uses the existing MongoDB `org_id`/`time` normalized-event indexes and
+adds PostgreSQL tenant/time indexes for alerts, incident status/severity
+aggregation, and affected-entity grouping. Migration
+`20261027000200_dashboard_analytics_indexes.js` creates these indexes
+concurrently to avoid blocking operational writes.
+
+## Audit investigation indexes
+
+AUDIT-01A preserves the existing insert/select-only audit boundary and adds no
+mutation path. Migration `20261028000100_audit_investigation_indexes.js` adds
+tenant-first parent indexes for time, action, actor, target, and IP queries so
+the partitioned audit trail can be investigated without cross-tenant scans.
+The API projection omits organization and internal before/after state columns.
+
+## Configuration management boundary
+
+CONFIG-01A keeps `public.configuration` global, matching its schema, and never
+exposes rows marked sensitive. `findByKeyForUpdate()` takes a key-scoped row
+lock inside a retrying SERIALIZABLE transaction; `updateValue()` repeats the
+key predicate. A real value change and its immutable `config_change` audit row
+commit or roll back together. Migration
+`20261028000200_configuration_query_index.js` adds a partial key index for the
+bounded non-sensitive list path.
+
+## Real-time subscription boundary
+
+WS-01A duplicates the shared Redis client into a dedicated subscriber because
+Redis subscriber mode cannot serve ordinary commands. It subscribes to three
+exact incident channels and closes before the shared database clients. The
+transactional incident outbox remains the source of published payloads;
+WebSocket delivery is an ephemeral, tenant-filtered projection.
+
 ## Incident command repository boundaries
 
 Incident mutations use tenant-scoped repository methods even after a

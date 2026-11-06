@@ -1,0 +1,59 @@
+openapi: 3.1.0
+info:
+  title: Trivikrama Dashboard Analytics API
+  version: 1.0.0
+paths:
+  /api/v1/dashboard/summary:
+    get:
+      summary: Get tenant dashboard KPIs
+      description: Counts and trends compare the selected window with the immediately preceding equal-duration window.
+      security: [{ bearerAuth: [] }]
+      parameters: [{ $ref: "#/components/parameters/Range" }]
+      responses:
+        "200": { description: Incident, alert, event-rate, response-time, severity, and AI-health metrics }
+        "400": { description: Invalid range }
+        "401": { description: Authentication required }
+        "403": { description: Permission denied }
+  /api/v1/dashboard/timeline:
+    get:
+      summary: Get zero-filled incident counts by severity and time bucket
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { $ref: "#/components/parameters/Range" }
+        - { in: query, name: interval, schema: { type: string, enum: [5m, 15m, 1h, 6h, 1d] } }
+      responses:
+        "200": { description: Chronological incident severity buckets }
+        "400": { description: Invalid range/interval or more than 500 requested buckets }
+        "401": { description: Authentication required }
+        "403": { description: Permission denied }
+  /api/v1/dashboard/top-assets:
+    get:
+      summary: Get top affected incident entities
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { $ref: "#/components/parameters/Range" }
+        - { in: query, name: limit, schema: { type: integer, minimum: 1, maximum: 25, default: 10 } }
+      responses:
+        "200": { description: Stable incident-count-ranked entities }
+        "400": { description: Invalid parameters }
+        "401": { description: Authentication required }
+        "403": { description: Permission denied }
+  /api/v1/dashboard/source-breakdown:
+    get:
+      summary: Get event counts by normalized source
+      description: Source type is preferred from normalized product metadata, then legacy unmapped source type, then collector ID.
+      security: [{ bearerAuth: [] }]
+      parameters: [{ $ref: "#/components/parameters/Range" }]
+      responses:
+        "200": { description: Source counts, percentages, and total }
+        "400": { description: Invalid range }
+        "401": { description: Authentication required }
+        "403": { description: Permission denied }
+components:
+  securitySchemes:
+    bearerAuth: { type: http, scheme: bearer, bearerFormat: JWT }
+  parameters:
+    Range:
+      in: query
+      name: range
+      schema: { type: string, enum: [1h, 4h, 24h, 7d, 30d], default: 24h }

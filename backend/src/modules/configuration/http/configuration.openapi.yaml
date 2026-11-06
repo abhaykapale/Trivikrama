@@ -1,0 +1,83 @@
+openapi: 3.1.0
+info:
+  title: Trivikrama Configuration Management API
+  version: 1.0.0
+paths:
+  /api/v1/config:
+    get:
+      summary: List non-sensitive system configuration
+      description: Admin only. Returns at most 100 non-sensitive managed configuration records and never returns tenant or updater metadata.
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200":
+          description: Non-sensitive system configuration
+          headers:
+            Cache-Control: { schema: { type: string }, description: private, no-store }
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ConfigurationList" }
+        "401": { description: Authentication required }
+        "403": { description: Admin permission required }
+  /api/v1/config/{key}:
+    put:
+      summary: Update one managed system configuration value
+      description: Admin only, except Security Engineer may update ai.anomaly_threshold. The mutation and immutable audit entry commit atomically. Replaying the current value is a successful no-op.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - in: path
+          name: key
+          required: true
+          schema: { type: string, minLength: 3, maxLength: 255, pattern: "^[a-z][a-z0-9_]*(?:\\.[a-z][a-z0-9_]*)+$" }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [value]
+              properties:
+                value: {}
+      responses:
+        "200":
+          description: Updated configuration, or the unchanged record for a replay
+          headers:
+            Cache-Control: { schema: { type: string }, description: private, no-store }
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ConfigurationUpdate" }
+        "400": { description: Invalid key syntax, body shape, JSON value, or value larger than 32 KiB }
+        "401": { description: Authentication required }
+        "403": { description: Permission denied }
+        "404": { description: Configuration key does not exist or is not externally visible }
+        "422": { description: Key is not API-managed or value violates its key-specific policy }
+components:
+  securitySchemes:
+    bearerAuth: { type: http, scheme: bearer, bearerFormat: JWT }
+  schemas:
+    Configuration:
+      type: object
+      additionalProperties: false
+      required: [key, value, description, isSensitive, updatedAt]
+      properties:
+        key: { type: string }
+        value: {}
+        description: { type: [string, "null"] }
+        isSensitive: { type: boolean, const: false }
+        updatedAt: { type: string, format: date-time }
+    ConfigurationList:
+      type: object
+      additionalProperties: false
+      required: [data]
+      properties:
+        data: { type: array, maxItems: 100, items: { $ref: "#/components/schemas/Configuration" } }
+    ConfigurationUpdate:
+      type: object
+      additionalProperties: false
+      required: [key, value, previousValue, updatedAt, updatedBy]
+      properties:
+        key: { type: string }
+        value: {}
+        previousValue: {}
+        updatedAt: { type: string, format: date-time }
+        updatedBy: { type: string, format: uuid }
