@@ -1,0 +1,2 @@
+# Canonical signing bytes must survive Windows checkouts unchanged.
+collector/tests/fixtures/signing-v1/canonical-unsigned-batch.json text eol=lf

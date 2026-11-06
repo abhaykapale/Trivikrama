@@ -10,5 +10,6 @@ htmlcov/
 training_data/*
 !training_data/README.md
 proof_runs/
-models/*
-!models/README.md
+# Runtime model bundles and registry metadata are reviewed explicitly.
+# Do not blanket-ignore models/: config.json and training_report.json are
+# required by the runtime loader. Large approved bundles may need Git LFS.
