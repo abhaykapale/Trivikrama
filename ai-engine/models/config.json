@@ -1,0 +1,53 @@
+{
+  "active_version": "v20261029_061230",
+  "versions": {
+    "v20261029_061230": {
+      "model_path": "v20261029_061230/model.joblib",
+      "scaler_path": "v20261029_061230/scaler.joblib",
+      "threshold": 0.2961,
+      "feature_names": [
+        "hour_of_day",
+        "day_of_week",
+        "is_business_hours",
+        "time_since_last_event",
+        "time_deviation_score",
+        "events_per_minute_src_ip",
+        "events_per_hour_user",
+        "unique_dst_ips_per_src",
+        "unique_users_per_src_ip",
+        "frequency_deviation",
+        "src_ip_entropy",
+        "username_entropy",
+        "process_name_entropy",
+        "bytes_sent",
+        "bytes_received",
+        "bytes_ratio",
+        "severity_id",
+        "failed_login_count_10min",
+        "failed_to_success_ratio",
+        "new_source_ip"
+      ],
+      "feature_defaults": {
+        "time_since_last_event": 41.73051502599691
+      },
+      "training_metadata": {
+        "trained_at": "2026-10-29T06:12:30.831833Z",
+        "training_samples": 8000,
+        "holdout_samples": 2000,
+        "n_estimators": 200,
+        "contamination": "auto",
+        "score_mean": 0.16226935395834288,
+        "score_std": 0.11847671166923945,
+        "raw_score_min": -0.266552339595272,
+        "raw_score_max": 0.12780333944364014,
+        "anomaly_count_at_threshold": 101,
+        "anomaly_rate_at_threshold": 0.0505,
+        "dataset_sha256": "1522d22c03e8be6842364575000746b38f0052d700a378b3bb3161da6163ab26",
+        "dataset_origin": "simulated",
+        "threshold_method": "holdout_percentile",
+        "threshold_percentile": 95.0,
+        "production_eligible": false
+      }
+    }
+  }
+}
