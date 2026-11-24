@@ -1,0 +1,19 @@
+﻿{
+    "status":  "UP",
+    "uptime":  514.6998431,
+    "timestamp":  "2026-11-18T07:11:29.994Z",
+    "dependencies":  {
+                         "postgres":  {
+                                          "status":  "UP",
+                                          "latencyMs":  2
+                                      },
+                         "mongodb":  {
+                                         "status":  "UP",
+                                         "latencyMs":  2
+                                     },
+                         "redis":  {
+                                       "status":  "UP",
+                                       "latencyMs":  1
+                                   }
+                     }
+}

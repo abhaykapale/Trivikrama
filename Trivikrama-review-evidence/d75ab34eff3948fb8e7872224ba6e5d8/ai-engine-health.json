@@ -1,0 +1,10 @@
+﻿{
+    "status":  "healthy",
+    "model_loaded":  true,
+    "model_version":  "v20261029_061230",
+    "uptime_seconds":  366.235,
+    "total_predictions":  2,
+    "avg_latency_ms":  7.5,
+    "p99_latency_ms":  15.0,
+    "errors_total":  0
+}

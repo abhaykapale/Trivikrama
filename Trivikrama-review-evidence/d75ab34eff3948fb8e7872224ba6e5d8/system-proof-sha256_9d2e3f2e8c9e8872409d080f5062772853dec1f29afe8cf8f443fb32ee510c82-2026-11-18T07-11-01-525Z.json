@@ -1,0 +1,214 @@
+{
+  "proof": "trivikrama-end-to-end-siem",
+  "proofVersion": "1.0",
+  "generatedAt": "2026-11-18T07:11:01.525Z",
+  "passed": true,
+  "eventSelection": "explicit",
+  "eventId": "sha256:9d2e3f2e8c9e8872409d080f5062772853dec1f29afe8cf8f443fb32ee510c82",
+  "organizationId": "default",
+  "stages": [
+    {
+      "id": "event_selection",
+      "label": "Evidence event selected",
+      "status": "PASS",
+      "summary": "Selected event sha256:9d2e3f2e8c9e8872409d080f5062772853dec1f29afe8cf8f443fb32ee510c82.",
+      "details": {
+        "method": "explicit"
+      }
+    },
+    {
+      "id": "normalized_event",
+      "label": "OCSF event normalized and stored",
+      "status": "PASS",
+      "summary": "The tenant-scoped normalized OCSF event is present.",
+      "details": {
+        "batchId": "a67b46d7-d31d-473b-ac5e-88220dffd61a",
+        "collectorId": "collector-dev-01",
+        "classUid": 3002,
+        "severityId": 3,
+        "ingestedAt": "2026-11-18T07:10:43.332Z"
+      }
+    },
+    {
+      "id": "verified_archive",
+      "label": "Signed collector batch verified and archived",
+      "status": "PASS",
+      "summary": "The verified collector batch and canonical digest are present.",
+      "details": {
+        "batchId": "a67b46d7-d31d-473b-ac5e-88220dffd61a",
+        "collectorId": "collector-dev-01",
+        "eventCount": 10,
+        "storedEventCount": 10,
+        "canonicalUnsignedSha256": "sha256:6c9f4d5860137ec18fae3ba96bebf61ddd572864609ff2d1f0ffce028065663b",
+        "archivedAt": "2026-11-18T07:10:43.332Z"
+      }
+    },
+    {
+      "id": "feature_extraction",
+      "label": "AI feature vector extracted",
+      "status": "PASS",
+      "summary": "All 20 model features are stored and finite.",
+      "details": {
+        "expectedFeatureCount": 20,
+        "missingFeatures": []
+      }
+    },
+    {
+      "id": "ai_inference",
+      "label": "AI inference persisted",
+      "status": "PASS",
+      "summary": "A contract-valid, non-fallback model result is stored.",
+      "details": {
+        "modelName": "isolation_forest_v1",
+        "modelVersion": "v20261029_061230",
+        "anomalyScore": 0.662272,
+        "confidence": 0.5306,
+        "isAnomaly": true,
+        "shapFeatureCount": 20,
+        "processingTimeMs": 15
+      }
+    },
+    {
+      "id": "detection",
+      "label": "Rule or AI alert persisted",
+      "status": "PASS",
+      "summary": "2 persisted alert(s) reference the selected event.",
+      "details": {
+        "matchingAlertCount": 2,
+        "alertTypes": [
+          "ai",
+          "rule"
+        ],
+        "ruleNames": [
+          "SSH Brute Force"
+        ]
+      }
+    },
+    {
+      "id": "incident_correlation",
+      "label": "Incident correlated and risk scored",
+      "status": "PASS",
+      "summary": "The tenant-scoped incident, evidence counts, and risk score are consistent.",
+      "details": {
+        "incidentId": "37d29b77-456a-41cb-8b05-8182709e6061",
+        "status": "open",
+        "severity": "medium",
+        "source": "both",
+        "riskScore": 53.56,
+        "alertCount": 4,
+        "eventCount": 10,
+        "primaryEntity": "203.0.113.90"
+      }
+    },
+    {
+      "id": "immutable_audit",
+      "label": "Immutable incident audit recorded",
+      "status": "PASS",
+      "summary": "The incident creation audit record is present.",
+      "details": {
+        "auditId": "cc2bd239-bb90-4d3d-9ede-3d2a1ac2a5bb",
+        "action": "incident_create",
+        "createdAt": "2026-11-18T07:10:43.450Z"
+      }
+    },
+    {
+      "id": "notification_outbox",
+      "label": "Replay-safe notification queued",
+      "status": "PASS",
+      "summary": "The notification is published.",
+      "details": {
+        "notificationId": "e2e820ff-4fbc-83e0-842c-d81399611f92",
+        "type": "INCIDENT_UPDATED",
+        "channel": "incidents:updated",
+        "status": "published",
+        "attemptCount": 1,
+        "publishedAt": "2026-11-18T07:10:43.632Z"
+      }
+    },
+    {
+      "id": "redis_publication",
+      "label": "Redis notification publication verified",
+      "status": "PASS",
+      "summary": "The published outbox row and Redis deduplication marker agree.",
+      "details": {
+        "required": true,
+        "markerMatches": true
+      }
+    },
+    {
+      "id": "collector_heartbeat",
+      "label": "Collector heartbeat recorded",
+      "status": "PASS",
+      "summary": "Collector status is online.",
+      "details": {
+        "required": true,
+        "collectorId": "collector-dev-01",
+        "status": "online",
+        "lastHeartbeatAt": "2026-11-18T07:10:43.249Z",
+        "filesProcessed": 0,
+        "eventsCollected": 34,
+        "errorsCount": 0
+      }
+    }
+  ],
+  "evidence": {
+    "normalizedEvent": {
+      "eventId": "sha256:9d2e3f2e8c9e8872409d080f5062772853dec1f29afe8cf8f443fb32ee510c82",
+      "batchId": "a67b46d7-d31d-473b-ac5e-88220dffd61a",
+      "collectorId": "collector-dev-01",
+      "classUid": 3002,
+      "severityId": 3,
+      "schemaValid": true,
+      "ingestedAt": "2026-11-18T07:10:43.332Z",
+      "pipelineDurationMs": null
+    },
+    "verifiedBatch": {
+      "batchId": "a67b46d7-d31d-473b-ac5e-88220dffd61a",
+      "collectorId": "collector-dev-01",
+      "canonicalUnsignedSha256": "sha256:6c9f4d5860137ec18fae3ba96bebf61ddd572864609ff2d1f0ffce028065663b",
+      "eventCount": 10,
+      "archivedAt": "2026-11-18T07:10:43.332Z"
+    },
+    "aiResult": {
+      "modelName": "isolation_forest_v1",
+      "modelVersion": "v20261029_061230",
+      "anomalyScore": 0.662272,
+      "confidence": 0.5306,
+      "isAnomaly": true,
+      "processingTimeMs": 15,
+      "shapFeatureCount": 20,
+      "createdAt": "2026-11-18T07:10:43.439Z"
+    },
+    "incident": {
+      "id": "37d29b77-456a-41cb-8b05-8182709e6061",
+      "status": "open",
+      "severity": "medium",
+      "riskScore": 53.56,
+      "source": "both",
+      "alertCount": 4,
+      "eventCount": 10,
+      "primaryEntity": "203.0.113.90",
+      "createdAt": "2026-11-18T07:10:43.450Z"
+    },
+    "alerts": [
+      {
+        "id": "bcf8e4c1-8140-85f8-802b-ce8495ea795c",
+        "type": "ai",
+        "ruleName": null,
+        "anomalyScore": 0.6623,
+        "severity": "high"
+      },
+      {
+        "id": "3e5bee35-43a5-8d00-890f-d70073904485",
+        "type": "rule",
+        "ruleName": "SSH Brute Force",
+        "anomalyScore": null,
+        "severity": "high"
+      }
+    ],
+    "timing": {
+      "storedPipelineDurationMs": null,
+      "ingestionToIncidentMs": 118
+    }
+  }
+}

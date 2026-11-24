@@ -28,6 +28,7 @@ import {
 } from "../domain/rule-command.contracts.js";
 import { RuleExportLimitExceededError } from "../domain/rule-operational.contracts.js";
 import { RuleValidationError } from "../domain/rule-validation.error.js";
+import { validateSigmaRuleYaml } from "../application/validate-sigma-rule.js";
 import {
   createRuleBodySchema,
   emptyRuleCommandBodySchema,
@@ -63,6 +64,13 @@ export function createRuleQueryRouter(
 
   router.get("/", ...security, async (request, response, next) => {
     await handleList(request, response, next, dependencies);
+  });
+  router.post("/validate", authenticateRequest(dependencies.authentication), requirePermission("rules.create"), (request, response, next) => {
+    try {
+      const { yamlContent } = createRuleBodySchema.parse(request.body);
+      const rule = validateSigmaRuleYaml(yamlContent);
+      response.status(200).json({ valid: true, sigmaId: rule.sigmaId, name: rule.name, type: rule.type, severity: rule.severity, compiledHash: rule.compiledHash });
+    } catch (error: unknown) { handleRuleCommandError(error, response, next, "Invalid rule validation request."); }
   });
   router.get(
     "/export",

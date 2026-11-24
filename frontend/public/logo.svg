@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-labelledby="title">
+  <title id="title">Trivikrama</title>
+  <path fill="#3b82f6" d="M32 3 56 12v17c0 15.4-9.7 25.6-24 32C17.7 54.6 8 44.4 8 29V12L32 3Z"/>
+  <path fill="#08111a" d="M20 17h24v7h-8v23h-8V24h-8v-7Z"/>
+</svg>
