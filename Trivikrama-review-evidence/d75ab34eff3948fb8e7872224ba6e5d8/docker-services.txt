@@ -1,0 +1,4 @@
+﻿NAMES                 STATUS                   PORTS
+trivikrama-mongodb    Up 9 minutes (healthy)   0.0.0.0:27017->27017/tcp, [::]:27017->27017/tcp
+trivikrama-postgres   Up 9 minutes (healthy)   0.0.0.0:5432->5432/tcp, [::]:5432->5432/tcp
+trivikrama-redis      Up 9 minutes (healthy)   0.0.0.0:6379->6379/tcp, [::]:6379->6379/tcp

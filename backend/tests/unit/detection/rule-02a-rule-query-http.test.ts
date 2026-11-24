@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { randomUUID } from "node:crypto";
 import type { Server } from "node:http";
 import type { AddressInfo } from "node:net";
 import test from "node:test";
@@ -23,6 +24,24 @@ import { createRuleQueryRouter } from "../../../src/modules/detection/http/rule-
 
 const USER_ID = "550e8400-e29b-41d4-a716-446655440001";
 const RULE_ID = "00000000-0000-4000-8000-000000000101";
+
+test("FE-04B validation is authenticated, engineer-authorized, and compiles without creation", async () => {
+  const harness = createHarness();
+  harness.addToken("writer", "security_engineer", "org-alpha");
+  harness.addToken("reader", "soc_analyst", "org-alpha");
+  await withServer(harness.app, async (baseUrl) => {
+    assert.equal((await requestPost(baseUrl, "/api/v1/rules/validate", "invalid", { yamlContent: "x" })).status, 401);
+    assert.equal((await requestPost(baseUrl, "/api/v1/rules/validate", "reader", { yamlContent: "x" })).status, 403);
+    assert.equal((await requestPost(baseUrl, "/api/v1/rules/validate", "writer", { yamlContent: "x" })).status, 400);
+    const yamlContent = "title: Validation example\nid: validation-example\nstatus: active\nlevel: high\nweight: 0.8\nlogsource:\n  class_uid: 3002\ndetection:\n  selection:\n    message|contains: suspicious\n  condition: selection\n";
+    const response = await requestPost(baseUrl, "/api/v1/rules/validate", "writer", { yamlContent });
+    assert.equal(response.status, 200, JSON.stringify(response.body));
+    assert.equal(response.body.valid, true);
+    assert.equal(response.body.type, "match");
+    assert.equal("yamlContent" in response.body, false);
+  });
+  assert.equal(harness.createInputs.length, 0);
+});
 
 test("RULE-02A endpoints require authentication", async () => {
   const harness = createHarness();
@@ -313,11 +332,12 @@ function createHarness(): Harness {
   const harness: Harness = {
     app: express(), listInputs, detailInputs, createInputs, updateInputs, statusInputs, archiveInputs, importInputs, dryRunInputs, exportInputs, detail: null, createError: null, updateError: null, archiveError: null,
     addToken(token, role, orgId) {
+      const userId = randomUUID();
       const jti = `jwt-${token}`;
       const now = Math.floor(Date.now() / 1_000);
-      jwtService.tokens.set(token, { sub: USER_ID, username: "rule-reader", role, jti, iat: now, exp: now + 3600, iss: "ai-siem" });
-      sessions.set(jti, session(jti));
-      users.set(USER_ID, user(role, orgId));
+      jwtService.tokens.set(token, { sub: userId, username: "rule-reader", role, jti, iat: now, exp: now + 3600, iss: "ai-siem" });
+      sessions.set(jti, { ...session(jti), userId });
+      users.set(userId, { ...user(role, orgId), id: userId });
     },
   };
   harness.app.use(express.json({ limit: "1mb" }));

@@ -3,6 +3,38 @@ info:
   title: Trivikrama Sigma Rule Query API
   version: 1.0.0
 paths:
+  /api/v1/rules/validate:
+    post:
+      summary: Validate Sigma YAML without persistence or activation
+      description: Requires rules.create; uses the same compiler as rule creation. Does not check tenant uniqueness or publish reload signals. Cookie-authenticated requests require the existing CSRF header.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [yamlContent]
+              properties:
+                yamlContent: { type: string, description: Maximum 51200 UTF-8 bytes }
+      responses:
+        '200':
+          description: Valid compiler preview
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [valid, sigmaId, name, type, severity, compiledHash]
+                properties:
+                  valid: { type: boolean, const: true }
+                  sigmaId: { type: string }
+                  name: { type: string }
+                  type: { type: string, enum: [match, count] }
+                  severity: { type: string }
+                  compiledHash: { type: string }
+        '400': { description: Source or compiler validation failure }
+        '401': { description: Authentication required }
+        '403': { description: Creation permission or CSRF validation failed }
   /api/v1/rules:
     get:
       summary: List tenant-visible Sigma detection rules
